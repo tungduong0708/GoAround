@@ -7,9 +7,11 @@ import router from './router/index.ts'
 
 const app = createApp(App)
 const pinia = createPinia()
-const themeStore = useThemeStore()
 
-themeStore.initTheme()
 app.use(pinia)
 app.use(router)
+
+const themeStore = useThemeStore(pinia)
+themeStore.initTheme()
+
 app.mount('#app')

@@ -1,5 +1,4 @@
 export const commonRoutes = [
-    
     {
         "path": "/login",
         "name": "LoginPage",

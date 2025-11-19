@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from backend.app.core.security import get_current_user
+from app.core.security import get_current_user
 
 router = APIRouter(tags=["private"], prefix="/private")
 
@@ -14,7 +14,7 @@ class TokenInfo(BaseModel):
 
 
 @router.get("/me", response_model=TokenInfo)
-def decoded_token(user: dict = Depends(get_current_user)):
+async def decoded_token(user: dict = Depends(get_current_user)):
     return {
         "status": "success",
         "user_id": user.get("sub"),
@@ -28,7 +28,7 @@ class HealthInfo(BaseModel):
 
 
 @router.get("/health", response_model=HealthInfo)
-def health():
+async def health():
     return {
         "status": "ok",
     }

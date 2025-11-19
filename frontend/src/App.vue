@@ -15,6 +15,7 @@ import ThemeToggle from './components/theme/ThemeToggle.vue'
   </div>
    <HelloWorld msg="Vite + Vue" />
   -->
+   <ThemeToggle />
     <RouterView class="router-view"/>
   </div>
 </template>

@@ -7,14 +7,10 @@ from starlette.middleware.cors import CORSMiddleware
 from app.api.main import api_router
 from app.core.config import settings
 from app.core.db import sessionmanager
-from app.models import Base
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Verify connection & create tables (if needed)
-    async with sessionmanager.connect() as connection:
-        await connection.run_sync(Base.metadata.create_all)
     yield
     # Shutdown: Close all connection pools
     if sessionmanager._engine is not None:

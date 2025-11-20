@@ -27,12 +27,17 @@ def test_jwt_security_integration():
 
     # A. Generate a fake "Supabase" token using our backend's secret
     payload = {
-        "sub": "123-456-789",
-        "email": "test@integration.com",
+        "iss": "https://project-ref.supabase.co/auth/v1",
         "aud": "authenticated",
         "exp": time.time() + 3600,
         "iat": time.time(),
+        "sub": "123e4567-e89b-12d3-a456-426614174000",
         "role": "authenticated",
+        "aal": "aal1",
+        "session_id": "session-uuid",
+        "email": "user@example.com",
+        "phone": "+1234567890",
+        "is_anonymous": False,
     }
 
     token = jwt.encode(payload, settings.SUPABASE_JWT_SECRET, algorithm="HS256")
@@ -43,7 +48,7 @@ def test_jwt_security_integration():
 
     # C. Verify the backend let us in
     assert response.status_code == 200
-    assert response.json()["email"] == "test@integration.com"
+    assert response.json()["email"] == "user@example.com"
 
 
 def test_reject_invalid_token():

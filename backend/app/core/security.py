@@ -1,15 +1,43 @@
+from typing import Any
+
 import jwt
 from fastapi import HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.config import settings
 
 security = HTTPBearer()
 
 
-def get_current_user(
+class TokenPayload(BaseModel):
+    """
+    Represents the decoded JWT payload from Supabase.
+    Strictly defines only the fields required for application logic.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    sub: str
+
+    role: str
+    aal: str
+
+    email: str | None = None
+    phone: str | None = None
+
+    user_metadata: dict[str, Any] = Field(default_factory=dict)
+    app_metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @property
+    def is_mfa_verified(self) -> bool:
+        """Helper to check if the user logged in with MFA."""
+        return self.aal == "aal2"
+
+
+def get_token_payload(
     credentials: HTTPAuthorizationCredentials = Security(security),
-) -> dict:
+) -> TokenPayload:
     """
     Validates the Supabase JWT and returns the user payload.
     """
@@ -22,7 +50,7 @@ def get_current_user(
             audience="authenticated",
             options={"verify_exp": True},
         )
-        return payload
+        return TokenPayload(**payload)
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

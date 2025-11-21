@@ -12,9 +12,6 @@ const { theme, isDark, isLight, setTheme } = useTheme()
       <header class="mb-12">
         <div class="flex justify-between items-center mb-6">
           <h1 class="text-4xl font-bold">Theme Demo</h1>
-          <div class="flex gap-2">
-            <ThemeToggle />
-          </div>
         </div>
         <p class="text-muted-foreground">
           Demonstrating the dark/light theme system

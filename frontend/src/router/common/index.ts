@@ -47,7 +47,7 @@ const commonRoutes: RouteRecordRaw[] = [
         }
     },
     {
-        path: "/:id",
+        path: "/places/:id",
         name: "details",
         component: () => import('@/pages/PlaceDetailsPage.vue'),
         meta: {

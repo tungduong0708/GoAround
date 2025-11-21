@@ -1,13 +1,10 @@
 <script setup lang="ts">
 
+import ThemeDemoPage from "@/pages/ThemeDemoPage.vue";
 </script>
 
 <template>
-  <div>
-    <h1>
-      Welcome to the Home Page
-    </h1>
-  </div>
+  <ThemeDemoPage />
 </template>
 
 <style scoped>

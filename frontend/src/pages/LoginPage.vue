@@ -115,14 +115,12 @@ onMounted(async () => {
   // Only turn off loading if we aren't redirecting
   isLoading.value = false;
 
-  // 2. Set up listener
+  // 2. Set up listener and store subscription immediately to prevent memory leak
   const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN' && session) {
       router.replace('/');
     }
   });
-  
-  // Save subscription to ref
   authListener.value = subscription;
 });
 

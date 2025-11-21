@@ -10,7 +10,7 @@ const router = useRouter();
 const email = ref('');
 const password = ref('');
 const rememberMe = ref(false);
-const isLoading = ref(false);
+const isLoading = ref(true);
 const errors = ref<{ email?: string; password?: string }>({});
 // Store subscription here so we can access it in onUnmounted
 const authListener = ref<{ unsubscribe: () => void } | null>(null);
@@ -71,6 +71,7 @@ const handleGoogleLogin = async () => {
       throw error;
     }
   } catch (error) {
+    errors.value.password = 'Google login failed. Please try again.';
     console.error('Google login failed', error);
   } finally {
     isLoading.value = false;

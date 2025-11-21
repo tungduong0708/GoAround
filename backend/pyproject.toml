@@ -11,6 +11,7 @@ dependencies = [
     "pydantic>=2.12.4",
     "pydantic-settings>=2.12.0",
     "pyjwt>=2.10.1",
+    "pytest-postgresql>=7.0.2",
     "sqlalchemy>=2.0.44",
 ]
 
@@ -36,4 +37,4 @@ show_contexts = true
 addopts = "-v"
 testpaths = ["tests"]
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
+asyncio_default_fixture_loop_scope = "session"

@@ -9,33 +9,37 @@ from app.core.config import settings
 from app.core.db import sessionmanager
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    yield
-    # Shutdown: Close all connection pools
-    if sessionmanager._engine is not None:
-        await sessionmanager.close()
+def init_app(init_db: bool) -> FastAPI:
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        yield
+        # Shutdown: Close all connection pools
+        if sessionmanager.is_initialized():
+            await sessionmanager.close()
 
+    def custom_generate_unique_id(route: APIRoute) -> str:
+        return f"{route.tags[0]}-{route.name}"
 
-def custom_generate_unique_id(route: APIRoute) -> str:
-    return f"{route.tags[0]}-{route.name}"
-
-
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    generate_unique_id_function=custom_generate_unique_id,
-    lifespan=lifespan,
-)
-
-# Set all CORS enabled origins
-if settings.all_cors_origins:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.all_cors_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+    app = FastAPI(
+        title=settings.PROJECT_NAME,
+        openapi_url=f"{settings.API_V1_STR}/openapi.json",
+        generate_unique_id_function=custom_generate_unique_id,
+        lifespan=lifespan if init_db else None,
     )
 
-app.include_router(api_router, prefix=settings.API_V1_STR)
+    # Set all CORS enabled origins
+    if settings.all_cors_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=settings.all_cors_origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
+    app.include_router(api_router, prefix=settings.API_V1_STR)
+
+    return app
+
+
+app = init_app(init_db=True)

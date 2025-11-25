@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useTheme } from '@/composables/useTheme'
-import ThemeToggle from '@/components/theme/ThemeToggle.vue'
 import { Button } from '@/components/ui/button'
 
 const { theme, isDark, isLight, setTheme } = useTheme()

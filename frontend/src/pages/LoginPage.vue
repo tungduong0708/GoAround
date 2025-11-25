@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { supabase } from '@/config/supabase/supabase';
-import { useRouter } from 'vue-router';
+import {computed, onMounted, onUnmounted, ref} from 'vue';
+import {Button} from '@/components/ui/button';
+import {Input} from '@/components/ui/input';
+import {Label} from '@/components/ui/label';
+import {supabase} from '@/config/supabase/supabase';
+import {useRouter} from 'vue-router';
 
 const router = useRouter();
 const email = ref('');
@@ -17,8 +17,8 @@ const authListener = ref<{ unsubscribe: () => void } | null>(null);
 
 const isFormValid = computed(() => {
   return email.value.trim() !== '' &&
-    password.value.trim() !== '' &&
-    Object.keys(errors.value).length === 0;
+      password.value.trim() !== '' &&
+      Object.keys(errors.value).length === 0;
 });
 
 const validateEmail = (value: string) => {
@@ -61,7 +61,7 @@ const handlePasswordChange = () => {
 const handleGoogleLogin = async () => {
   isLoading.value = true;
   try {
-    const { error } = await supabase.auth.signInWithOAuth({
+    const {error} = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/`,
@@ -88,7 +88,7 @@ const handleSubmit = async () => {
 
   isLoading.value = true;
   try {
-    const { error } = await supabase.auth.signInWithPassword({
+    const {error} = await supabase.auth.signInWithPassword({
       email: email.value,
       password: password.value,
     });
@@ -106,23 +106,23 @@ const handleSubmit = async () => {
 
 onMounted(async () => {
   // 1. Check session
-  const { data: { session } } = await supabase.auth.getSession();
-  
+  const {data: {session}} = await supabase.auth.getSession();
+
   if (session) {
     router.replace('/');
     return;
   }
-  
+
   // Only turn off loading if we aren't redirecting
   isLoading.value = false;
 
   // 2. Set up listener
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+  const {data: {subscription}} = supabase.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN' && session) {
       router.replace('/');
     }
   });
-  
+
   // Save subscription to ref
   authListener.value = subscription;
 });
@@ -137,290 +137,105 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="login-page">
-    <div class="login-brand">
-      <img src="@/assets/GoAround-logo.svg" alt="GoAround" class="brand-mark">
-      <h1 class="brand-title">Sign in to GoAround</h1>
+  <div class="min-h-screen w-full bg-background text-foreground px-4 py-12 sm:py-16 flex flex-col items-center gap-6">
+    <div class="flex flex-col items-center gap-3 text-center">
+      <img src="@/assets/GoAround-logo.svg" alt="GoAround" class="h-12 w-12"/>
+      <h1 class="text-2xl font-semibold text-foreground">Sign in to GoAround</h1>
+      <p class="text-sm text-muted-foreground">Access your saved trips and forums</p>
     </div>
 
-    <div class="login-card">
+    <div
+        class="w-full max-w-md rounded-2xl border border-border bg-card text-card-foreground p-6 shadow-xl shadow-foreground/5">
       <Button
-        class="social-button"
-        variant="outline"
-        :disabled="isLoading"
-        @click="handleGoogleLogin"
+          class="w-full gap-2 font-semibold text-foreground"
+          variant="outline"
+          :disabled="isLoading"
+          @click="handleGoogleLogin"
       >
-        <img src="@/assets/google-logo.svg" alt="Google" class="social-icon" />
+        <img src="@/assets/google-logo.svg" alt="Google" class="h-4 w-4"/>
         <span v-if="isLoading">Signing in...</span>
         <span v-else>Continue with Google</span>
       </Button>
 
-      <div class="divider">
+      <div class="flex items-center gap-3 py-3 text-sm text-muted-foreground">
+        <span class="h-px flex-1 bg-border" aria-hidden="true"></span>
         <span>or</span>
+        <span class="h-px flex-1 bg-border" aria-hidden="true"></span>
       </div>
 
-      <form class="login-form" @submit.prevent="handleSubmit">
-        <div class="form-field">
-          <Label for="email">Email</Label>
+      <form class="space-y-5" @submit.prevent="handleSubmit">
+        <div class="space-y-2">
+          <Label for="email" class="text-sm font-medium text-foreground">Email</Label>
           <Input
-            id="email"
-            v-model="email"
-            type="email"
-            autocomplete="email"
-            :aria-invalid="Boolean(errors.email)"
-            placeholder="username@example.com"
-            :disabled="isLoading"
-            @input="handleEmailChange"
-            @blur="handleEmailChange"
-            :class="{ 'input-error': errors.email }"
+              id="email"
+              v-model="email"
+              type="email"
+              autocomplete="email"
+              :aria-invalid="Boolean(errors.email)"
+              placeholder="username@example.com"
+              :disabled="isLoading"
+              class="bg-background text-foreground border-input placeholder:text-muted-foreground focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              @input="handleEmailChange"
+              @blur="handleEmailChange"
+              :class="{ 'border-destructive focus-visible:ring-destructive': errors.email }"
           />
-          <p v-if="errors.email" class="field-error">{{ errors.email }}</p>
+          <p v-if="errors.email" class="text-sm text-destructive">{{ errors.email }}</p>
         </div>
 
-        <div class="form-field">
-          <Label for="password">Password</Label>
+        <div class="space-y-2">
+          <Label for="password" class="text-sm font-medium text-foreground">Password</Label>
           <Input
-            id="password"
-            v-model="password"
-            type="password"
-            autocomplete="current-password"
-            :aria-invalid="Boolean(errors.password)"
-            placeholder="Enter your password"
-            :disabled="isLoading"
-            @input="handlePasswordChange"
-            @blur="handlePasswordChange"
-            :class="{ 'input-error': errors.password }"
+              id="password"
+              v-model="password"
+              type="password"
+              autocomplete="current-password"
+              :aria-invalid="Boolean(errors.password)"
+              placeholder="Enter your password"
+              :disabled="isLoading"
+              class="bg-background text-foreground
+                   border-input placeholder:text-muted-foreground
+                   focus-visible:ring-ring focus-visible:ring-2
+                   focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              @input="handlePasswordChange"
+              @blur="handlePasswordChange"
+              :class="{ 'border-destructive focus-visible:ring-destructive': errors.password }"
           />
-          <div class="field-helper">
-            <label class="remember">
+          <div class="flex items-center justify-between text-sm text-muted-foreground">
+            <label class="inline-flex items-center gap-2">
               <input
-                v-model="rememberMe"
-                type="checkbox"
-                name="remember"
-                :disabled="isLoading"
+                  v-model="rememberMe"
+                  type="checkbox"
+                  name="remember"
+                  :disabled="isLoading"
+                  class="size-4 rounded border-input bg-background text-primary focus:ring-ring"
               >
               Remember me
             </label>
-            <a class="helper-link" href="#">Forgot password?</a>
+            <a class="font-semibold text-primary hover:text-primary/80" href="#">
+              Forgot password?
+            </a>
           </div>
-          <p v-if="errors.password" class="field-error">{{ errors.password }}</p>
+          <p v-if="errors.password" class="text-sm text-destructive">{{ errors.password }}</p>
         </div>
 
-        <Button
-          type="submit"
-          class="submit-button"
-          :disabled="!isFormValid || isLoading"
-        >
-          <span v-if="isLoading" class="spinner" aria-hidden="true"></span>
+        <Button type="submit" class="w-full font-semibold" :disabled="!isFormValid || isLoading">
+          <span
+              v-if="isLoading"
+              class="mr-2 inline-flex size-4 animate-spin rounded-full border-2 border-card border-t-primary"
+              aria-hidden="true"
+          ></span>
           <span v-if="isLoading">Signing in...</span>
           <span v-else>Sign in</span>
         </Button>
       </form>
     </div>
 
-    <div class="signup-card">
+    <div
+        class="w-full max-w-md rounded-2xl border border-border bg-card/80 px-6 py-4 text-center text-muted-foreground">
       <span>New to GoAround?</span>
-      <a href="#">Create an account</a>
+      <a class="ml-2 font-semibold text-primary hover:text-primary/80" href="#">
+        Create an account
+      </a>
     </div>
   </div>
 </template>
-
-<style scoped>
-.login-page {
-  min-height: 100%;
-  padding: 3rem 1.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.5rem;
-  background: radial-gradient(circle at top, #f8fafc 0%, #e5ebf3 45%, #e5ebf3 100%);
-}
-
-.login-brand {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.brand-mark {
-  width: 48px;
-  height: 48px;
-}
-
-.brand-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #21293b;
-}
-
-.login-card {
-  width: min(420px, 100%);
-  background: #ffffff;
-  border: 1px solid #d0d7de;
-  border-radius: 12px;
-  padding: 2rem;
-  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.social-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-weight: 600;
-}
-
-.social-icon {
-  width: 18px;
-  height: 18px;
-}
-
-.divider {
-  position: relative;
-  text-align: center;
-  color: #6c7280;
-  font-size: 0.875rem;
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  width: 40%;
-  height: 1px;
-  background: #d0d7de;
-}
-
-.divider::before {
-  left: 0;
-}
-
-.divider::after {
-  right: 0;
-}
-
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.form-field label {
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.field-helper {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.875rem;
-  margin-top: 0.35rem;
-}
-
-.remember {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #475467;
-}
-
-.remember input {
-  width: 16px;
-  height: 16px;
-}
-
-.helper-link {
-  color: #2563eb;
-  text-decoration: none;
-}
-
-.helper-link:hover {
-  text-decoration: underline;
-}
-
-.submit-button {
-  font-weight: 600;
-  height: 42px;
-}
-
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: currentColor;
-  border-radius: 50%;
-  margin-right: 0.5rem;
-  animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.field-error {
-  color: #d93025;
-  font-size: 0.8125rem;
-}
-
-.input-error {
-  border-color: #d93025;
-}
-
-.signup-card {
-  width: min(420px, 100%);
-  text-align: center;
-  border: 1px solid #d0d7de;
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: 12px;
-  padding: 1.25rem;
-  color: #475467;
-  display: flex;
-  justify-content: center;
-  gap: 0.35rem;
-}
-
-.signup-card a {
-  color: #2563eb;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.signup-card a:hover {
-  text-decoration: underline;
-}
-
-@media (max-width: 480px) {
-  .login-page {
-    padding: 2.5rem 1rem;
-  }
-
-  .login-card,
-  .signup-card {
-    padding: 1.5rem;
-  }
-
-  .brand-title {
-    font-size: 1.5rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .spinner {
-    animation: none;
-  }
-}
-</style>

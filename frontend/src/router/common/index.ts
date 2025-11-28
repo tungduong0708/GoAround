@@ -37,7 +37,7 @@ const commonRoutes: RouteRecordRaw[] = [
             authRequired: false
         }
     },
-    {
+    {   
         path: "/search",
         name: "search",
         component: () => import('@/pages/SearchPage.vue'),

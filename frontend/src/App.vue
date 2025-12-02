@@ -1,22 +1,23 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import ThemeToggle from './components/theme/ThemeToggle.vue'
+import AppHeader from './components/Header.vue'
+
+const route = useRoute()
+const showHeader = computed(() => route.meta.hideHeader !== true)
 </script>
 
 <template>
- <div class="main-layout"> 
-  <!--
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
-  </div>
-   <HelloWorld msg="Vite + Vue" />
-  -->
-   <ThemeToggle />
-    <RouterView class="router-view"/>
+  <div class="main-layout">
+    <AppHeader
+      v-if="showHeader"
+      class="app-header"
+    />
+    <div class="content-shell">
+      <ThemeToggle class="theme-toggle" />
+      <RouterView class="router-view" />
+    </div>
   </div>
 </template>
 
@@ -34,11 +35,24 @@ html{
   min-height: 100vh;
   overflow: hidden;
 }
+.content-shell {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.theme-toggle {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 5;
+}
 .router-view {
   flex: 1;
   overflow: auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  padding-top: 1rem;
 }
 </style>

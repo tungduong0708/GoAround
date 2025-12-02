@@ -25,7 +25,8 @@ const commonRoutes: RouteRecordRaw[] = [
         component: () => import('@/pages/LoginPage.vue'),
         meta: {
             title: "Login",
-            authRequired: false
+            authRequired: false,
+            hideHeader: true,
         }
     },
     {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import SearchBar from '@/components/SearchBar.vue'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useSearchCategories } from '@/composables'
 
@@ -35,9 +35,7 @@ const { categories, selectedCategory, updateValue, handleSubmit } = useSearchCat
               :key="category.value"
               :value="category.value"
               class="rounded-full flex border border-transparent p-4 text-sm font-medium text-muted-foreground shadow-sm transition data-[state=active]:border-ring data-[state=active]:bg-background data-[state=active]:text-foreground"
-            > <CardDescription class="max-w-2xl text-base text-muted-foreground">
-          Explore curated stays, cafés, and experiences tailored to your next getaway. Pick a vibe, search, and start planning.
-        </CardDescription>
+            > 
               <div class="flex items-center justify-center gap-2">
                 <component :is="category.icon" class="size-4" aria-hidden="true" />
                 <span>{{ category.label }}</span>

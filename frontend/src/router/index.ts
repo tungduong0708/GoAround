@@ -1,4 +1,4 @@
-import {createRouter, createWebHistory} from "vue-router";
+import { createRouter, createWebHistory } from "vue-router";
 import commonRoutes from "./common";
 import guardRoutes from "./guard";
 
@@ -8,19 +8,17 @@ const routes = [
   {
     path: "/:pathMatch(.*)*",
     name: "not-found",
-    component: () => import('@/pages/NotFound.vue'),
+    component: () => import("@/pages/NotFound.vue"),
     meta: {
       title: "Not Found",
       requiresAuth: false,
     },
   },
-]
+];
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
-
-})
-
+});
 
 export default router;

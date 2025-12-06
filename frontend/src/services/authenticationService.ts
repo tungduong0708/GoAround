@@ -1,6 +1,14 @@
 import { supabase } from "@/config/supabase/supabase";
-import type { ISignInInput, ISignUpInput, ISignInResponse, ISignUpResponse } from "@/utils/interfaces";
-import { SignInFailedException, SignUpFailedException } from "@/utils/exceptions";
+import type {
+  ISignInInput,
+  ISignUpInput,
+  ISignInResponse,
+  ISignUpResponse,
+} from "@/utils/interfaces";
+import {
+  SignInFailedException,
+  SignUpFailedException,
+} from "@/utils/exceptions";
 
 class AuthenticationService {
   private static instance: AuthenticationService;
@@ -28,7 +36,7 @@ class AuthenticationService {
     if (error) throw new SignUpFailedException(error.message);
     return {
       user: data.user,
-      session: data.session
+      session: data.session,
     };
   }
 
@@ -40,7 +48,7 @@ class AuthenticationService {
     if (error) throw new SignInFailedException(error.message);
     return {
       user: data.user,
-      session: data.session
+      session: data.session,
     };
   }
 
@@ -50,7 +58,10 @@ class AuthenticationService {
   }
 
   async getMe() {
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
     if (error) throw error;
     return user;
   }

@@ -1,8 +1,13 @@
 // Types
-export type { Theme } from './types/theme'
+export type { Theme } from "./types/theme";
 
 // Constants
-export { THEME_STORAGE_KEY, THEMES, DEFAULT_THEME, THEME_COLORS } from './constants/theme'
+export {
+  THEME_STORAGE_KEY,
+  THEMES,
+  DEFAULT_THEME,
+  THEME_COLORS,
+} from "./constants/theme";
 
 // Helpers
 export {
@@ -11,5 +16,4 @@ export {
   getInitialTheme,
   applyThemeClass,
   getToggledTheme,
-} from './helpers/theme'
-
+} from "./helpers/theme";

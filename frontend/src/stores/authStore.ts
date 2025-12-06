@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { authService } from '@/services'
 
 export const useAuthStore = defineStore('auth', () => {
   const session = ref<Session | null>(null)
@@ -13,7 +13,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const initSession = async () => {
-    const { data, error } = await supabase.auth.getSession()
+    const { data, error } = await authService.getSession()
     if (!error) {
       setSession(data.session ?? null)
     }
@@ -21,7 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const subscribeToAuth = (callback?: (event: AuthChangeEvent, session: Session | null) => void) => {
-    const { data } = supabase.auth.onAuthStateChange((event, currentSession) => {
+    const { data } = authService.onAuthStateChange((event, currentSession) => {
       setSession(currentSession)
       callback?.(event, currentSession)
     })
@@ -30,18 +30,15 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const signInWithPassword = async (email: string, password: string) => {
-    return supabase.auth.signInWithPassword({ email, password })
+    return authService.signInWithPassword(email, password)
   }
 
   const signInWithGoogle = async (redirectTo: string) => {
-    return supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo },
-    })
+    return authService.signInWithOAuth('google', { redirectTo })
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    await authService.signOut()
     setSession(null)
   }
 

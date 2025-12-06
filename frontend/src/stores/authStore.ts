@@ -23,7 +23,8 @@ export const useAuthStore = defineStore("auth", {
         if (session) {
           this.session = session;
           this.user = session.user;
-          this.role = (session.user.user_metadata.role as UserRole) || UserRole.TRAVELLER;
+          this.role =
+            (session.user.user_metadata.role as UserRole) || UserRole.TRAVELLER;
           this.isAuthenticated = true;
         } else {
           this.session = null;
@@ -36,7 +37,9 @@ export const useAuthStore = defineStore("auth", {
         supabase.auth.onAuthStateChange((_event, session) => {
           this.session = session;
           this.user = session?.user ?? null;
-          this.role = (session?.user?.user_metadata?.role as UserRole) || (session ? UserRole.TRAVELLER : null);
+          this.role =
+            (session?.user?.user_metadata?.role as UserRole) ||
+            (session ? UserRole.TRAVELLER : null);
           this.isAuthenticated = !!session;
         });
       } catch (error: any) {
@@ -64,7 +67,8 @@ export const useAuthStore = defineStore("auth", {
         if (data.user) {
           this.user = data.user;
           this.session = data.session;
-          this.role = (data.user?.user_metadata.role as UserRole) || UserRole.TRAVELLER;
+          this.role =
+            (data.user?.user_metadata.role as UserRole) || UserRole.TRAVELLER;
           this.isAuthenticated = !!data.session;
         }
       } catch (error: any) {
@@ -87,7 +91,8 @@ export const useAuthStore = defineStore("auth", {
         if (data.session) {
           this.session = data.session;
           this.user = data.user;
-          this.role = (data.user?.user_metadata.role as UserRole) || UserRole.TRAVELLER;
+          this.role =
+            (data.user?.user_metadata.role as UserRole) || UserRole.TRAVELLER;
           this.isAuthenticated = true;
         }
       } catch (error: any) {

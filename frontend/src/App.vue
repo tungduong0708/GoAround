@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import ThemeToggle from './components/theme/ThemeToggle.vue'
+import ThemeToggle from "./components/theme/ThemeToggle.vue";
 </script>
 
 <template>
- <div class="main-layout"> 
-  <!--
+  <div class="main-layout">
+    <!--
   <div>
     <a href="https://vite.dev" target="_blank">
       <img src="/vite.svg" class="logo" alt="Vite logo" />
@@ -15,16 +15,16 @@ import ThemeToggle from './components/theme/ThemeToggle.vue'
   </div>
    <HelloWorld msg="Vite + Vue" />
   -->
-   <ThemeToggle />
-    <RouterView class="router-view"/>
+    <ThemeToggle />
+    <RouterView class="router-view" />
   </div>
 </template>
 
 <style>
 @import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;700&display=swap");
 
-html{
-  font-family: 'Quicksand', sans-serif;
+html {
+  font-family: "Quicksand", sans-serif;
 }
 
 .main-layout {

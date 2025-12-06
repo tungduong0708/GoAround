@@ -23,15 +23,13 @@ class AxiosService {
       timeout: 10000,
     });
 
-    AxiosService.authInstance.interceptors.request.use(
-      async (request) => {
-        const { data } = await supabase.auth.getSession();
-        if (data.session?.access_token) {
-          request.headers.Authorization = `Bearer ${data.session.access_token}`;
-        }
-        return request;
+    AxiosService.authInstance.interceptors.request.use(async (request) => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.access_token) {
+        request.headers.Authorization = `Bearer ${data.session.access_token}`;
       }
-    )
+      return request;
+    });
 
     AxiosService.authInstance.interceptors.response.use(
       (response) => response,
@@ -42,7 +40,7 @@ class AxiosService {
         }
         return Promise.reject(error);
       }
-    )
+    );
   }
 
   public static getCommonInstance(): AxiosInstance {

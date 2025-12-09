@@ -9,7 +9,9 @@ import type {
 
 class UserService {
   private static instance: UserService;
-  private constructor() {}
+  private constructor() {
+    // Private constructor to prevent instantiation
+  }
 
   public static getInstance(): UserService {
     if (!UserService.instance) {
@@ -23,7 +25,7 @@ class UserService {
       const response = await authInstance.get("/users/me");
       return response.data as ICurrentUserResponse;
     } catch (error: any) {
-      throw error.response.data;
+      throw error.response.data || { message: error.message };
     }
   }
 
@@ -34,7 +36,7 @@ class UserService {
       const response = await authInstance.put("/users/me", input);
       return response.data as ICurrentUserResponse;
     } catch (error: any) {
-      throw error.response.data;
+      throw error.response.data || { message: error.message };
     }
   }
 
@@ -43,7 +45,7 @@ class UserService {
       const response = await commonInstance.get(`/users/${userId}`);
       return response.data as IPublicProfileResponse;
     } catch (error: any) {
-      throw error.response.data;
+      throw error.response.data || { message: error.message };
     }
   }
 
@@ -55,7 +57,7 @@ class UserService {
       const response = await authInstance.post(`/users/${userId}/ban`, input);
       return response.data as IBanUserResponse;
     } catch (error: any) {
-      throw error.response.data;
+      throw error.response.data || { message: error.message };
     }
   }
 }

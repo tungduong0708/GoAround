@@ -24,7 +24,8 @@ export const useAuthStore = defineStore("auth", {
           this.session = session;
           this.user = session.user;
           this.role =
-            (session.user.user_metadata.role as UserRole) || UserRole.TRAVELLER;
+            (session.user?.user_metadata?.role as UserRole) ||
+            UserRole.TRAVELLER;
           this.isAuthenticated = true;
         } else {
           this.session = null;
@@ -48,6 +49,7 @@ export const useAuthStore = defineStore("auth", {
           await AuthenticationService.signOut();
         } catch (e) {
           // Ignore sign out error
+          console.error("Failed to sign out:", e);
         }
         this.session = null;
         this.user = null;
@@ -68,7 +70,7 @@ export const useAuthStore = defineStore("auth", {
           this.user = data.user;
           this.session = data.session;
           this.role =
-            (data.user?.user_metadata.role as UserRole) || UserRole.TRAVELLER;
+            (data.user?.user_metadata?.role as UserRole) || UserRole.TRAVELLER;
           this.isAuthenticated = !!data.session;
         }
       } catch (error: any) {
@@ -92,7 +94,7 @@ export const useAuthStore = defineStore("auth", {
           this.session = data.session;
           this.user = data.user;
           this.role =
-            (data.user?.user_metadata.role as UserRole) || UserRole.TRAVELLER;
+            (data.user?.user_metadata?.role as UserRole) || UserRole.TRAVELLER;
           this.isAuthenticated = true;
         }
       } catch (error: any) {

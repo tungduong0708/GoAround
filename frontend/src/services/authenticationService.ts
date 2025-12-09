@@ -13,6 +13,10 @@ import {
 class AuthenticationService {
   private static instance: AuthenticationService;
 
+  private constructor() {
+    // Private constructor to prevent instantiation
+  }
+
   public static getInstance(): AuthenticationService {
     if (!AuthenticationService.instance) {
       AuthenticationService.instance = new AuthenticationService();

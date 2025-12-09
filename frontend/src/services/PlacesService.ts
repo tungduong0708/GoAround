@@ -9,7 +9,9 @@ import type {
 
 class PlacesService {
   private static instance: PlacesService;
-  private constructor() {}
+  private constructor() {
+    // Private constructor to prevent instantiation
+  }
 
   public static getInstance(): PlacesService {
     if (!PlacesService.instance) {
@@ -23,7 +25,7 @@ class PlacesService {
       const response = await commonInstance.get("/places", { params: query });
       return response.data as IPlace[];
     } catch (error: any) {
-      throw error.response?.data || error.message;
+      throw error.response?.data || { message: error.message };
     }
   }
 
@@ -32,7 +34,7 @@ class PlacesService {
       const response = await commonInstance.get(`/places/${id}`);
       return response.data as IPlace;
     } catch (error: any) {
-      throw error.response?.data || error.message;
+      throw error.response?.data || { message: error.message };
     }
   }
 
@@ -41,7 +43,7 @@ class PlacesService {
       const response = await authInstance.post("/places", input);
       return response.data as IPlace;
     } catch (error: any) {
-      throw error.response?.data || error.message;
+      throw error.response?.data || { message: error.message };
     }
   }
 
@@ -50,7 +52,7 @@ class PlacesService {
       const response = await authInstance.put(`/places/${id}`, input);
       return response.data as IPlace;
     } catch (error: any) {
-      throw error.response?.data || error.message;
+      throw error.response?.data || { message: error.message };
     }
   }
 
@@ -59,7 +61,7 @@ class PlacesService {
       const response = await authInstance.delete(`/places/${id}`);
       return response.data;
     } catch (error: any) {
-      throw error.response?.data || error.message;
+      throw error.response?.data || { message: error.message };
     }
   }
 
@@ -71,7 +73,7 @@ class PlacesService {
       const response = await authInstance.post(`/places/${id}/transfer`, input);
       return response.data;
     } catch (error: any) {
-      throw error.response?.data || error.message;
+      throw error.response?.data || { message: error.message };
     }
   }
 }

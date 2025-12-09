@@ -1,3 +1,3 @@
 export interface IResolveReportInput {
-    action: 'delete' | 'dismiss' | 'ban';
+  action: "delete" | "dismiss" | "ban";
 }

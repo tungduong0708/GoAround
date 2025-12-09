@@ -1,3 +1,3 @@
 export interface IReportSearchQuery {
-    status?: string;
+  status?: string;
 }

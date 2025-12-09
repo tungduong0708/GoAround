@@ -1,5 +1,5 @@
 export interface ICreateTripInput {
-    tripName: string;
-    startDate?: string;
-    endDate?: string;
+  tripName: string;
+  startDate?: string;
+  endDate?: string;
 }

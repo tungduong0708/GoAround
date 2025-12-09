@@ -1,20 +1,20 @@
 export interface IReviewUser {
-    id: string;
-    username: string;
-    avatarUrl: string;
+  id: string;
+  username: string;
+  avatarUrl: string;
 }
 
 export interface IReviewImage {
-    id: string;
-    imageUrl: string;
+  id: string;
+  imageUrl: string;
 }
 
 export interface IReview {
-    id: string;
-    placeId: string;
-    user: IReviewUser;
-    rating: number;
-    reviewText: string;
-    createdAt: string;
-    images: IReviewImage[];
+  id: string;
+  placeId: string;
+  user: IReviewUser;
+  rating: number;
+  reviewText: string;
+  createdAt: string;
+  images: IReviewImage[];
 }

@@ -1,5 +1,5 @@
 export interface IUpdateReviewInput {
-    rating?: number;
-    reviewText?: string;
-    images?: string[];
+  rating?: number;
+  reviewText?: string;
+  images?: string[];
 }

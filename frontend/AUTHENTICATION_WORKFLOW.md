@@ -40,12 +40,14 @@ The Pinia store in `src/stores/authStore.ts` manages the reactive state:
   - `isAuthenticated`: Boolean flag indicating login status.
   - `isLoading`: Loading state for async actions.
   - `error`: Error messages.
+  - `role`: The user's role (UserRole type).
 
 - **Actions**:
   - **`initialize()`**: Called on app start. Checks for an existing session and sets up a listener (`onAuthStateChange`) to keep the store in sync with Supabase (e.g., handling auto-refresh or logout).
   - **`register()`**: Calls the service to sign up and updates state.
   - **`login()`**: Calls the service to sign in and updates state.
   - **`logout()`**: Calls the service to sign out and clears state.
+  - **`upgradeToBusinessOwner()`**: Upgrades the current user to a business owner by updating user metadata via the authentication service.
 
 ## 4. Error Handling
 

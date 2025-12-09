@@ -1,6 +1,6 @@
 import { UserRole } from "../types/UserRole";
 
-interface ISignUpInput {
+export interface ISignUpInput {
   username: string;
   email: string;
   password: string;
@@ -8,5 +8,3 @@ interface ISignUpInput {
   phone?: string;
   role?: UserRole;
 }
-
-export type { ISignUpInput };

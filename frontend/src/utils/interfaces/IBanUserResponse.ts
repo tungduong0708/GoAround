@@ -1,5 +1,3 @@
-interface IBanUserResponse {
-    message: string;    
+export interface IBanUserResponse {
+  message: string;
 }
-
-export type {IBanUserResponse}

@@ -1,6 +1,4 @@
-interface IToken {
+export interface IToken {
   accessToken: string;
   refreshToken: string;
 }
-
-export type { IToken };

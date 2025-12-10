@@ -15,7 +15,7 @@ import { useHeader } from '@/composables'
 
 
 const props = withDefaults(defineProps<{
-  isAuthenticated?: boolean
+  isAuthenticated?: boolean,
   displayName?: string, 
   avatarUrl?: string
 }>(), {

@@ -4,12 +4,12 @@ import { useSearchStore } from '@/stores'
 import type { SearchCategoryValue } from '@/stores/searchStore'
 import { categories as search_categories } from '@/utils/constants/search_cate'
 
-type SearchHeroEmit = {
+type SearchCategoriesEmit = {
   (event: 'update:modelValue', value: string): void
   (event: 'submit'): void
 }
 
-export function useSearchCategories(emit?: SearchHeroEmit) {
+export function useSearchCategories(emit?: SearchCategoriesEmit) {
   const searchStore = useSearchStore()
   const { category } = storeToRefs(searchStore)
 

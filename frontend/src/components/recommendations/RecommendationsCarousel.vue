@@ -70,7 +70,7 @@ const handleSelect = (item: Recommendation) => {
           <div class="relative h-48 w-full overflow-hidden rounded-3xl rounded-b-none">
             <img :src="item.image" :alt="item.title" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
             <div class="absolute right-3 top-3 flex items-center gap-2">
-              <Button variant="secondary" size="icon" class="rounded-full bg-white/80 text-foreground shadow">
+              <Button variant="secondary" size="icon" class="rounded-full bg-white/80 text-foreground shadow" aria-label="Save to bookmarks">
                 <BookmarkIcon class="size-4" aria-hidden="true" />
               </Button>
               <div class="flex items-center gap-1 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold text-white">

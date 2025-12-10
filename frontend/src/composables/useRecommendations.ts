@@ -6,6 +6,7 @@ import type { Recommendation } from '@/utils/types'
 export function useRecommendations(options: { autoLoad?: boolean } = { autoLoad: true }) {
   const store = useRecommendationStore()
   const { items, loading, error, hasLoaded } = storeToRefs(store)
+  // TODO: implement search within recommendations
   const searchTerm = ref('')
 
   const loadRecommendations = async (force = false) => {

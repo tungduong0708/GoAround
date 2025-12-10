@@ -30,8 +30,8 @@ const defaultSuggestions = [
 const suggestionChips = computed(() => props.suggestions?.length ? props.suggestions : defaultSuggestions)
 const showClear = computed(() => normalizedValue.value.trim().length > 0 && !props.loading)
 
-const handleFormSubmit = (event?: Event) => {
-	event?.preventDefault()
+const handleFormSubmit = (value: Record<string, any>) => {
+	// TODO: Handle search value if needed
 	submitSearch()
 }
 
@@ -41,6 +41,7 @@ const handleClear = () => {
 
 const handleSuggestion = (value: string) => {
 	emit('update:modelValue', value)
+	//TODO: Trigger search immediately on suggestion click
 	submitSearch()
 }
 </script>
@@ -48,7 +49,7 @@ const handleSuggestion = (value: string) => {
 <template>
 	<div class="flex w-full flex-col items-stretch gap-4">
 		<div class="rounded-3xl border border-border/60 bg-background/90 p-1 shadow-lg shadow-primary/5">
-			<Form as="form" class="flex items-center gap-3 rounded-[calc(theme(borderRadius.3xl)-0.25rem)] bg-card/80 px-5 py-3" @on-submit="handleFormSubmit">
+			<Form as="form" class="flex items-center gap-3 rounded-[calc(theme(borderRadius.3xl)-0.25rem)] bg-card/80 px-5 py-3" @submit="handleFormSubmit">
 				<label class="sr-only" for="search-input">Search</label>
 				<SearchIcon class="hidden size-5 text-muted-foreground sm:block" aria-hidden="true" />
 				<Input

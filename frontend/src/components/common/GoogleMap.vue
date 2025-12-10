@@ -8,6 +8,7 @@ const props = defineProps<{
 }>()
 
 const mapDiv = ref<HTMLElement | null>(null)
+const error_msg = ref<string | null>(null)
 let map: any = null
 let marker: any = null
 
@@ -41,7 +42,7 @@ const loadGoogleMaps = (): Promise<void> => {
 const initMap = async () => {
   if (!mapDiv.value) return
   if (!API_KEY) {
-    console.warn('Google Maps API Key is missing. Please add VITE_GOOGLE_MAPS_API_KEY to your .env file.')
+    error_msg.value = 'Google Maps API Key is missing. Please add VITE_GOOGLE_MAPS_API_KEY to your .env file.'
     return
   }
 
@@ -67,7 +68,8 @@ const initMap = async () => {
       animation: google.maps.Animation.DROP,
     })
   } catch (error) {
-    console.error('Error loading Google Maps:', error)
+    error_msg.value = 'Failed to load Google Maps. Please check your network connection.'
+    console.error(error)
   }
 }
 
@@ -94,9 +96,8 @@ watch(() => [props.lat, props.lng], ([newLat, newLng]) => {
 
 <template>
   <div class="relative h-full w-full overflow-hidden rounded-3xl bg-muted/20">
-    <div v-if="!API_KEY" class="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center text-muted-foreground">
-      <p class="font-semibold">Map Unavailable</p>
-      <p class="text-sm">Missing Google Maps API Key</p>
+    <div v-if="error_msg" class="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center text-muted-foreground">
+      <p class="font-semibold">{{ error_msg }}</p>
     </div>
     <div ref="mapDiv" class="h-full w-full"></div>
   </div>

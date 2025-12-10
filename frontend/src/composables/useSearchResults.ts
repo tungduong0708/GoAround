@@ -30,7 +30,7 @@ export function useSearchResults(options: UseSearchResultsOptions = { autoLoad: 
     console.info('Navigate to', result.id)
   }
 
-  if (options.autoLoad !== false) {
+  if (options.autoLoad ?? true) {
     onMounted(() => {
       if (!hasSearched.value && !loading.value) {
         performSearch()

@@ -28,7 +28,7 @@ const handleClick = () => {
     <div class="relative h-40 w-full overflow-hidden">
       <img :src="result.image" :alt="result.name" class="h-full w-full object-cover transition duration-500 hover:scale-105" />
       <div class="absolute right-3 top-3 flex items-center gap-2">
-        <Button variant="secondary" size="icon" class="rounded-full bg-white/80 text-foreground shadow">
+        <Button variant="secondary" size="icon" class="rounded-full bg-white/80 text-foreground shadow" aria-label="Save to bookmarks">
           <BookmarkIcon class="size-4" aria-hidden="true" />
         </Button>
         <div class="flex items-center gap-1 rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white">

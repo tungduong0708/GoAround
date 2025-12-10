@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { usePlaceDetails } from '@/composables'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -8,51 +7,18 @@ import { Skeleton } from '@/components/ui/skeleton'
 import GoogleMap from '@/components/common/GoogleMap.vue'
 import { MapPinIcon, StarIcon, ClockIcon, TicketIcon, BookmarkIcon, TagIcon } from 'lucide-vue-next'
 
-const { place, loading, error } = usePlaceDetails()
-
-const heroImage = computed(() => {
-  if (!place.value) return ''
-  return place.value.mainImageUrl || place.value.images?.[0]?.imageUrl || ''
-})
-
-const galleryImages = computed(() => {
-  if (!place.value?.images) return []
-  return place.value.images.map((img) => img.imageUrl).filter(Boolean)
-})
-
-const locationLabel = computed(() => {
-  if (!place.value) return ''
-  const parts = [place.value.address, place.value.city, place.value.country].filter(Boolean)
-  return parts.join(', ')
-})
-
-const coordinates = computed(() => {
-  const coords = place.value?.location?.coordinates
-  if (coords && coords.length === 2) {
-    const [lng, lat] = coords
-    return { lat, lng }
-  }
-  return null
-})
-
-const tags = computed(() => place.value?.tags?.map((tag) => tag.name) ?? [])
-
-const priceLabel = computed(() => {
-  const p = place.value
-  if (!p) return 'N/A'
-  if (p.pricePerNight !== undefined) return `$${p.pricePerNight.toLocaleString()}/night`
-  if (p.ticketPrice !== undefined) return `$${p.ticketPrice.toLocaleString()}`
-  if (p.priceRange) return p.priceRange
-  return 'N/A'
-})
-
-const openHoursLabel = computed(() => {
-  const hours = place.value?.openingHours
-  if (!hours) return 'N/A'
-  const entries = Object.entries(hours)
-  if (!entries.length) return 'N/A'
-  return entries.map(([day, val]) => `${day}: ${val}`).join(' • ')
-})
+const {
+  place,
+  loading,
+  error,
+  heroImage,
+  galleryImages,
+  locationLabel,
+  coordinates,
+  tags,
+  priceLabel,
+  openHoursLabel,
+} = usePlaceDetails()
 </script>
 
 <template>

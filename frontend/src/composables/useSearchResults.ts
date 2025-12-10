@@ -1,7 +1,7 @@
 import { onMounted, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSearchStore } from '@/stores'
-import type { SearchResult } from '@/utils/types'
+import type { IPlace } from '@/utils/interfaces'
 
 export interface UseSearchResultsOptions {
   autoLoad?: boolean
@@ -25,7 +25,7 @@ export function useSearchResults(options: UseSearchResultsOptions = { autoLoad: 
     set: (value: string) => setQuery(value),
   })
 
-  const selectResult = (result: SearchResult) => {
+  const selectResult = (result: IPlace) => {
     // placeholder for navigation until routes are prepared
     console.info('Navigate to', result.id)
   }

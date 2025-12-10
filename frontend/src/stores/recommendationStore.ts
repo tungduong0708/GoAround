@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Recommendation } from '@/utils/types'
-import { fetchRecommendations } from '@/services'
+import { RecommendationService } from '@/services'
+import type { IPlace } from '@/utils/interfaces'
 
 export const useRecommendationStore = defineStore('recommendations', () => {
-  const items = ref<Recommendation[]>([])
+  const items = ref<IPlace[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
   const hasLoaded = ref(false)
@@ -17,7 +17,7 @@ export const useRecommendationStore = defineStore('recommendations', () => {
     error.value = null
 
     try {
-      items.value = await fetchRecommendations()
+      items.value = await RecommendationService.fetchRecommendations()
       hasLoaded.value = true
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Unable to load recommendations right now.'

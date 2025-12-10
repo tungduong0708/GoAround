@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { PlaceDetails } from '@/utils/types'
-import { fetchPlaceDetails } from '@/services'
+import type { IPlace } from '@/utils/interfaces'
+import { PlacesService } from '@/services'
 
 export const usePlaceStore = defineStore('place', () => {
-  const place = ref<PlaceDetails | null>(null)
+  const place = ref<IPlace | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -14,7 +14,7 @@ export const usePlaceStore = defineStore('place', () => {
     place.value = null
 
     try {
-      place.value = await fetchPlaceDetails(id)
+      place.value = await PlacesService.getPlaceById(id)
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to load place details'
     } finally {

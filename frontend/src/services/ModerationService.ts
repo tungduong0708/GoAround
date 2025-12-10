@@ -4,6 +4,8 @@ import type {
   ICreateReportInput,
   IResolveReportInput,
   IReportSearchQuery,
+  IApiResponse,
+  IPaginatedResponse,
 } from "@/utils/interfaces";
 
 class ModerationService {
@@ -20,38 +22,28 @@ class ModerationService {
   }
 
   async submitReport(input: ICreateReportInput): Promise<{ message: string }> {
-    try {
-      const response = await authInstance.post("/reports", input);
-      return response.data;
-    } catch (error: any) {
-      throw error.response?.data || { message: error.message };
-    }
+    const response = await authInstance.post("/reports", input);
+    return (response.data as IApiResponse<{ message: string }>).data;
   }
 
-  async getReports(query?: IReportSearchQuery): Promise<IReport[]> {
-    try {
-      const response = await authInstance.get("/admin/reports", {
-        params: query,
-      });
-      return response.data as IReport[];
-    } catch (error: any) {
-      throw error.response?.data || { message: error.message };
-    }
+  async getReports(
+    query?: IReportSearchQuery
+  ): Promise<IPaginatedResponse<IReport[]>> {
+    const response = await authInstance.get("/admin/reports", {
+      params: query,
+    });
+    return response.data as IPaginatedResponse<IReport[]>;
   }
 
   async resolveReport(
     id: string,
     input: IResolveReportInput
   ): Promise<{ message: string }> {
-    try {
-      const response = await authInstance.post(
-        `/admin/reports/${id}/resolve`,
-        input
-      );
-      return response.data;
-    } catch (error: any) {
-      throw error.response?.data || { message: error.message };
-    }
+    const response = await authInstance.post(
+      `/admin/reports/${id}/resolve`,
+      input
+    );
+    return (response.data as IApiResponse<{ message: string }>).data;
   }
 }
 

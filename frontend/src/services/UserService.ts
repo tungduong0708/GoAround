@@ -5,6 +5,7 @@ import type {
   ICurrentUserResponse,
   IPublicProfileResponse,
   IUpdateProfileInput,
+  IApiResponse,
 } from "@/utils/interfaces";
 
 class UserService {
@@ -21,44 +22,28 @@ class UserService {
   }
 
   async getCurrentUser(): Promise<ICurrentUserResponse> {
-    try {
-      const response = await authInstance.get("/users/me");
-      return response.data as ICurrentUserResponse;
-    } catch (error: any) {
-      throw error.response.data || { message: error.message };
-    }
+    const response = await authInstance.get("/users/me");
+    return (response.data as IApiResponse<ICurrentUserResponse>).data;
   }
 
   async updateProfile(
     input: IUpdateProfileInput
   ): Promise<ICurrentUserResponse> {
-    try {
-      const response = await authInstance.put("/users/me", input);
-      return response.data as ICurrentUserResponse;
-    } catch (error: any) {
-      throw error.response.data || { message: error.message };
-    }
+    const response = await authInstance.put("/users/me", input);
+    return (response.data as IApiResponse<ICurrentUserResponse>).data;
   }
 
   async publicProfile(userId: string): Promise<IPublicProfileResponse> {
-    try {
-      const response = await commonInstance.get(`/users/${userId}`);
-      return response.data as IPublicProfileResponse;
-    } catch (error: any) {
-      throw error.response.data || { message: error.message };
-    }
+    const response = await commonInstance.get(`/users/${userId}`);
+    return (response.data as IApiResponse<IPublicProfileResponse>).data;
   }
 
   async banUser(
     userId: string,
     input: IBanUserInput
   ): Promise<IBanUserResponse> {
-    try {
-      const response = await authInstance.post(`/users/${userId}/ban`, input);
-      return response.data as IBanUserResponse;
-    } catch (error: any) {
-      throw error.response.data || { message: error.message };
-    }
+    const response = await authInstance.post(`/users/${userId}/ban`, input);
+    return (response.data as IApiResponse<IBanUserResponse>).data;
   }
 }
 

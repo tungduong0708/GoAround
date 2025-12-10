@@ -3,6 +3,8 @@ import type {
   ISavedList,
   ICreateListInput,
   IAddPlaceToListInput,
+  IApiResponse,
+  IPaginatedResponse,
 } from "@/utils/interfaces";
 
 class ListService {
@@ -18,60 +20,37 @@ class ListService {
     return ListService.instance;
   }
 
-  async getLists(): Promise<ISavedList[]> {
-    try {
-      const response = await authInstance.get("/lists");
-      return response.data as ISavedList[];
-    } catch (error: any) {
-      throw error.response?.data || { message: error.message };
-    }
+  async getLists(): Promise<IPaginatedResponse<ISavedList[]>> {
+    const response = await authInstance.get("/lists");
+    return response.data as IPaginatedResponse<ISavedList[]>;
   }
 
   async createList(input: ICreateListInput): Promise<ISavedList> {
-    try {
-      const response = await authInstance.post("/lists", input);
-      return response.data as ISavedList;
-    } catch (error: any) {
-      throw error.response?.data || { message: error.message };
-    }
+    const response = await authInstance.post("/lists", input);
+    return (response.data as IApiResponse<ISavedList>).data;
   }
 
-  async getListById(id: string): Promise<ISavedList> {
-    try {
-      const response = await authInstance.get(`/lists/${id}`);
-      return response.data as ISavedList;
-    } catch (error: any) {
-      throw error.response?.data || { message: error.message };
-    }
+  async getListById(id: string): Promise<IPaginatedResponse<ISavedList>> {
+    const response = await authInstance.get(`/lists/${id}`);
+    return response.data as IPaginatedResponse<ISavedList>;
   }
 
   async addPlaceToList(
     listId: string,
     input: IAddPlaceToListInput
   ): Promise<{ message: string }> {
-    try {
-      const response = await authInstance.post(
-        `/lists/${listId}/places`,
-        input
-      );
-      return response.data;
-    } catch (error: any) {
-      throw error.response?.data || { message: error.message };
-    }
+    const response = await authInstance.post(`/lists/${listId}/places`, input);
+    return (response.data as IApiResponse<{ message: string }>).data;
   }
 
   async removePlaceFromList(
     listId: string,
     placeId: string
   ): Promise<{ message: string }> {
-    try {
-      const response = await authInstance.delete(
-        `/lists/${listId}/places/${placeId}`
-      );
-      return response.data;
-    } catch (error: any) {
-      throw error.response?.data || { message: error.message };
-    }
+    const response = await authInstance.delete(
+      `/lists/${listId}/places/${placeId}`
+    );
+    return (response.data as IApiResponse<{ message: string }>).data;
   }
 }
 

@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
-import type { Recommendation } from '@/utils/types'
 import { ArrowLeftIcon, ArrowRightIcon, MapPinIcon, StarIcon, BookmarkIcon } from 'lucide-vue-next'
+import type { IPlace } from '@/utils/interfaces'
 
 const props = defineProps<{
-  items: Recommendation[]
+  items: IPlace[]
   title?: string
   loading?: boolean
 }>()
 
 const emit = defineEmits<{
-  select: [Recommendation]
+  select: [IPlace]
 }>()
 
 const scrollerRef = ref<HTMLDivElement | null>(null)
@@ -28,7 +28,10 @@ const scrollByCards = (direction: 'prev' | 'next') => {
   container.scrollBy({ left: distance, behavior: 'smooth' })
 }
 
-const handleSelect = (item: Recommendation) => {
+const formatRating = (place: IPlace) => (place.averageRating ?? 0).toFixed(1)
+const formatLocation = (place: IPlace) => [place.address, place.city, place.country].filter(Boolean).join(', ')
+
+const handleSelect = (item: IPlace) => {
   emit('select', item)
 }
 </script>
@@ -68,29 +71,29 @@ const handleSelect = (item: Recommendation) => {
           @click="handleSelect(item)"
         >
           <div class="relative h-48 w-full overflow-hidden rounded-3xl rounded-b-none">
-            <img :src="item.image" :alt="item.title" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+            <img :src="item.mainImageUrl" :alt="item.name" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
             <div class="absolute right-3 top-3 flex items-center gap-2">
               <Button variant="secondary" size="icon" class="rounded-full bg-white/80 text-foreground shadow" aria-label="Save to bookmarks">
                 <BookmarkIcon class="size-4" aria-hidden="true" />
               </Button>
               <div class="flex items-center gap-1 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold text-white">
                 <StarIcon class="size-3 text-yellow-300" aria-hidden="true" />
-                <span>{{ item.rating.toFixed(1) }}</span>
+                <span>{{ formatRating(item) }}</span>
               </div>
             </div>
           </div>
 
           <div class="space-y-2 px-4 py-4">
             <div>
-              <p class="text-lg font-semibold">{{ item.title }}</p>
+              <p class="text-lg font-semibold">{{ item.name }}</p>
               <p class="flex items-center gap-1 text-sm text-muted-foreground">
                 <MapPinIcon class="size-4 text-muted-foreground" aria-hidden="true" />
-                {{ item.location }}
+                {{ formatLocation(item) }}
               </p>
             </div>
             <div class="flex items-center justify-between text-sm text-muted-foreground">
-              <span>{{ item.category }}</span>
-              <span>{{ item.reviews }} reviews</span>
+              <span>{{ item.placeType }}</span>
+              <span>{{ item.reviewCount }} reviews</span>
             </div>
           </div>
         </button>

@@ -1,15 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { SearchFilters, SearchResult } from '@/utils/types'
-import { searchPlaces } from '@/services'
-
+import { SearchService } from '@/services'
+import type { IPlace, IPlaceSearchQuery } from '@/utils/interfaces'
 export const SEARCH_CATEGORY_VALUES = ['all', 'hotels', 'restaurants', 'cafes', 'landmarks'] as const
 export type SearchCategoryValue = (typeof SEARCH_CATEGORY_VALUES)[number]
 
 export const useSearchStore = defineStore('search', () => {
   const query = ref('')
-  const filters = ref<SearchFilters>({})
-  const results = ref<SearchResult[]>([])
+  const filters = ref<Partial<Omit<IPlaceSearchQuery, 'q'>>>({})
+  const results = ref<IPlace[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
   const hasSearched = ref(false)
@@ -17,8 +16,8 @@ export const useSearchStore = defineStore('search', () => {
 
   const hasResults = computed(() => results.value.length > 0)
 
-  const buildFilters = (): SearchFilters => {
-    const base: SearchFilters = { ...filters.value }
+  const buildFilters = (): Partial<Omit<IPlaceSearchQuery, 'q'>> => {
+    const base: Partial<Omit<IPlaceSearchQuery, 'q'>> = { ...filters.value }
     if (category.value === 'all') {
       delete base.category
     } else {
@@ -31,7 +30,7 @@ export const useSearchStore = defineStore('search', () => {
     query.value = value
   }
 
-  const setFilters = (value: SearchFilters) => {
+  const setFilters = (value: Partial<Omit<IPlaceSearchQuery, 'q'>>) => {
     filters.value = value
   }
 
@@ -45,7 +44,8 @@ export const useSearchStore = defineStore('search', () => {
   }
 
   const search = async () => {
-    if (!query.value.trim()) {
+    const normalizedQuery = query.value.trim()
+    if (!normalizedQuery) {
       clearResults()
       return
     }
@@ -55,7 +55,12 @@ export const useSearchStore = defineStore('search', () => {
 
     try {
       const effectiveFilters = buildFilters()
-      results.value = await searchPlaces(query.value, effectiveFilters)
+      const payload: IPlaceSearchQuery = {
+        q: normalizedQuery,
+        ...effectiveFilters,
+      }
+
+      results.value = await SearchService.searchPlaces(payload)
       hasSearched.value = true
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Unable to complete search right now.'

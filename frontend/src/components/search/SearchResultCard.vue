@@ -1,16 +1,26 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import type { IPlace } from '@/utils/interfaces'
 import { BookmarkIcon, MapPinIcon, StarIcon } from 'lucide-vue-next'
-import type { SearchResult } from '@/utils/types'
 
 const props = defineProps<{
-  result: SearchResult
+  result: IPlace
 }>()
 
 const emit = defineEmits<{
-  select: [SearchResult]
+  select: [IPlace]
 }>()
+
+const locationLabel = computed(() => {
+  const parts = [props.result.address, props.result.city, props.result.country].filter(Boolean)
+  return parts.join(', ')
+})
+
+const categoryLabel = computed(() => props.result.placeType.charAt(0).toUpperCase() + props.result.placeType.slice(1))
+const ratingLabel = computed(() => props.result.averageRating.toFixed(1))
+const tagCount = computed(() => props.result.tags?.length ?? 0)
 
 const handleClick = () => {
   emit('select', props.result)
@@ -26,14 +36,14 @@ const handleClick = () => {
     @keyup.enter="handleClick"
   >
     <div class="relative h-40 w-full overflow-hidden">
-      <img :src="result.image" :alt="result.name" class="h-full w-full object-cover transition duration-500 hover:scale-105" />
+      <img :src="result.mainImageUrl" :alt="result.name" class="h-full w-full object-cover transition duration-500 hover:scale-105" />
       <div class="absolute right-3 top-3 flex items-center gap-2">
         <Button variant="secondary" size="icon" class="rounded-full bg-white/80 text-foreground shadow" aria-label="Save to bookmarks">
           <BookmarkIcon class="size-4" aria-hidden="true" />
         </Button>
         <div class="flex items-center gap-1 rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white">
           <StarIcon class="size-3 text-yellow-300" aria-hidden="true" />
-          <span>{{ result.rating.toFixed(1) }}</span>
+          <span>{{ ratingLabel }}</span>
         </div>
       </div>
     </div>
@@ -43,12 +53,12 @@ const handleClick = () => {
         <h3 class="text-lg font-semibold text-foreground">{{ result.name }}</h3>
         <p class="flex items-center gap-1 text-sm text-muted-foreground">
           <MapPinIcon class="size-4" aria-hidden="true" />
-          {{ result.location }}
+          {{ locationLabel }}
         </p>
       </div>
       <div class="mt-auto flex items-center justify-between text-sm text-muted-foreground">
-        <span class="font-medium text-foreground/80">{{ result.category }}</span>
-        <span>{{ result.rating.toFixed(1) }} · {{ result.tags.length }} tags</span>
+        <span class="font-medium text-foreground/80">{{ categoryLabel }}</span>
+        <span>{{ ratingLabel }} · {{ tagCount }} tags</span>
       </div>
     </CardContent>
   </Card>

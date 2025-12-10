@@ -30,8 +30,7 @@ const defaultSuggestions = [
 const suggestionChips = computed(() => props.suggestions?.length ? props.suggestions : defaultSuggestions)
 const showClear = computed(() => normalizedValue.value.trim().length > 0 && !props.loading)
 
-const handleFormSubmit = (value: Record<string, any>) => {
-	// TODO: Handle search value if needed
+const handleFormSubmit = () => {
 	submitSearch()
 }
 

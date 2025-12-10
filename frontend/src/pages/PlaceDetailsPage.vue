@@ -1,15 +1,58 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { usePlaceDetails } from '@/composables'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Separator } from '@/components/ui/separator'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import GoogleMap from '@/components/common/GoogleMap.vue'
-import { MapPinIcon, StarIcon, ClockIcon, TicketIcon, HourglassIcon, BookmarkIcon, Hourglass } from 'lucide-vue-next'
+import { MapPinIcon, StarIcon, ClockIcon, TicketIcon, BookmarkIcon, TagIcon } from 'lucide-vue-next'
 
 const { place, loading, error } = usePlaceDetails()
+
+const heroImage = computed(() => {
+  if (!place.value) return ''
+  return place.value.mainImageUrl || place.value.images?.[0]?.imageUrl || ''
+})
+
+const galleryImages = computed(() => {
+  if (!place.value?.images) return []
+  return place.value.images.map((img) => img.imageUrl).filter(Boolean)
+})
+
+const locationLabel = computed(() => {
+  if (!place.value) return ''
+  const parts = [place.value.address, place.value.city, place.value.country].filter(Boolean)
+  return parts.join(', ')
+})
+
+const coordinates = computed(() => {
+  const coords = place.value?.location?.coordinates
+  if (coords && coords.length === 2) {
+    const [lng, lat] = coords
+    return { lat, lng }
+  }
+  return null
+})
+
+const tags = computed(() => place.value?.tags?.map((tag) => tag.name) ?? [])
+
+const priceLabel = computed(() => {
+  const p = place.value
+  if (!p) return 'N/A'
+  if (p.pricePerNight !== undefined) return `$${p.pricePerNight.toLocaleString()}/night`
+  if (p.ticketPrice !== undefined) return `$${p.ticketPrice.toLocaleString()}`
+  if (p.priceRange) return p.priceRange
+  return 'N/A'
+})
+
+const openHoursLabel = computed(() => {
+  const hours = place.value?.openingHours
+  if (!hours) return 'N/A'
+  const entries = Object.entries(hours)
+  if (!entries.length) return 'N/A'
+  return entries.map(([day, val]) => `${day}: ${val}`).join(' • ')
+})
 </script>
 
 <template>
@@ -40,7 +83,7 @@ const { place, loading, error } = usePlaceDetails()
       <!-- Image Gallery -->
       <div class="grid grid-cols-1 gap-4 md:grid-cols-4 md:grid-rows-2 h-[400px] md:h-[500px]">
         <div class="relative col-span-1 md:col-span-4 md:row-span-2 overflow-hidden rounded-3xl">
-          <img :src="place.images[0]" :alt="place.name" class="h-full w-full object-cover" />
+          <img :src="heroImage || place.mainImageUrl" :alt="place.name" class="h-full w-full object-cover" />
           <Button variant="secondary" size="icon" class="absolute right-4 top-4 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white" aria-label="Save place">
             <BookmarkIcon class="size-5" />
           </Button>
@@ -48,8 +91,8 @@ const { place, loading, error } = usePlaceDetails()
       </div>
       
       <!-- Additional Images Row -->
-      <div v-if="place.images.length > 1" class="grid grid-cols-4 gap-4">
-        <div v-for="(img, index) in place.images.slice(0, 4)" :key="index" class="aspect-[4/3] overflow-hidden rounded-2xl cursor-pointer hover:opacity-90 transition-opacity">
+      <div v-if="galleryImages.length > 1" class="grid grid-cols-4 gap-4">
+        <div v-for="(img, index) in galleryImages.slice(0, 4)" :key="index" class="aspect-[4/3] overflow-hidden rounded-2xl cursor-pointer hover:opacity-90 transition-opacity">
            <img :src="img" :alt="place.name" class="h-full w-full object-cover" />
         </div>
       </div>
@@ -63,12 +106,12 @@ const { place, loading, error } = usePlaceDetails()
             <div class="flex items-center gap-4 text-muted-foreground">
               <div class="flex items-center gap-1 text-yellow-500">
                 <StarIcon class="size-5 fill-current" />
-                <span class="font-semibold text-foreground">{{ place.rating }}</span>
+                <span class="font-semibold text-foreground">{{ place.averageRating }}</span>
                 <span class="text-muted-foreground">({{ place.reviewCount }} reviews)</span>
               </div>
               <div class="flex items-center gap-1">
                 <MapPinIcon class="size-5" />
-                <span>{{ place.location }}</span>
+                <span>{{ locationLabel }}</span>
               </div>
             </div>
           </div>
@@ -83,20 +126,23 @@ const { place, loading, error } = usePlaceDetails()
           <section class="space-y-4">
             <h2 class="text-2xl font-semibold">Highlight</h2>
             <div class="flex flex-wrap gap-3">
-              <Badge v-for="highlight in place.highlights" :key="highlight" variant="secondary" class="px-4 py-2 text-sm font-normal rounded-full bg-secondary/50 hover:bg-secondary/70">
-                <span class="mr-2 text-primary">•</span> {{ highlight }}
+              <Badge v-for="tag in tags" :key="tag" variant="secondary" class="px-4 py-2 text-sm font-normal rounded-full bg-secondary/50 hover:bg-secondary/70">
+                <span class="mr-2 text-primary">•</span> {{ tag }}
               </Badge>
+              <p v-if="!tags.length" class="text-sm text-muted-foreground">No highlights listed</p>
             </div>
           </section>
 
           <!-- Location Map -->
           <section class="space-y-4">
             <h2 class="text-2xl font-semibold">Location map</h2>
-            <div class="h-80 w-full rounded-3xl shadow-sm">
+            <div class="h-80 w-full rounded-3xl shadow-sm overflow-hidden">
               <GoogleMap 
-                :lat="place.coordinates.lat" 
-                :lng="place.coordinates.lng" 
+                v-if="coordinates"
+                :lat="coordinates.lat" 
+                :lng="coordinates.lng" 
               />
+              <div v-else class="flex h-full w-full items-center justify-center bg-muted/50 text-muted-foreground">Location not available</div>
             </div>
           </section>
 
@@ -106,27 +152,9 @@ const { place, loading, error } = usePlaceDetails()
               <h2 class="text-2xl font-semibold">Reviews</h2>
               <Button variant="default" class="bg-orange-500 hover:bg-orange-600 text-white rounded-full">Write a Review</Button>
             </div>
-            
-            <div class="space-y-6">
-              <div v-for="review in place.reviews" :key="review.id" class="space-y-3">
-                <div class="flex items-start justify-between">
-                  <div class="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarImage :src="review.avatar ?? ''" />
-                      <AvatarFallback>{{ review.author.charAt(0) }}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p class="font-semibold">{{ review.author }}</p>
-                      <p class="text-xs text-muted-foreground">{{ review.date }}</p>
-                    </div>
-                  </div>
-                  <div class="flex text-yellow-500">
-                    <StarIcon v-for="i in 5" :key="i" class="size-4" :class="i <= review.rating ? 'fill-current' : 'text-muted/30'" />
-                  </div>
-                </div>
-                <p class="text-muted-foreground">{{ review.content }}</p>
-                <Separator class="mt-6" />
-              </div>
+            <div class="rounded-2xl border border-dashed border-border/60 p-6 text-muted-foreground">
+              <p class="font-medium text-foreground">No reviews yet</p>
+              <p class="text-sm">Be the first to share your experience at {{ place.name }}.</p>
             </div>
           </section>
         </div>
@@ -142,8 +170,8 @@ const { place, loading, error } = usePlaceDetails()
                       <ClockIcon class="size-5 text-foreground" />
                     </div>
                     <div>
-                      <p class="text-sm font-medium text-muted-foreground">Open Hours</p>
-                      <p class="font-semibold">{{ place.openHours }}</p>
+                      <p class="text-sm font-medium text-muted-foreground">Opening Hours</p>
+                      <p class="font-semibold">{{ openHoursLabel }}</p>
                     </div>
                   </div>
 
@@ -152,18 +180,18 @@ const { place, loading, error } = usePlaceDetails()
                       <TicketIcon class="size-5 text-foreground" />
                     </div>
                     <div>
-                      <p class="text-sm font-medium text-muted-foreground">Ticket Price</p>
-                      <p class="font-semibold">{{ place.price }}</p>
+                      <p class="text-sm font-medium text-muted-foreground">Price</p>
+                      <p class="font-semibold">{{ priceLabel }}</p>
                     </div>
                   </div>
 
                   <div class="flex items-start gap-3">
                     <div class="rounded-full bg-background p-2 shadow-sm">
-                      <HourglassIcon class="size-5 text-foreground" />
+                      <TagIcon class="size-5 text-foreground" />
                     </div>
                     <div>
-                      <p class="text-sm font-medium text-muted-foreground">Recommended Duration</p>
-                      <p class="font-semibold">{{ place.recommendedDuration }}</p>
+                      <p class="text-sm font-medium text-muted-foreground">Place Type</p>
+                      <p class="font-semibold">{{ place.placeType }}</p>
                     </div>
                   </div>
                 </div>

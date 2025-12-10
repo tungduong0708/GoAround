@@ -1,19 +1,17 @@
-import { onMounted, ref } from 'vue'
+import { onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRecommendationStore } from '@/stores'
-import type { Recommendation } from '@/utils/types'
+import type { IPlace } from '@/utils/interfaces'
 
 export function useRecommendations(options: { autoLoad?: boolean } = { autoLoad: true }) {
   const store = useRecommendationStore()
   const { items, loading, error, hasLoaded } = storeToRefs(store)
-  // TODO: implement search within recommendations
-  const searchTerm = ref('')
 
   const loadRecommendations = async (force = false) => {
     await store.loadRecommendations({ force })
   }
 
-  const handleRecommendationSelect = (item: Recommendation) => {
+  const handleRecommendationSelect = (item: IPlace) => {
     // TODO: implement navigation to recommendation detail page
     // placeholder navigation logic
     console.info('Selected recommendation:', item.id)

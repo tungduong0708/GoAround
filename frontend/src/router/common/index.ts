@@ -26,6 +26,7 @@ const commonRoutes: RouteRecordRaw[] = [
     meta: {
       title: "Login",
       authRequired: false,
+      hideHeader: true,
     },
   },
   {

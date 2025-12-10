@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import SearchHero from '@/components/search/SearchHero.vue'
 import RecommendationsCarousel from '@/components/recommendations/RecommendationsCarousel.vue'
@@ -14,16 +13,7 @@ const {
   handleRecommendationSelect,
 } = useRecommendations()
 
-const {
-  query,
-  setQuery,
-  performSearch,
-} = useSearchResults({ autoLoad: false })
-
-const searchTerm = computed({
-  get: () => query.value,
-  set: (val) => setQuery(val),
-})
+const { searchTerm, performSearch } = useSearchResults({ autoLoad: false })
 
 const handleSearchSubmit = () => {
   performSearch()

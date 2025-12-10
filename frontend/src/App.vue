@@ -24,8 +24,8 @@ const showHeader = computed(() => route.meta.hideHeader !== true)
 <style>
 @import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;700&display=swap");
 
-html{
-  font-family: 'Quicksand', sans-serif;
+html {
+  font-family: "Quicksand", sans-serif;
 }
 
 .main-layout {

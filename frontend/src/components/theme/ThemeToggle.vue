@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { Moon, Sun } from 'lucide-vue-next'
-import { useTheme } from '@/composables/useTheme.ts'
-import { Button } from '@/components/ui/button'
+import { Moon, Sun } from "lucide-vue-next";
+import { useTheme } from "@/composables/useTheme.ts";
+import { Button } from "@/components/ui/button";
 
-const { theme, toggleTheme } = useTheme()
+const { theme, toggleTheme } = useTheme();
 </script>
 
 <template>
@@ -16,7 +16,9 @@ const { theme, toggleTheme } = useTheme()
   >
     <Sun v-if="theme === 'light'" class="h-5 w-5 transition-all" />
     <Moon v-else class="h-5 w-5 transition-all" />
-    <span class="sr-only">{{ theme === 'dark' ? 'Dark Mode' : 'Light Mode' }}</span>
+    <span class="sr-only">{{
+      theme === "dark" ? "Dark Mode" : "Light Mode"
+    }}</span>
   </Button>
 </template>
 
@@ -41,4 +43,3 @@ const { theme, toggleTheme } = useTheme()
   border-width: 0;
 }
 </style>
-

@@ -108,8 +108,7 @@ export function useLoginForm(router: Router) {
   const handleGoogleLogin = async () => {
     isLoading.value = true
     try {
-      const { error } = await authStore.signInWithGoogle(`${window.location.origin}/`)
-      if (error) throw error
+      await authStore.signInWithGoogle(`${window.location.origin}/`)
     } catch (error) {
       errors.value.password = 'Google login failed. Please try again.'
       console.error('Google login failed', error)

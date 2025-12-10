@@ -1,76 +1,76 @@
-import type {RouteRecordRaw} from "vue-router";
+import type { RouteRecordRaw } from "vue-router";
 
 const guardRoutes: RouteRecordRaw[] = [
   {
-    path: '/profile',
-    name: 'profile',
-    component: () => import('@/pages/UserProfile/UserProfilePage.vue'),
+    path: "/profile",
+    name: "profile",
+    component: () => import("@/pages/UserProfile/UserProfilePage.vue"),
     meta: {
-      title: 'Profile',
-      authRequired: true
-    }
+      title: "Profile",
+      authRequired: true,
+    },
   },
   {
-    path: '/trip',
-    name: 'trip',
-    component: () => import('@/pages/Trips/MainPage.vue'),
+    path: "/trip",
+    name: "trip",
+    component: () => import("@/pages/Trips/MainPage.vue"),
     meta: {
-      title: 'Trips',
-      authRequired: true
+      title: "Trips",
+      authRequired: true,
     },
     children: [
       {
-        path: ':tripId',
-        name: 'trip-details',
-        component: () => import('@/pages/Trips/TripPage.vue'),
+        path: ":tripId",
+        name: "trip-details",
+        component: () => import("@/pages/Trips/TripPage.vue"),
         meta: {
-          title: 'Trip Details',
+          title: "Trip Details",
           authRequired: true,
-        }
-      }
-    ]
+        },
+      },
+    ],
   },
   {
-    path: '/forums',
-    name: 'forums',
+    path: "/forums",
+    name: "forums",
     children: [
       {
-        path: '/',
-        name: 'forums-home',
-        component: () => import('@/pages/Forums/MainPage.vue'),
+        path: "/",
+        name: "forums-home",
+        component: () => import("@/pages/Forums/MainPage.vue"),
         meta: {
-          title: 'Forums',
+          title: "Forums",
           authRequired: false,
         },
       },
       {
-        path: ':postId',
-        name: 'post-details',
-        component: () => import('@/pages/Forums/PostPage.vue'),
+        path: ":postId",
+        name: "post-details",
+        component: () => import("@/pages/Forums/PostPage.vue"),
         meta: {
-          title: 'Post Details',
+          title: "Post Details",
           authRequired: false,
-        }
+        },
       },
       {
-        path: 'search',
-        name: 'forums-search',
-        component: () => import('@/pages/Forums/SearchPage.vue'),
+        path: "search",
+        name: "forums-search",
+        component: () => import("@/pages/Forums/SearchPage.vue"),
         meta: {
-          title: 'Search Forums',
+          title: "Search Forums",
           authRequired: false,
-        }
+        },
       },
       {
-        path: 'create',
-        name: 'create-post',
-        component: () => import('@/pages/Forums/NewPostPage.vue'),
+        path: "create",
+        name: "create-post",
+        component: () => import("@/pages/Forums/NewPostPage.vue"),
         meta: {
-          title: 'Create Post',
+          title: "Create Post",
           authRequired: true,
-        }
+        },
       },
-    ]
+    ],
   },
 ];
 

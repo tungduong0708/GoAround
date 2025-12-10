@@ -5,6 +5,8 @@ import type {
   IUpdatePlaceInput,
   ITransferOwnershipInput,
   IPlaceSearchQuery,
+  IApiResponse,
+  IPaginatedResponse,
 } from "@/utils/interfaces";
 
 class PlacesService {
@@ -20,61 +22,39 @@ class PlacesService {
     return PlacesService.instance;
   }
 
-  async getPlaces(query?: IPlaceSearchQuery): Promise<IPlace[]> {
-    try {
-      const response = await commonInstance.get("/places", { params: query });
-      return response.data as IPlace[];
-    } catch (error: any) {
-      throw error.response?.data || { message: error.message };
-    }
+  async getPlaces(
+    query?: IPlaceSearchQuery
+  ): Promise<IPaginatedResponse<IPlace[]>> {
+    const response = await commonInstance.get("/places", { params: query });
+    return response.data as IPaginatedResponse<IPlace[]>;
   }
 
   async getPlaceById(id: string): Promise<IPlace> {
-    try {
-      const response = await commonInstance.get(`/places/${id}`);
-      return response.data as IPlace;
-    } catch (error: any) {
-      throw error.response?.data || { message: error.message };
-    }
+    const response = await commonInstance.get(`/places/${id}`);
+    return (response.data as IApiResponse<IPlace>).data;
   }
 
   async createPlace(input: ICreatePlaceInput): Promise<IPlace> {
-    try {
-      const response = await authInstance.post("/places", input);
-      return response.data as IPlace;
-    } catch (error: any) {
-      throw error.response?.data || { message: error.message };
-    }
+    const response = await authInstance.post("/places", input);
+    return (response.data as IApiResponse<IPlace>).data;
   }
 
   async updatePlace(id: string, input: IUpdatePlaceInput): Promise<IPlace> {
-    try {
-      const response = await authInstance.put(`/places/${id}`, input);
-      return response.data as IPlace;
-    } catch (error: any) {
-      throw error.response?.data || { message: error.message };
-    }
+    const response = await authInstance.put(`/places/${id}`, input);
+    return (response.data as IApiResponse<IPlace>).data;
   }
 
   async deletePlace(id: string): Promise<{ message: string }> {
-    try {
-      const response = await authInstance.delete(`/places/${id}`);
-      return response.data;
-    } catch (error: any) {
-      throw error.response?.data || { message: error.message };
-    }
+    const response = await authInstance.delete(`/places/${id}`);
+    return (response.data as IApiResponse<{ message: string }>).data;
   }
 
   async transferOwnership(
     id: string,
     input: ITransferOwnershipInput
   ): Promise<{ message: string }> {
-    try {
-      const response = await authInstance.post(`/places/${id}/transfer`, input);
-      return response.data;
-    } catch (error: any) {
-      throw error.response?.data || { message: error.message };
-    }
+    const response = await authInstance.post(`/places/${id}/transfer`, input);
+    return (response.data as IApiResponse<{ message: string }>).data;
   }
 }
 

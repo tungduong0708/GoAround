@@ -5,6 +5,8 @@ import type {
   ICreatePostInput,
   ICreateReplyInput,
   IForumSearchQuery,
+  IApiResponse,
+  IPaginatedResponse,
 } from "@/utils/interfaces";
 
 class ForumService {
@@ -20,48 +22,34 @@ class ForumService {
     return ForumService.instance;
   }
 
-  async getPosts(query?: IForumSearchQuery): Promise<IForumPost[]> {
-    try {
-      const response = await commonInstance.get("/forum/posts", {
-        params: query,
-      });
-      return response.data as IForumPost[];
-    } catch (error: any) {
-      throw error.response?.data || { message: error.message };
-    }
+  async getPosts(
+    query?: IForumSearchQuery
+  ): Promise<IPaginatedResponse<IForumPost[]>> {
+    const response = await commonInstance.get("/forum/posts", {
+      params: query,
+    });
+    return response.data as IPaginatedResponse<IForumPost[]>;
   }
 
   async createPost(input: ICreatePostInput): Promise<IForumPost> {
-    try {
-      const response = await authInstance.post("/forum/posts", input);
-      return response.data as IForumPost;
-    } catch (error: any) {
-      throw error.response?.data || { message: error.message };
-    }
+    const response = await authInstance.post("/forum/posts", input);
+    return (response.data as IApiResponse<IForumPost>).data;
   }
 
-  async getPostById(id: string): Promise<IForumPost> {
-    try {
-      const response = await commonInstance.get(`/forum/posts/${id}`);
-      return response.data as IForumPost;
-    } catch (error: any) {
-      throw error.response?.data || { message: error.message };
-    }
+  async getPostById(id: string): Promise<IPaginatedResponse<IForumPost>> {
+    const response = await commonInstance.get(`/forum/posts/${id}`);
+    return response.data as IPaginatedResponse<IForumPost>;
   }
 
   async replyToPost(
     postId: string,
     input: ICreateReplyInput
   ): Promise<IForumReply> {
-    try {
-      const response = await authInstance.post(
-        `/forum/posts/${postId}/replies`,
-        input
-      );
-      return response.data as IForumReply;
-    } catch (error: any) {
-      throw error.response?.data || { message: error.message };
-    }
+    const response = await authInstance.post(
+      `/forum/posts/${postId}/replies`,
+      input
+    );
+    return (response.data as IApiResponse<IForumReply>).data;
   }
 }
 

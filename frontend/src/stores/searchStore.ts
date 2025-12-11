@@ -1,20 +1,20 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { SearchService } from '@/services'
-import type { IPlace, IPlaceSearchQuery } from '@/utils/interfaces'
+import { PlacesService } from '@/services'
+import type { IPlace, IPlaceSearchQuery, IPaginatedResponse } from '@/utils/interfaces'
 export const SEARCH_CATEGORY_VALUES = ['all', 'hotels', 'restaurants', 'cafes', 'landmarks'] as const
 export type SearchCategoryValue = (typeof SEARCH_CATEGORY_VALUES)[number]
 
 export const useSearchStore = defineStore('search', () => {
   const query = ref('')
   const filters = ref<Partial<Omit<IPlaceSearchQuery, 'q'>>>({})
-  const results = ref<IPlace[]>([])
+  const results = ref<IPaginatedResponse<IPlace[]>>()
   const loading = ref(false)
   const error = ref<string | null>(null)
   const hasSearched = ref(false)
   const category = ref<SearchCategoryValue>('all')
 
-  const hasResults = computed(() => results.value.length > 0)
+  const hasResults = computed(() => results.value?.status === 'success' && (results.value.data.length ?? 0) > 0)
 
   const buildFilters = (): Partial<Omit<IPlaceSearchQuery, 'q'>> => {
     const base: Partial<Omit<IPlaceSearchQuery, 'q'>> = { ...filters.value }
@@ -39,7 +39,7 @@ export const useSearchStore = defineStore('search', () => {
   }
 
   const clearResults = () => {
-    results.value = []
+    results.value = undefined
     hasSearched.value = false
   }
 
@@ -60,7 +60,7 @@ export const useSearchStore = defineStore('search', () => {
         ...effectiveFilters,
       }
 
-      results.value = await SearchService.searchPlaces(payload)
+      results.value = await PlacesService.getPlaces(payload)
       hasSearched.value = true
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Unable to complete search right now.'

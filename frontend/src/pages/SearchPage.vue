@@ -58,7 +58,7 @@ const { categories, selectedCategory } = useSearchCategories()
 		<section class="mt-10 space-y-4">
 			<div class="flex flex-wrap items-center justify-between gap-3">
 				<h2 class="text-2xl font-semibold tracking-tight text-foreground">Search Results</h2>
-				<p class="text-sm text-muted-foreground">{{ results.length }} places found</p>
+				<p class="text-sm text-muted-foreground">{{ results?.data.length ?? 0 }} places found</p>
 			</div>
 
 			<div v-if="error" class="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-destructive">
@@ -78,7 +78,7 @@ const { categories, selectedCategory } = useSearchCategories()
 				</div>
 
 				<div v-else class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-					<SearchResultCard v-for="result in results" :key="result.id" :result="result" @select="selectResult" />
+					<SearchResultCard v-for="result in results?.data" :key="result.id" :result="result" @select="selectResult" />
 				</div>
 			</div>
 		</section>

@@ -10,6 +10,7 @@ from app.schemas import (
     APIResponse,
     Message,
     MetaData,
+    ReviewSchema,
     PlaceCreate,
     PlaceDetail,
     PlacePublic,
@@ -71,6 +72,23 @@ async def get_place(session: SessionDep, id: uuid.UUID) -> Any:
         raise HTTPException(status_code=404, detail="Place not found")
 
     return APIResponse(status="success", data=place)
+
+
+@router.get("/{id}/reviews", response_model=APIResponse[list[ReviewSchema]])
+async def list_reviews_for_place(
+    session: SessionDep, id: uuid.UUID, page: int = 1, limit: int = 20
+) -> Any:
+    # Ensure place exists
+    exists = await session.get(Place, id)
+    if not exists:
+        raise HTTPException(status_code=404, detail="Place not found")
+
+    reviews, total = await crud.list_reviews_for_place(session, id, page, limit)
+    return APIResponse(
+        status="success",
+        data=reviews,
+        meta=MetaData(page=page, limit=limit, total_items=total),
+    )
 
 
 # --- Protected Endpoints ---

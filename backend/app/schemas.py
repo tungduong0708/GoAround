@@ -1,4 +1,5 @@
 import uuid
+from datetime import date, datetime
 from typing import Any, Literal
 
 from geoalchemy2.elements import WKBElement
@@ -46,6 +47,15 @@ class PlaceImageSchema(BaseModel):
 
 
 class OwnerSchema(BaseModel):
+    id: uuid.UUID
+    username: str | None = None
+    avatar_url: str | None = None
+    full_name: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ReviewerSchema(BaseModel):
     id: uuid.UUID
     username: str | None = None
     avatar_url: str | None = None
@@ -253,3 +263,160 @@ class PlaceDetail(PlacePublic):
     @classmethod
     def parse_location_geo_detail(cls, v: Any) -> Any:
         return parse_db_geometry(v)
+
+
+# --- Trip / Itinerary Schemas ---
+
+
+class TripCreate(BaseModel):
+    trip_name: str = Field(..., min_length=1, max_length=100)
+    start_date: date | None = None
+    end_date: date | None = None
+    tags: list[str] = Field(default_factory=list)
+
+
+class TripUpdate(BaseModel):
+    trip_name: str | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    tags: list[str] | None = None
+
+
+class TripStopCreate(BaseModel):
+    place_id: uuid.UUID
+    stop_order: int | None = Field(None, ge=1)
+    arrival_time: datetime
+    notes: str | None = None
+
+
+class TripStopUpdate(BaseModel):
+    order_index: int | None = Field(None, ge=1)
+    arrival_time: datetime | None = None
+    notes: str | None = None
+
+
+class TripStopSchema(BaseModel):
+    id: uuid.UUID
+    trip_id: uuid.UUID
+    place_id: uuid.UUID
+    stop_order: int
+    arrival_time: datetime | None = None
+    notes: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TripStopWithPlace(BaseModel):
+    id: uuid.UUID
+    trip_id: uuid.UUID
+    stop_order: int
+    arrival_time: datetime | None = None
+    notes: str | None = None
+    place: PlacePublic | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TripSchema(BaseModel):
+    id: uuid.UUID
+    trip_name: str
+    start_date: date | None = None
+    end_date: date | None = None
+    tags: list[str] = Field(default_factory=list)
+    stops: list[TripStopWithPlace] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def parse_tags_list(cls, v: Any) -> list[str]:
+        if isinstance(v, list) and v and hasattr(v[0], "name"):
+            return [t.name for t in v]
+        return v if v is not None else []
+
+
+class TripListSchema(BaseModel):
+    id: uuid.UUID
+    trip_name: str
+    start_date: date | None = None
+    end_date: date | None = None
+    stop_count: int = 0
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Saved List Schemas ---
+
+
+class SavedListCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+
+
+class SavedListSchema(BaseModel):
+    id: uuid.UUID
+    name: str
+    created_at: datetime
+    item_count: int = 0
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SavedListItemSchema(BaseModel):
+    list_id: uuid.UUID
+    place_id: uuid.UUID
+    saved_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SavedListItemWithPlace(BaseModel):
+    place: PlacePublic
+    saved_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SavedListDetailSchema(BaseModel):
+    id: uuid.UUID
+    name: str
+    created_at: datetime
+    items: list[SavedListItemWithPlace] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AddPlaceToListRequest(BaseModel):
+    place_id: uuid.UUID
+
+
+# --- Review Schemas ---
+
+
+class ReviewCreate(BaseModel):
+    place_id: uuid.UUID
+    rating: int = Field(..., ge=1, le=5)
+    review_text: str | None = None
+    images: list[str] = Field(default_factory=list)
+
+
+class ReviewUpdate(BaseModel):
+    rating: int | None = Field(None, ge=1, le=5)
+    review_text: str | None = None
+    images: list[str] | None = None
+
+
+class ReviewImageSchema(BaseModel):
+    id: uuid.UUID
+    image_url: str
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ReviewSchema(BaseModel):
+    id: uuid.UUID
+    place_id: uuid.UUID
+    rating: int
+    review_text: str | None = None
+    created_at: datetime
+    images: list[ReviewImageSchema] = Field(default_factory=list)
+    user: ReviewerSchema | None = None
+
+    model_config = ConfigDict(from_attributes=True)

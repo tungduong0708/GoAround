@@ -10,6 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import (
+    SavedList,
+    SavedListItem,
+    Review,
+    ReviewImage,
+    Trip,
+    TripStop,
     Cafe,
     Hotel,
     Landmark,
@@ -29,6 +35,25 @@ from app.schemas import (
     PlacePublic,
     PlaceSearchFilter,
     PlaceUpdate,
+    ReviewerSchema,
+    ReviewCreate,
+    ReviewUpdate,
+    ReviewSchema,
+    ReviewImageSchema,
+    SavedListCreate,
+    SavedListSchema,
+    SavedListItemSchema,
+    SavedListDetailSchema,
+    SavedListItemWithPlace,
+    AddPlaceToListRequest,
+    TripCreate,
+    TripUpdate,
+    TripSchema,
+    TripListSchema,
+    TripStopCreate,
+    TripStopUpdate,
+    TripStopSchema,
+    TripStopWithPlace,
 )
 
 # --- Helpers: Enrichment ---
@@ -64,7 +89,7 @@ def _enrich_place_public(place: Place) -> PlacePublic:
         location=LocationSchema(lat=lat, lng=lng),
         average_rating=float(place.average_rating or 0.0),
         review_count=place.review_count or 0,
-        primary_image=place.main_image_url,
+        main_image_url=place.main_image_url,
         tags=tag_names,
     )
 
@@ -191,7 +216,7 @@ async def create_place(
             result = await session.execute(select(Tag).where(Tag.name == tag_name))
             tag = result.scalars().first()
             if not tag:
-                tag = Tag(name=tag_name, category="General")
+                tag = Tag(name=tag_name)
                 session.add(tag)
                 await session.flush()
             db_place.tags.append(tag)
@@ -267,7 +292,7 @@ async def update_place(
             result = await session.execute(select(Tag).where(Tag.name == tag_name))
             tag = result.scalars().first()
             if not tag:
-                tag = Tag(name=tag_name, category="General")
+                tag = Tag(name=tag_name)
                 session.add(tag)
                 await session.flush()
             db_place.tags.append(tag)
@@ -388,3 +413,475 @@ async def search_places(
     result = await session.execute(query)
     results = result.scalars().all()
     return [_enrich_place_public(p) for p in results], total
+
+
+# --- Saved Lists Operations ---
+
+
+async def create_saved_list(session: AsyncSession, user_id: uuid.UUID, data: SavedListCreate) -> SavedListSchema:
+    saved_list = SavedList(user_id=user_id, name=data.name)
+    session.add(saved_list)
+    await session.commit()
+    await session.refresh(saved_list)
+    return SavedListSchema.model_validate(saved_list)
+
+
+async def list_saved_lists(
+    session: AsyncSession, user_id: uuid.UUID, page: int, limit: int
+) -> tuple[list[SavedListSchema], int]:
+    base_query = select(SavedList.id).where(SavedList.user_id == user_id)
+    total_res = await session.execute(select(func.count()).select_from(base_query.subquery()))
+    total = int(total_res.scalar() or 0)
+
+    stmt = (
+        select(SavedList, func.count(SavedListItem.place_id).label("item_count"))
+        .outerjoin(SavedListItem, SavedList.id == SavedListItem.list_id)
+        .where(SavedList.user_id == user_id)
+        .group_by(SavedList.id)
+        .order_by(SavedList.created_at.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+    )
+    rows = (await session.execute(stmt)).all()
+    data: list[SavedListSchema] = []
+    for lst, item_count in rows:
+        data.append(
+            SavedListSchema(
+                id=lst.id,
+                name=lst.name,
+                created_at=lst.created_at,
+                item_count=int(item_count or 0),
+            )
+        )
+    return data, total
+
+
+async def get_saved_list(
+    session: AsyncSession, user_id: uuid.UUID, list_id: uuid.UUID
+):
+    stmt = (
+        select(SavedList)
+        .options(
+            selectinload(SavedList.items)
+            .selectinload(SavedListItem.place)
+            .selectinload(Place.tags)
+        )
+        .where(SavedList.id == list_id)
+    )
+    res = await session.execute(stmt)
+    saved_list = res.scalars().first()
+    if not saved_list or saved_list.user_id != user_id:
+        raise ValueError("List not found or access denied")
+
+    detailed_items = [
+        {
+            "place": _enrich_place_public(item.place),
+            "saved_at": item.saved_at,
+        }
+        for item in saved_list.items
+        if item.place is not None
+    ]
+
+    return SavedListDetailSchema(
+        id=saved_list.id,
+        name=saved_list.name,
+        created_at=saved_list.created_at,
+        items=[
+            SavedListItemWithPlace(place=entry["place"], saved_at=entry["saved_at"])
+            for entry in detailed_items
+        ],
+    )
+
+
+async def add_place_to_list(
+    session: AsyncSession, list_id: uuid.UUID, user_id: uuid.UUID, req: AddPlaceToListRequest
+) -> SavedListItemSchema:
+    saved_list = await session.get(SavedList, list_id)
+    if not saved_list or saved_list.user_id != user_id:
+        raise ValueError("List not found or access denied")
+
+    place = await session.get(Place, req.place_id)
+    if not place:
+        raise ValueError("Place not found")
+
+    existing = await session.execute(
+        select(SavedListItem).where(
+            SavedListItem.list_id == list_id, SavedListItem.place_id == req.place_id
+        )
+    )
+    if existing.scalars().first():
+        raise ValueError("Place already in list")
+
+    item = SavedListItem(list_id=list_id, place_id=req.place_id)
+    session.add(item)
+    await session.commit()
+    await session.refresh(item)
+    return SavedListItemSchema.model_validate(item)
+
+
+async def remove_place_from_list(
+    session: AsyncSession, list_id: uuid.UUID, user_id: uuid.UUID, place_id: uuid.UUID
+) -> None:
+    saved_list = await session.get(SavedList, list_id)
+    if not saved_list or saved_list.user_id != user_id:
+        raise ValueError("List not found or access denied")
+    res = await session.execute(
+        select(SavedListItem).where(
+            SavedListItem.list_id == list_id, SavedListItem.place_id == place_id
+        )
+    )
+    item = res.scalars().first()
+    if not item:
+        raise ValueError("Place not found in list")
+    await session.delete(item)
+    await session.commit()
+
+
+# --- Review Operations ---
+
+
+async def _recalculate_place_rating(session: AsyncSession, place_id: uuid.UUID) -> None:
+    result = await session.execute(
+        select(func.avg(Review.rating), func.count(Review.id)).where(
+            Review.place_id == place_id
+        )
+    )
+    avg, count = result.first() or (0, 0)
+    place = await session.get(Place, place_id)
+    if place:
+        place.average_rating = float(avg or 0)
+        place.review_count = int(count or 0)
+
+
+async def create_review(session: AsyncSession, user_id: uuid.UUID, data: ReviewCreate) -> ReviewSchema:
+    place = await session.get(Place, data.place_id)
+    if not place:
+        raise ValueError("Place not found")
+
+    review = Review(
+        place_id=data.place_id,
+        user_id=user_id,
+        rating=data.rating,
+        review_text=data.review_text,
+    )
+    session.add(review)
+    await session.flush()
+
+    for url in data.images:
+        session.add(ReviewImage(review_id=review.id, image_url=url))
+
+    await _recalculate_place_rating(session, data.place_id)
+    await session.commit()
+    await session.refresh(review)
+    return await get_review(session, review.id)  # type: ignore
+
+
+async def get_review(session: AsyncSession, review_id: uuid.UUID) -> ReviewSchema | None:
+    res = await session.execute(
+        select(Review)
+        .options(selectinload(Review.images), selectinload(Review.user))
+        .where(Review.id == review_id)
+    )
+    review = res.scalars().first()
+    if not review:
+        return None
+
+    return ReviewSchema(
+        id=review.id,
+        place_id=review.place_id,
+        rating=review.rating,
+        review_text=review.review_text,
+        created_at=review.created_at,
+        images=[ReviewImageSchema.model_validate(img) for img in review.images],
+        user=ReviewerSchema.model_validate(review.user) if review.user else None,
+    )
+
+
+async def list_reviews_for_place(
+    session: AsyncSession, place_id: uuid.UUID, page: int, limit: int
+) -> tuple[list[ReviewSchema], int]:
+    base_query = select(Review.id).where(Review.place_id == place_id)
+    total_res = await session.execute(select(func.count()).select_from(base_query.subquery()))
+    total = int(total_res.scalar() or 0)
+
+    stmt = (
+        select(Review)
+        .options(selectinload(Review.images), selectinload(Review.user))
+        .where(Review.place_id == place_id)
+        .order_by(Review.created_at.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+    )
+    res = await session.execute(stmt)
+    reviews = res.scalars().all()
+    data = [
+        ReviewSchema(
+            id=r.id,
+            place_id=r.place_id,
+            rating=r.rating,
+            review_text=r.review_text,
+            created_at=r.created_at,
+            images=[ReviewImageSchema.model_validate(img) for img in r.images],
+            user=ReviewerSchema.model_validate(r.user) if r.user else None,
+        )
+        for r in reviews
+    ]
+    return data, total
+
+
+async def update_review(session: AsyncSession, user_id: uuid.UUID, review_id: uuid.UUID, data: ReviewUpdate) -> ReviewSchema:
+    review = await session.get(Review, review_id)
+    if not review:
+        raise ValueError("Review not found")
+    if review.user_id != user_id:
+        raise PermissionError("Not allowed")
+
+    upd = data.model_dump(exclude_unset=True)
+    images = upd.pop("images", None)
+    for k, v in upd.items():
+        setattr(review, k, v)
+
+    if images is not None:
+        for img in list(review.images):
+            await session.delete(img)
+        for url in images:
+            session.add(ReviewImage(review_id=review.id, image_url=url))
+
+    await _recalculate_place_rating(session, review.place_id)
+    await session.commit()
+    return await get_review(session, review.id)  # type: ignore
+
+
+async def delete_review(session: AsyncSession, user_id: uuid.UUID, review_id: uuid.UUID) -> None:
+    review = await session.get(Review, review_id)
+    if not review:
+        raise ValueError("Review not found")
+    if review.user_id != user_id:
+        raise PermissionError("Not allowed")
+    place_id = review.place_id
+    await session.delete(review)
+    await _recalculate_place_rating(session, place_id)
+    await session.commit()
+
+
+# --- Trip / Itinerary Operations ---
+
+
+async def _load_trip_detail(session: AsyncSession, trip: Trip) -> TripSchema:
+    res = await session.execute(
+        select(Trip)
+        .options(
+            selectinload(Trip.stops)
+            .selectinload(TripStop.place)
+            .selectinload(Place.tags),
+            selectinload(Trip.tags),
+        )
+        .where(Trip.id == trip.id)
+    )
+    trip_obj = res.scalars().first()
+    if not trip_obj:
+        raise ValueError("Trip not found")
+
+    stops = []
+    for stop in sorted(trip_obj.stops, key=lambda s: s.stop_order or 0):
+        stops.append(
+            TripStopWithPlace(
+                id=stop.id,
+                trip_id=stop.trip_id,
+                stop_order=stop.stop_order,
+                arrival_time=stop.arrival_time,
+                notes=stop.notes,
+                place=_enrich_place_public(stop.place) if stop.place else None,
+            )
+        )
+    return TripSchema(
+        id=trip_obj.id,
+        trip_name=trip_obj.trip_name,
+        start_date=trip_obj.start_date,
+        end_date=trip_obj.end_date,
+        tags=[t.name for t in trip_obj.tags] if trip_obj.tags else [],
+        stops=stops,
+    )
+
+
+async def list_trips(
+    session: AsyncSession, user_id: uuid.UUID, page: int, limit: int
+) -> tuple[list[TripListSchema], int]:
+    base_query = select(Trip.id).where(Trip.user_id == user_id)
+    total_res = await session.execute(select(func.count()).select_from(base_query.subquery()))
+    total = int(total_res.scalar() or 0)
+
+    stmt = (
+        select(Trip, func.count(TripStop.id).label("stop_count"))
+        .outerjoin(TripStop, Trip.id == TripStop.trip_id)
+        .where(Trip.user_id == user_id)
+        .group_by(Trip.id)
+        .order_by(Trip.start_date.asc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+    )
+    res = await session.execute(stmt)
+    data = [
+        TripListSchema(
+            id=trip.id,
+            trip_name=trip.trip_name,
+            start_date=trip.start_date,
+            end_date=trip.end_date,
+            stop_count=int(stop_count or 0),
+        )
+        for trip, stop_count in res.all()
+    ]
+    return data, total
+
+
+async def create_trip(session: AsyncSession, user_id: uuid.UUID, data: TripCreate) -> TripSchema:
+    trip = Trip(user_id=user_id, trip_name=data.trip_name, start_date=data.start_date, end_date=data.end_date)
+    session.add(trip)
+    await session.flush()
+    if data.tags:
+        for tag_name in data.tags:
+            result = await session.execute(select(Tag).where(Tag.name == tag_name))
+            tag = result.scalars().first()
+            if not tag:
+                tag = Tag(name=tag_name)
+                session.add(tag)
+                await session.flush()
+            trip.tags.append(tag)
+    await session.commit()
+    await session.refresh(trip)
+    return await _load_trip_detail(session, trip)
+
+
+async def get_trip(session: AsyncSession, user_id: uuid.UUID, trip_id: uuid.UUID) -> TripSchema:
+    trip = await session.get(Trip, trip_id)
+    if not trip or trip.user_id != user_id:
+        raise ValueError("Trip not found")
+    return await _load_trip_detail(session, trip)
+
+
+async def update_trip(session: AsyncSession, user_id: uuid.UUID, trip_id: uuid.UUID, data: TripUpdate) -> TripSchema:
+    trip = await session.get(Trip, trip_id)
+    if not trip:
+        raise ValueError("Trip not found")
+    if trip.user_id != user_id:
+        raise PermissionError("Not allowed")
+    upd = data.model_dump(exclude_unset=True)
+    tags = upd.pop("tags", None)
+    for k, v in upd.items():
+        setattr(trip, k, v)
+    if tags is not None:
+        trip.tags = []
+        for tag_name in tags:
+            result = await session.execute(select(Tag).where(Tag.name == tag_name))
+            tag = result.scalars().first()
+            if not tag:
+                tag = Tag(name=tag_name)
+                session.add(tag)
+                await session.flush()
+            trip.tags.append(tag)
+    await session.commit()
+    await session.refresh(trip)
+    return await _load_trip_detail(session, trip)
+
+
+async def _insert_stop_at_order(session: AsyncSession, trip_id: uuid.UUID, desired_order: int) -> int:
+    await session.execute(
+        TripStop.__table__.update()
+        .where(TripStop.trip_id == trip_id, TripStop.stop_order >= desired_order)
+        .values(stop_order=TripStop.stop_order + 1)
+    )
+    return desired_order
+
+
+async def add_trip_stop(
+    session: AsyncSession, user_id: uuid.UUID, trip_id: uuid.UUID, data: TripStopCreate
+) -> TripStopSchema:
+    trip = await session.get(Trip, trip_id)
+    if not trip:
+        raise ValueError("Trip not found")
+    if trip.user_id != user_id:
+        raise PermissionError("Not allowed")
+    place = await session.get(Place, data.place_id)
+    if not place:
+        raise ValueError("Place not found")
+
+    if data.stop_order is None:
+        current_max_res = await session.execute(
+            select(func.max(TripStop.stop_order)).where(TripStop.trip_id == trip_id)
+        )
+        next_order = (current_max_res.scalar() or 0) + 1
+    else:
+        next_order = await _insert_stop_at_order(session, trip_id, data.stop_order)
+
+    stop = TripStop(
+        trip_id=trip_id,
+        place_id=data.place_id,
+        stop_order=next_order,
+        arrival_time=data.arrival_time,
+        notes=data.notes,
+    )
+    session.add(stop)
+    await session.commit()
+    await session.refresh(stop)
+    return TripStopSchema.model_validate(stop)
+
+
+async def update_trip_stop(
+    session: AsyncSession, user_id: uuid.UUID, trip_id: uuid.UUID, stop_id: uuid.UUID, data: TripStopUpdate
+) -> TripStopSchema:
+    stop = await session.get(TripStop, stop_id)
+    if not stop:
+        raise ValueError("Stop not found")
+    trip = await session.get(Trip, stop.trip_id)
+    if not trip or trip.user_id != user_id or trip.id != trip_id:
+        raise PermissionError("Not allowed")
+
+    upd = data.model_dump(exclude_unset=True)
+    new_order = upd.pop("order_index", None)
+
+    if new_order is not None and new_order != stop.stop_order:
+        if new_order < stop.stop_order:
+            await session.execute(
+                TripStop.__table__.update()
+                .where(
+                    TripStop.trip_id == trip_id,
+                    TripStop.stop_order >= new_order,
+                    TripStop.stop_order < stop.stop_order,
+                )
+                .values(stop_order=TripStop.stop_order + 1)
+            )
+        else:
+            await session.execute(
+                TripStop.__table__.update()
+                .where(
+                    TripStop.trip_id == trip_id,
+                    TripStop.stop_order <= new_order,
+                    TripStop.stop_order > stop.stop_order,
+                )
+                .values(stop_order=TripStop.stop_order - 1)
+            )
+        stop.stop_order = new_order
+
+    for k, v in upd.items():
+        setattr(stop, k, v)
+
+    await session.commit()
+    await session.refresh(stop)
+    return TripStopSchema.model_validate(stop)
+
+
+async def remove_trip_stop(session: AsyncSession, user_id: uuid.UUID, trip_id: uuid.UUID, stop_id: uuid.UUID) -> None:
+    stop = await session.get(TripStop, stop_id)
+    if not stop:
+        return
+    trip = await session.get(Trip, stop.trip_id)
+    if not trip or trip.user_id != user_id or trip.id != trip_id:
+        raise PermissionError("Not allowed")
+    removed_order = stop.stop_order
+    await session.delete(stop)
+    await session.execute(
+        TripStop.__table__.update()
+        .where(TripStop.trip_id == trip_id, TripStop.stop_order > removed_order)
+        .values(stop_order=TripStop.stop_order - 1)
+    )
+    await session.commit()

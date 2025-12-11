@@ -2,15 +2,12 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+// 1. Removed unnecessary Vee-Validate component imports
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
-import { Form } from '@/components/ui/form'
 import { useLoginForm } from '@/composables'
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
 
 const {
   email,
@@ -19,11 +16,9 @@ const {
   isLoading,
   errors,
   isFormValid,
-  handleEmailChange,
-  handlePasswordChange,
   handleGoogleLogin,
-  handleSubmit,
-} = useLoginForm(router)
+  onSubmit,
+} = useLoginForm()
 </script>
 
 <template>
@@ -57,20 +52,19 @@ const {
           <Separator class="flex-1" />
         </div>
 
-        <Form as="form" class="space-y-5" @submit.prevent="handleSubmit">
+        <form class="space-y-5" @submit.prevent="onSubmit">
+          
           <div class="space-y-2">
             <Label for="email" class="text-sm font-medium">Email</Label>
             <Input
-              id="email"
               v-model="email"
+              id="email"
               type="email"
               autocomplete="email"
-              :aria-invalid="Boolean(errors.email)"
               placeholder="username@example.com"
               :disabled="isLoading"
-              @input="handleEmailChange"
-              @blur="handleEmailChange"
               :class="errors.email ? 'border-destructive focus-visible:ring-destructive' : ''"
+              :aria-invalid="!!errors.email"
             />
             <p v-if="errors.email" class="text-sm text-destructive">{{ errors.email }}</p>
           </div>
@@ -78,17 +72,16 @@ const {
           <div class="space-y-2">
             <Label for="password" class="text-sm font-medium">Password</Label>
             <Input
-              id="password"
               v-model="password"
+              id="password"
               type="password"
               autocomplete="current-password"
-              :aria-invalid="Boolean(errors.password)"
               placeholder="Enter your password"
               :disabled="isLoading"
-              @input="handlePasswordChange"
-              @blur="handlePasswordChange"
               :class="errors.password ? 'border-destructive focus-visible:ring-destructive' : ''"
+              :aria-invalid="!!errors.password"
             />
+            
             <div class="flex items-center justify-between text-sm text-muted-foreground">
               <div class="flex items-center gap-2">
                 <Checkbox
@@ -103,15 +96,17 @@ const {
                 <a href="#">Forgot password?</a>
               </Button>
             </div>
+            
             <p v-if="errors.password" class="text-sm text-destructive">{{ errors.password }}</p>
           </div>
 
+          <p v-if="errors.general" class="text-sm text-destructive">{{ errors.general }}</p>
           <Button type="submit" class="w-full font-semibold" :disabled="!isFormValid || isLoading">
             <Spinner v-if="isLoading" class="mr-2" aria-hidden="true" />
             <span v-if="isLoading">Signing in...</span>
             <span v-else>Sign in</span>
           </Button>
-        </Form>
+        </form>
       </CardContent>
     </Card>
 

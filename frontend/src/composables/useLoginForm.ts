@@ -1,76 +1,58 @@
-// (AI generated)
-// TODO: Review this file and consider moving back to a store if needed.
-// Clarifying store structure rationale
-// Right now authStore owns the logged-in client state (Supabase session/user) and keeps it available across the app, while loginStore is just duplicating a bunch of one-off form state/validation for the login page. Since you want stores/ to be strictly for shared client data, the clean approach is:
-    // Keep authStore (it holds the canonical user/session data).
-    // Move the login-form refs/validation back into a composable or directly into the page, so they don’t live in Pinia.
-    // Drop loginStore.ts entirely.
-// That way the store folder truly contains only client data models (e.g., auth, theme, search), and view-specific behavior lives in composables/components..
-
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import type { Router } from 'vue-router'
+import { useRouter } from 'vue-router' // 1. Import useRouter here
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
+import { useForm, useField } from 'vee-validate'
+import { toTypedSchema } from '@vee-validate/zod'
+import { z } from 'zod'
 import { useAuthStore } from '@/stores'
 
-type LoginErrors = {
-  email?: string
-  password?: string
-}
-
-export function useLoginForm(router: Router) {
+export function useLoginForm() { // 2. No arguments needed now
+  const router = useRouter()     //    Get router instance internally
   const authStore = useAuthStore()
 
-  const email = ref('')
-  const password = ref('')
-  const rememberMe = ref(false)
-  const isLoading = ref(true)
-  const errors = ref<LoginErrors>({})
-  const authSubscription = ref<{ unsubscribe: () => void } | null>(null)
-
-  const isFormValid = computed(() =>
-    email.value.trim() !== '' &&
-    password.value.trim() !== '' &&
-    Object.keys(errors.value).length === 0,
+  // --- Validation Schema ---
+  const loginSchema = toTypedSchema(
+    z.object({
+      email: z.string().email('Enter a valid email address'),
+      password: z.string().min(6, 'Password must be at least 6 characters'),
+      rememberMe: z.boolean().optional(),
+      apiError: z.string().optional(), // For general API errors
+    }),
   )
 
-  const validateEmail = (value: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return emailRegex.test(value)
-  }
+  // --- Initialize Form ---
+  // 3. Keep 'handleSubmit' (don't rename) so we can use it below
+  const { handleSubmit, meta, setFieldError, errors: vvErrors } = useForm({
+    validationSchema: loginSchema,
+    initialValues: {
+      email: '',
+      password: '',
+      rememberMe: false,
+      apiError: '', // For general API errors
+    },
+  })
 
-  const validatePassword = (value: string) => value.length >= 6
+  // --- Fields ---
+  const { value: email } = useField<string>('email')
+  const { value: password } = useField<string>('password')
+  const { value: rememberMe } = useField<boolean>('rememberMe')
+  const { value: apiError } = useField<string>('apiError')
 
-  const handleEmailChange = () => {
-    if (!email.value.trim()) {
-      errors.value.email = 'Email is required'
-      return
-    }
+  // --- State ---
+  const isLoading = ref(true)
+  const authSubscription = ref<{ unsubscribe: () => void } | null>(null)
 
-    if (!validateEmail(email.value)) {
-      errors.value.email = 'Enter a valid email address'
-      return
-    }
+  const errors = computed(() => ({
+    email: vvErrors.value.email,
+    password: vvErrors.value.password,
+    // Add a general form error if needed
+    general: vvErrors.value.apiError 
+  }))
 
-    delete errors.value.email
-  }
+  const isFormValid = computed(() => meta.value.valid)
 
-  const handlePasswordChange = () => {
-    if (!password.value.trim()) {
-      errors.value.password = 'Password is required'
-      return
-    }
-
-    if (!validatePassword(password.value)) {
-      errors.value.password = 'Password must be at least 6 characters'
-      return
-    }
-
-    delete errors.value.password
-  }
-
-  const redirectHome = () => {
-    router.replace('/')
-  }
+  // --- Auth Flow Logic ---
+  const redirectHome = () => router.replace('/')
 
   const initializeSession = async () => {
     const session = await authStore.initSession()
@@ -89,54 +71,48 @@ export function useLoginForm(router: Router) {
 
   const initAuthFlow = async () => {
     const alreadySignedIn = await initializeSession()
-    if (alreadySignedIn) {
-      return
-    }
+    if (alreadySignedIn) return
 
     isLoading.value = false
     authSubscription.value = authStore.subscribeToAuth(handleAuthChange)
   }
 
-  const cleanupAuthListener = () => {
-    authSubscription.value?.unsubscribe()
-    authSubscription.value = null
-  }
-
+  // --- Lifecycle ---
   onMounted(initAuthFlow)
-  onUnmounted(cleanupAuthListener)
+  
+  onUnmounted(() => {
+    authSubscription.value?.unsubscribe()
+  })
 
+  // --- Actions ---
   const handleGoogleLogin = async () => {
     isLoading.value = true
     try {
       await authStore.signInWithGoogle(`${window.location.origin}/`)
-    } catch (error) {
-      errors.value.password = 'Google login failed. Please try again.'
-      console.error('Google login failed', error)
+    } catch (error: any) {
+      // Set a manual error on a specific field or a general area
+      setFieldError('apiError', 'Google login failed: ' + error.message)
     } finally {
       isLoading.value = false
     }
   }
 
-  const handleSubmit = async () => {
-    handleEmailChange()
-    handlePasswordChange()
-
-    if (!isFormValid.value) {
-      return
-    }
-
+  const onSubmit = handleSubmit(async (values) => {
     isLoading.value = true
     try {
-      const { error } = await authStore.signInWithPassword(email.value, password.value)
+      const { error } = await authStore.signInWithPassword(values.email, values.password)
       if (error) throw error
-      router.push('/')
-    } catch (error) {
-      errors.value.password = 'Invalid email or password'
-      console.error('Email login failed', error)
+      // Note: redirection happens in handleAuthChange listener, 
+      // but you can also force it here to be safe:
+      router.push('/') 
+    } catch (error: any) {
+      // 4. KEY FIX: Feed the error back to the UI
+      // Assuming 'error.message' contains "Invalid login credentials"
+      setFieldError('apiError', error.message || 'Invalid email or password')
     } finally {
       isLoading.value = false
     }
-  }
+  })
 
   return {
     email,
@@ -145,9 +121,7 @@ export function useLoginForm(router: Router) {
     isLoading,
     errors,
     isFormValid,
-    handleEmailChange,
-    handlePasswordChange,
     handleGoogleLogin,
-    handleSubmit,
+    onSubmit,
   }
 }

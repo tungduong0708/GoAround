@@ -87,25 +87,39 @@ class PlaceBase(BaseModel):
     country: str | None = None
     location: LocationSchema
 
-    # Polymorphic/Subclass Fields (Optional in Base)
-    # These map to fields in Hotel/Restaurant/Landmark or generic placeholders
-    description: str | None = None  # Landmark
-    price_level: float | None = None  # Mapped from price_per_night/price_range logic
-    place_type: str = "place"  # Discriminator
+    # Base fields available for all place types
+    description: str | None = None
+    opening_hours: dict[str, Any] | None = None
+
+    place_type: Literal["hotel", "restaurant", "landmark", "cafe"] = Field(
+        ..., description="Type of place"
+    )
 
 
 # --- Request Schemas ---
 
 
 class PlaceCreate(PlaceBase):
+    main_image_url: str | None = None
     images: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
 
-    # Extra fields for specific types
+    # Hotel-specific fields
+    hotel_class: int | None = Field(
+        None, ge=1, le=5, description="Official hotel star rating (1-5)"
+    )
+    price_per_night: float | None = Field(None, ge=0)
+    amenities: list[str] | None = None  # For hotels and cafes
+
+    # Restaurant-specific fields
     cuisine_type: str | None = None
-    opening_hours: dict[str, Any] | None = None  # Restaurant
-    star_rating: float | None = None  # Hotel
-    ticket_price: float | None = None  # Landmark
+    price_range: str | None = Field(None, pattern=r"^\$+$", description="$ to $$$$")
+
+    # Landmark-specific fields
+    ticket_price: float | None = Field(None, ge=0)
+
+    # Cafe-specific fields
+    coffee_specialties: str | None = None
 
 
 class PlaceUpdate(BaseModel):
@@ -113,26 +127,43 @@ class PlaceUpdate(BaseModel):
     address: str | None = None
     location: LocationSchema | None = None
     description: str | None = None
+    opening_hours: dict[str, Any] | None = None
     city: str | None = None
     country: str | None = None
+    main_image_url: str | None = None
 
     images: list[str] | None = None
     tags: list[str] | None = None
 
-    # Specifics
-    opening_hours: dict[str, Any] | None = None
+    # Type-specific fields
+    hotel_class: int | None = Field(None, ge=1, le=5)
+    price_per_night: float | None = None
+    amenities: list[str] | None = None
+    cuisine_type: str | None = None
+    price_range: str | None = None
+    ticket_price: float | None = None
+    coffee_specialties: str | None = None
 
 
 class PlaceSearchFilter(BaseModel):
     q: str | None = None
+    category: Literal["hotel", "restaurant", "landmark", "cafe"] | None = Field(
+        None, description="Filter by place type"
+    )
     location: str | None = None
     radius: float = 5.0
     tags: str | None = None
+    amenities: str | None = Field(None, description="Comma-separated amenities")
+    price_range: str | None = Field(
+        None, description="Filter by price range ($ to $$$$)"
+    )
+    rating: float | None = Field(None, ge=0, le=5, description="Minimum rating")
     sort_by: Literal["rating", "distance", "newest"] = "rating"
     page: int = 1
     limit: int = 20
+
+    # Legacy field for backwards compatibility
     place_type: str | None = None
-    price_level: int | None = None  # Filter logic needed
 
     @field_validator("location")
     @classmethod
@@ -159,16 +190,22 @@ class TransferOwnershipRequest(BaseModel):
 class PlacePublic(BaseModel):
     id: uuid.UUID
     name: str
-    place_type: str
+    place_type: Literal["hotel", "restaurant", "landmark", "cafe"]
     address: str | None = None
     city: str | None = None
     country: str | None = None
     location: LocationSchema | None = None
+    main_image_url: str | None = None
 
     average_rating: float = 0.0
     review_count: int = 0
-    # Map 'main_image_url' (DB) -> 'primary_image' (API)
-    primary_image: str | None = Field(default=None, validation_alias="main_image_url")
+
+    # Base fields available for all types
+    opening_hours: dict[str, Any] | None = None
+
+    # Conditional fields based on place_type
+    price_range: str | None = None  # For restaurants, cafes, hotels (as range)
+
     tags: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
@@ -187,12 +224,24 @@ class PlacePublic(BaseModel):
 
 
 class PlaceDetail(PlacePublic):
-    # Subclass specific fields exposed as optional
+    # Base fields available for all types
     description: str | None = None
-    opening_hours: dict[str, Any] | None = None
-    price_range: str | None = None
-    star_rating: float | None = None
+
+    # Hotel-specific fields
+    hotel_class: int | None = None  # Renamed from star_rating (1-5 official stars)
+    price_per_night: float | None = None
+
+    # Restaurant-specific fields
+    cuisine_type: str | None = None
+
+    # Landmark-specific fields
     ticket_price: float | None = None
+
+    # Cafe-specific fields
+    coffee_specialties: str | None = None
+
+    # Amenities (for hotels and cafes)
+    amenities: list[str] | None = None
 
     images: list[PlaceImageSchema] = Field(default_factory=list)
     owner: OwnerSchema | None = None

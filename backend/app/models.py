@@ -156,6 +156,8 @@ class Place(Base):
     main_image_url: Mapped[str | None] = mapped_column(String(255))
     average_rating: Mapped[float] = mapped_column(Numeric(2, 1), default=0)
     review_count: Mapped[int] = mapped_column(Integer, default=0)
+    description: Mapped[str | None] = mapped_column(Text)
+    opening_hours: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
     __mapper_args__ = {"polymorphic_identity": "place", "polymorphic_on": place_type}
 
@@ -182,7 +184,7 @@ class Hotel(Place):
     id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("places.id", ondelete="CASCADE"), primary_key=True
     )
-    star_rating: Mapped[float | None] = mapped_column(Numeric(2, 1))
+    hotel_class: Mapped[int | None] = mapped_column(Integer)
     price_per_night: Mapped[float | None] = mapped_column(Numeric)
     amenities: Mapped[list[str] | None] = mapped_column(ARRAY(String))
 
@@ -195,7 +197,6 @@ class Restaurant(Place):
         ForeignKey("places.id", ondelete="CASCADE"), primary_key=True
     )
     cuisine_type: Mapped[str | None] = mapped_column(String(50))
-    opening_hours: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     price_range: Mapped[str | None] = mapped_column(String(10))
     __mapper_args__ = {"polymorphic_identity": "restaurant"}
 
@@ -205,9 +206,19 @@ class Landmark(Place):
     id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("places.id", ondelete="CASCADE"), primary_key=True
     )
-    description: Mapped[str | None] = mapped_column(Text)
     ticket_price: Mapped[float | None] = mapped_column(Numeric)
     __mapper_args__ = {"polymorphic_identity": "landmark"}
+
+
+class Cafe(Place):
+    __tablename__ = "cafes"
+    id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("places.id", ondelete="CASCADE"), primary_key=True
+    )
+    coffee_specialties: Mapped[str | None] = mapped_column(String(255))
+    amenities: Mapped[list[str] | None] = mapped_column(ARRAY(String))
+    price_range: Mapped[str | None] = mapped_column(String(10))
+    __mapper_args__ = {"polymorphic_identity": "cafe"}
 
 
 class PlaceImage(Base):

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import (
+    Cafe,
     Hotel,
     Landmark,
     Place,
@@ -86,8 +87,12 @@ def _enrich_place_detail(place: Place) -> PlaceDetail:
     description = getattr(place, "description", None)
     opening_hours = getattr(place, "opening_hours", None)
     price_range = getattr(place, "price_range", None)
-    star_rating = getattr(place, "star_rating", None)
+    hotel_class = getattr(place, "hotel_class", None)
+    price_per_night = getattr(place, "price_per_night", None)
+    amenities = getattr(place, "amenities", None)
+    cuisine_type = getattr(place, "cuisine_type", None)
     ticket_price = getattr(place, "ticket_price", None)
+    coffee_specialties = getattr(place, "coffee_specialties", None)
 
     return PlaceDetail(
         **public_view.model_dump(),
@@ -96,8 +101,12 @@ def _enrich_place_detail(place: Place) -> PlaceDetail:
         description=description,
         opening_hours=opening_hours,
         price_range=price_range,
-        star_rating=float(star_rating) if star_rating is not None else None,
+        hotel_class=int(hotel_class) if hotel_class is not None else None,
+        price_per_night=float(price_per_night) if price_per_night is not None else None,
+        amenities=amenities,
+        cuisine_type=cuisine_type,
         ticket_price=float(ticket_price) if ticket_price is not None else None,
+        coffee_specialties=coffee_specialties,
         my_review=None,
     )
 
@@ -109,7 +118,7 @@ async def create_place(
     session: AsyncSession, place_create: PlaceCreate, owner_id: uuid.UUID
 ) -> PlaceDetail:
     """
-    Creates a new place, selecting the correct Polymorphic Identity (Hotel, Restaurant, Landmark).
+    Creates a new place, selecting the correct Polymorphic Identity (Hotel, Restaurant, Landmark, Cafe).
     """
     # 1. Location WKT
     loc = place_create.location
@@ -123,34 +132,39 @@ async def create_place(
         "city": place_create.city,
         "country": place_create.country,
         "location": location_wkt,
-        "place_type": place_create.place_type,  # Should match discriminator
+        "place_type": place_create.place_type,
+        "main_image_url": place_create.main_image_url,
+        "description": place_create.description,
+        "opening_hours": place_create.opening_hours,
     }
 
     # 3. Instantiate Specific Model
-    # Filter out None values from schema to avoid overwriting defaults or passing invalid args
     db_place = None
 
     if place_create.place_type == "hotel":
         db_place = Hotel(
             **common_data,
-            star_rating=place_create.star_rating,
-            price_per_night=place_create.price_level,  # Mapping logic assumption or separate field
-            # amenities=... (if passed)
+            hotel_class=place_create.hotel_class,
+            price_per_night=place_create.price_per_night,
+            amenities=place_create.amenities,
         )
     elif place_create.place_type == "restaurant":
         db_place = Restaurant(
             **common_data,
             cuisine_type=place_create.cuisine_type,
-            opening_hours=place_create.opening_hours,
-            price_range=str(place_create.price_level)
-            if place_create.price_level
-            else None,  # Rough mapping
+            price_range=place_create.price_range,
         )
     elif place_create.place_type == "landmark":
         db_place = Landmark(
             **common_data,
-            description=place_create.description,
             ticket_price=place_create.ticket_price,
+        )
+    elif place_create.place_type == "cafe":
+        db_place = Cafe(
+            **common_data,
+            coffee_specialties=place_create.coffee_specialties,
+            amenities=place_create.amenities,
+            price_range=place_create.price_range,
         )
     else:
         # Fallback to generic Place

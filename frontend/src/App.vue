@@ -1,21 +1,16 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import ThemeToggle from './components/theme/ThemeToggle.vue'
-import AppHeader from './components/Header.vue'
+import { computed } from "vue";
+import { useRoute } from "vue-router";
+import AppHeader from "./components/Header.vue";
 
-const route = useRoute()
-const showHeader = computed(() => route.meta.hideHeader !== true)
+const route = useRoute();
+const showHeader = computed(() => route.meta.hideHeader !== true);
 </script>
 
 <template>
   <div class="main-layout">
-    <AppHeader
-      v-if="showHeader"
-      class="app-header"
-    />
+    <AppHeader v-if="showHeader" class="app-header" />
     <div class="content-shell">
-      <ThemeToggle class="theme-toggle" />
       <RouterView class="router-view" />
     </div>
   </div>
@@ -43,12 +38,7 @@ html {
   overflow-y: auto;
   overflow-x: hidden;
 }
-.theme-toggle {
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  z-index: 5;
-}
+
 .router-view {
   flex: 1;
   overflow: auto;

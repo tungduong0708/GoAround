@@ -2,8 +2,10 @@ import { onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRecommendationStore } from '@/stores'
 import type { IPlace } from '@/utils/interfaces'
+import { useRouter } from 'vue-router'
 
 export function useRecommendations(options: { autoLoad?: boolean } = { autoLoad: true }) {
+  const router = useRouter()
   const store = useRecommendationStore()
   const { items, loading, error, hasLoaded } = storeToRefs(store)
 
@@ -12,9 +14,7 @@ export function useRecommendations(options: { autoLoad?: boolean } = { autoLoad:
   }
 
   const handleRecommendationSelect = (item: IPlace) => {
-    // TODO: implement navigation to recommendation detail page
-    // placeholder navigation logic
-    console.info('Selected recommendation:', item.id)
+    router.push({ name: 'details', params: { id: item.id } })
   }
 
   if (options.autoLoad !== false) {

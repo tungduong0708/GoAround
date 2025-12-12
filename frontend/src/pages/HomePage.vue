@@ -13,11 +13,10 @@ const {
   handleRecommendationSelect,
 } = useRecommendations()
 
-const { searchTerm, performSearch } = useSearchResults({ autoLoad: false })
+const { searchTerm, performSearch} = useSearchResults({ autoLoad: false })
 
 const handleSearchSubmit = () => {
   performSearch()
-  router.push({ name: 'search' })
 }
 </script>
 

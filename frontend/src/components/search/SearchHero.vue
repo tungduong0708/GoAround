@@ -15,7 +15,7 @@ const emit = defineEmits<{
   submit: []
 }>()
 
-const { categories, selectedCategory, updateValue, handleSubmit } = useSearchCategories(emit)
+const { categories, selectedCategory, updateValue, selectCategory, handleSubmit } = useSearchCategories(emit)
 </script>
 
 <template>
@@ -34,6 +34,7 @@ const { categories, selectedCategory, updateValue, handleSubmit } = useSearchCat
               v-for="category in categories"
               :key="category.value"
               :value="category.value"
+              @click="selectCategory(category.value)"
               class="rounded-full flex border border-transparent p-4 text-sm font-medium text-muted-foreground shadow-sm transition data-[state=active]:border-ring data-[state=active]:bg-background data-[state=active]:text-foreground"
             > 
               <div class="flex items-center justify-center gap-2">

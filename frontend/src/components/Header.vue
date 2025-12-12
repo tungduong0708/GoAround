@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 
-import { headerNavLinks } from '@/utils/constants/header_routes'
+import { headerNavLinks } from '@/utils/constants/headerRoutes'
 import { useHeader } from '@/composables'
 
 

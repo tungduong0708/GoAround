@@ -2,6 +2,7 @@ import { onMounted, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSearchStore } from '@/stores'
 import type { IPlace } from '@/utils/interfaces'
+import { useRouter } from 'vue-router'
 
 export interface UseSearchResultsOptions {
   autoLoad?: boolean
@@ -9,11 +10,13 @@ export interface UseSearchResultsOptions {
 }
 
 export function useSearchResults(options: UseSearchResultsOptions = { autoLoad: true, searchOnCategoryChange: false }) {
+  const router = useRouter()
   const store = useSearchStore()
   const { query, results, loading, error, hasSearched, hasResults, category } = storeToRefs(store)
 
   const performSearch = async () => {
     await store.search()
+    router.push({ name: "search"})
   }
 
   const setQuery = (value: string) => {
@@ -28,6 +31,7 @@ export function useSearchResults(options: UseSearchResultsOptions = { autoLoad: 
   const selectResult = (result: IPlace) => {
     // placeholder for navigation until routes are prepared
     console.info('Navigate to', result.id)
+    router.push({ name: 'details', params: { id: result.id } })
   }
 
   if (options.autoLoad ?? true) {
@@ -53,7 +57,6 @@ export function useSearchResults(options: UseSearchResultsOptions = { autoLoad: 
     hasSearched,
     hasResults,
     performSearch,
-    setQuery,
     selectResult,
     setFilters: store.setFilters,
     clearResults: store.clearResults,

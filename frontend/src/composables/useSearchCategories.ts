@@ -2,7 +2,7 @@ import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSearchStore } from '@/stores'
 import type { SearchCategoryValue } from '@/stores/searchStore'
-import { categories as search_categories } from '@/utils/constants/search_cate'
+import { categories as search_categories } from '@/utils/constants/searchCate'
 
 type SearchCategoriesEmit = {
   (event: 'update:modelValue', value: string): void
@@ -15,7 +15,6 @@ export function useSearchCategories(emit?: SearchCategoriesEmit) {
 
   const handleCategoryChange = (value: SearchCategoryValue) => {
     searchStore.setCategory(value)
-    emit?.('submit')
   }
 
   const selectedCategory = computed<SearchCategoryValue>({

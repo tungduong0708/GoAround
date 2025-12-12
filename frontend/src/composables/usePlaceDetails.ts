@@ -10,6 +10,7 @@ export function usePlaceDetails() {
 
   const fetchPlace = (id: string) => {
     if (id) {
+      console.log('Fetching place with ID:', id)
       store.loadPlace(id)
     }
   }

@@ -1,4 +1,4 @@
-import type { RouteRecordRaw } from "vue-router";
+import { RouterView, type RouteRecordRaw } from "vue-router";
 
 const guardRoutes: RouteRecordRaw[] = [
   {
@@ -32,23 +32,18 @@ const guardRoutes: RouteRecordRaw[] = [
   },
   {
     path: "/forums",
-    name: "forums",
+    component: RouterView,
+    meta: {
+      title: "Forums",
+      authRequired: false,
+    },
     children: [
       {
-        path: "/",
+        path: "",
         name: "forums-home",
         component: () => import("@/pages/Forums/MainPage.vue"),
         meta: {
           title: "Forums",
-          authRequired: false,
-        },
-      },
-      {
-        path: ":postId",
-        name: "post-details",
-        component: () => import("@/pages/Forums/PostPage.vue"),
-        meta: {
-          title: "Post Details",
           authRequired: false,
         },
       },
@@ -68,6 +63,15 @@ const guardRoutes: RouteRecordRaw[] = [
         meta: {
           title: "Create Post",
           authRequired: true,
+        },
+      },
+      {
+        path: ":postId",
+        name: "post-details",
+        component: () => import("@/pages/Forums/PostPage.vue"),
+        meta: {
+          title: "Post Details",
+          authRequired: false,
         },
       },
     ],

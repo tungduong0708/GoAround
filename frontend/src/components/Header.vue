@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { headerNavLinks } from "@/utils/constants/headerRoutes";
 import { useHeader } from "@/composables";
 import logo from "@/assets/GoAround-logo.svg";
+import titleLogo from "@/assets/GoAround-title.svg";
 import ThemeToggle from "./theme/ThemeToggle.vue";
 
 const props = withDefaults(
@@ -40,15 +41,15 @@ const { profileLink, profileLabel, profileSubtext, initials } =
         class="flex items-center gap-3 text-xl font-semibold text-foreground"
         :to="{ name: 'home' }"
       >
-        <span class="flex size-10 items-center justify-center">
+        <span class="flex size-12 items-center justify-center">
           <img :src="logo" alt="GoAround Logo" />
         </span>
-        <span class="flex items-baseline gap-1">
-          <span>Go</span>
-          <span
-            class="bg-gradient-to-r from-primary to-cyan-400 bg-clip-text text-transparent"
-            >Around</span
-          >
+        <span class="flex h-16 items-center">
+          <img
+            :src="titleLogo"
+            alt="GoAround"
+            class="h-full w-auto object-contain"
+          />
         </span>
       </RouterLink>
 

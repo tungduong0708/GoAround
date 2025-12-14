@@ -48,21 +48,22 @@ const guardRoutes: RouteRecordRaw[] = [
         },
       },
       {
-        path: "search",
-        name: "forums-search",
-        component: () => import("@/pages/Forums/SearchPage.vue"),
-        meta: {
-          title: "Search Forums",
-          authRequired: false,
-        },
-      },
-      {
         path: "create",
         name: "create-post",
         component: () => import("@/pages/Forums/NewPostPage.vue"),
         meta: {
           title: "Create Post",
           authRequired: true,
+        },
+      },
+      // Not Found
+      {
+        path: ":catchAll(.*)",
+        name: "not-found",
+        component: () => import("@/pages/NotFound.vue"),
+        meta: {
+          title: "Not Found",
+          authRequired: false,
         },
       },
       {

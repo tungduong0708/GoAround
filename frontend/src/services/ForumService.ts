@@ -4,6 +4,7 @@ import type {
   IForumReply,
   ICreatePostInput,
   ICreateReplyInput,
+  ICreateReportInput,
   IForumSearchQuery,
   IApiResponse,
   IPaginatedResponse,
@@ -104,20 +105,113 @@ class ForumService {
     return (response.data as IApiResponse<IForumPost>).data;
   }
 
-  async getPostById(id: string): Promise<IPaginatedResponse<IForumPost>> {
-    const response = await commonInstance.get(`/forum/posts/${id}`);
-    return response.data as IPaginatedResponse<IForumPost>;
+  async getPostById(id: string): Promise<IApiResponse<IForumPost> | null> {
+    // const response = await commonInstance.get(`/forum/posts/${id}`);
+    // return response.data as IApiResponse<IForumPost>;
+
+    // Temporary mock implementation
+    const { mockForumPosts } = await import("@/utils/constants/mockData");
+    const post = mockForumPosts.find((p) => p.id === id);
+
+    if (!post) {
+      return null;
+    }
+
+    // Enrich post with mock data for detail view
+    const enrichedPost: IForumPost = {
+      ...post,
+      viewCount: Math.floor(Math.random() * 100000) + 1000,
+      likeCount: Math.floor(Math.random() * 50000) + 500,
+      author: {
+        ...post.author,
+        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author.username}`,
+      },
+    };
+
+    return {
+      status: "success",
+      data: enrichedPost,
+    };
+  }
+
+  async getReplies(
+    postId: string,
+    page: number = 1,
+    limit: number = 5
+  ): Promise<IPaginatedResponse<IForumReply[]>> {
+    // const response = await commonInstance.get(`/forum/posts/${postId}/replies`, {
+    //   params: { page, limit },
+    // });
+    // return response.data as IPaginatedResponse<IForumReply[]>;
+
+    // Temporary mock implementation
+    const { mockForumReplies } = await import("@/utils/constants/mockData");
+    const allReplies = mockForumReplies[postId] || [];
+
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedReplies = allReplies.slice(startIndex, endIndex);
+
+    return {
+      status: "success",
+      data: paginatedReplies,
+      meta: {
+        page,
+        limit,
+        totalItems: allReplies.length,
+      },
+    };
   }
 
   async replyToPost(
     postId: string,
     input: ICreateReplyInput
   ): Promise<IForumReply> {
-    const response = await authInstance.post(
-      `/forum/posts/${postId}/replies`,
-      input
-    );
-    return (response.data as IApiResponse<IForumReply>).data;
+    // const response = await authInstance.post(
+    //   `/forum/posts/${postId}/replies`,
+    //   input
+    // );
+    // return (response.data as IApiResponse<IForumReply>).data;
+
+    // Temporary mock - simulate creating a reply
+    const newReply: IForumReply = {
+      id: `reply-${Date.now()}`,
+      content: input.content,
+      user: {
+        id: "current-user",
+        username: "CurrentUser",
+        avatarUrl:
+          "https://api.dicebear.com/7.x/avataaars/svg?seed=CurrentUser",
+      },
+      createdAt: new Date().toISOString(),
+      parentReplyId: input.parentReplyId,
+      likeCount: 0,
+    };
+
+    return newReply;
+  }
+
+  async reportContent(
+    input: ICreateReportInput
+  ): Promise<{ success: boolean; message: string }> {
+    // const response = await authInstance.post("/reports", input);
+    // return response.data;
+
+    // Temporary mock - simulate report submission
+    console.log("Report submitted:", input);
+    await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate network delay
+
+    return {
+      success: true,
+      message: "Thank you for your report. Our team will review it shortly.",
+    };
+  }
+
+  async incrementViewCount(postId: string): Promise<void> {
+    // await commonInstance.post(`/forum/posts/${postId}/view`);
+
+    // Mock - just log for now
+    console.log(`View count incremented for post: ${postId}`);
   }
 }
 

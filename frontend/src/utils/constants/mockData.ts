@@ -941,3 +941,158 @@ export const mockForumPosts: IForumPost[] = [
     replies: [],
   },
 ];
+
+// Mock replies for forum posts - used for paginated replies on post detail view
+export const mockForumReplies: Record<
+  string,
+  import("@/utils/interfaces").IForumReply[]
+> = {
+  "1": [
+    {
+      id: "reply-1",
+      content:
+        "This is such a great question! I visited Kyoto last spring and found some amazing hidden spots. The Philosopher's Path early in the morning is magical - barely any tourists and the cherry blossoms were incredible.",
+      user: {
+        id: "user101",
+        username: "SakuraLover",
+        avatarUrl:
+          "https://api.dicebear.com/7.x/avataaars/svg?seed=SakuraLover",
+      },
+      createdAt: "2025-05-30T08:15:00Z",
+      likeCount: 42,
+    },
+    {
+      id: "reply-2",
+      content:
+        "Don't miss Fushimi Inari at night! Most tourists leave by sunset, but the shrine is actually open 24/7. Walking through the torii gates with just lantern light is an unforgettable experience.",
+      user: {
+        id: "user102",
+        username: "NightOwlTraveler",
+        avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=NightOwl",
+      },
+      createdAt: "2025-05-30T14:22:00Z",
+      likeCount: 89,
+    },
+    {
+      id: "reply-3",
+      content:
+        "For Osaka, I highly recommend the Shinsekai district. It feels like stepping back in time - amazing kushikatsu and a completely different vibe from the modern city.",
+      user: {
+        id: "user103",
+        username: "FoodieExplorer",
+        avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Foodie",
+      },
+      createdAt: "2025-05-31T09:45:00Z",
+      likeCount: 67,
+    },
+    {
+      id: "reply-4",
+      content:
+        "If you're into traditional crafts, check out the Nishijin Textile Center in Kyoto. They have beautiful kimono demonstrations and you can even try weaving yourself!",
+      user: {
+        id: "user104",
+        username: "CraftHunter",
+        avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Craft",
+      },
+      createdAt: "2025-06-01T11:30:00Z",
+      likeCount: 34,
+    },
+    {
+      id: "reply-5",
+      content:
+        "The Arashiyama Bamboo Grove is famous but overcrowded. Instead, try Sagano for similar vibes with way fewer people. The whole area is perfect for cycling!",
+      user: {
+        id: "user105",
+        username: "BicycleBob",
+        avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bob",
+      },
+      createdAt: "2025-06-02T16:00:00Z",
+      likeCount: 156,
+    },
+    {
+      id: "reply-6",
+      content:
+        "Totally agree with @BicycleBob! Renting a bike in Kyoto is the best way to explore. The city is very bike-friendly and you can cover so much more ground.",
+      user: {
+        id: "user106",
+        username: "PedalPower",
+        avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Pedal",
+      },
+      createdAt: "2025-06-02T18:45:00Z",
+      parentReplyId: "reply-5",
+      likeCount: 23,
+    },
+    {
+      id: "reply-7",
+      content:
+        "For authentic Japanese breakfast, find a local kissaten (traditional coffee shop). They serve thick toast with butter and serve amazing coffee in a retro atmosphere.",
+      user: {
+        id: "user107",
+        username: "MorningCoffee",
+        avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Coffee",
+      },
+      createdAt: "2025-06-03T07:00:00Z",
+      likeCount: 45,
+    },
+    {
+      id: "reply-8",
+      content:
+        "Osaka Castle Park is beautiful, especially during cherry blossom season. But the real gem is the Nishinomaru Garden next to it - much more peaceful.",
+      user: {
+        id: "user108",
+        username: "ParkWanderer",
+        avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Park",
+      },
+      createdAt: "2025-06-04T14:20:00Z",
+      likeCount: 78,
+    },
+    {
+      id: "reply-9",
+      content:
+        "Has anyone tried the local craft beer scene? I found some amazing microbreweries in Osaka that weren't in any guidebook!",
+      user: {
+        id: "user109",
+        username: "CraftBeerFan",
+        avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Beer",
+      },
+      createdAt: "2025-06-05T20:30:00Z",
+      likeCount: 31,
+    },
+    {
+      id: "reply-10",
+      content:
+        "The Gion district at dusk is magical. You might even spot a geisha heading to an appointment. Just remember to be respectful and not chase them for photos!",
+      user: {
+        id: "user110",
+        username: "RespectfulTraveler",
+        avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Respect",
+      },
+      createdAt: "2025-06-06T17:45:00Z",
+      likeCount: 112,
+    },
+    {
+      id: "reply-11",
+      content:
+        "Pro tip: Get a JR Pass if you're planning to visit both cities. The shinkansen is incredibly convenient and scenic!",
+      user: {
+        id: "user111",
+        username: "TrainEnthusiast",
+        avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Train",
+      },
+      createdAt: "2025-06-07T09:00:00Z",
+      likeCount: 203,
+    },
+    {
+      id: "reply-12",
+      content:
+        "Kurama Onsen is a hidden gem north of Kyoto. Natural hot springs in the mountains with incredible views. The hike there is beautiful too!",
+      user: {
+        id: "user112",
+        username: "OnsenLover",
+        avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Onsen",
+      },
+      createdAt: "2025-06-08T11:30:00Z",
+      likeCount: 88,
+    },
+  ],
+};

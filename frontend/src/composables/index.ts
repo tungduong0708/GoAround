@@ -8,3 +8,4 @@ export { useSearchResults } from "./useSearchResults";
 export * from "./usePlaceDetails";
 
 export * from "./useForumMain";
+export * from "./useForumPost";

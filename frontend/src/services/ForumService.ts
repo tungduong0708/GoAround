@@ -1,4 +1,4 @@
-import { authInstance, commonInstance } from "@/config";
+// Imports removed
 import type {
   IForumPost,
   IForumReply,
@@ -101,8 +101,33 @@ class ForumService {
   }
 
   async createPost(input: ICreatePostInput): Promise<IForumPost> {
-    const response = await authInstance.post("/forum/posts", input);
-    return (response.data as IApiResponse<IForumPost>).data;
+    // const response = await authInstance.post("/forum/posts", input);
+    // return (response.data as IApiResponse<IForumPost>).data;
+
+    const { mockForumPosts } = await import("@/utils/constants/mockData");
+
+    const newPost: IForumPost = {
+      id: `post-${Date.now()}`,
+      title: input.title,
+      content: input.content,
+      contentSnippet: input.content.substring(0, 100) + "...",
+      author: {
+        id: "current-user",
+        username: "You", // Mock current user
+      },
+      tags: (input.tags || []).map((t) => ({ id: `tag-${t}`, name: t })),
+      createdAt: new Date().toISOString(),
+      replyCount: 0,
+      likeCount: 0,
+      viewCount: 0,
+      images: input.images || [],
+      replies: [],
+    };
+
+    // Add to beginning of mock list
+    mockForumPosts.unshift(newPost);
+
+    return newPost;
   }
 
   async getPostById(id: string): Promise<IApiResponse<IForumPost> | null> {
@@ -119,19 +144,56 @@ class ForumService {
 
     // Enrich post with mock data for detail view
     const enrichedPost: IForumPost = {
-      ...post,
+      id: post.id,
+      title: post.title,
+      content: post.content,
+      contentSnippet: post.contentSnippet,
+      createdAt: post.createdAt,
+      tags: post.tags,
+      replies: post.replies,
       viewCount: Math.floor(Math.random() * 100000) + 1000,
       likeCount: Math.floor(Math.random() * 50000) + 500,
       author: {
         ...post.author,
         avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author.username}`,
       },
+      // Ensure images is defined
+      images: post.images || [],
     };
 
     return {
       status: "success",
       data: enrichedPost,
     };
+  }
+
+  async updatePost(id: string, input: ICreatePostInput): Promise<IForumPost> {
+    // Mock update
+    const { mockForumPosts } = await import("@/utils/constants/mockData");
+    const index = mockForumPosts.findIndex((p) => p.id === id);
+
+    if (index === -1) throw new Error("Post not found");
+
+    const existingPost = mockForumPosts[index];
+    if (!existingPost) throw new Error("Post not found");
+
+    const updatedPost: IForumPost = {
+      id: existingPost.id,
+      createdAt: existingPost.createdAt,
+      replyCount: existingPost.replyCount,
+      likeCount: existingPost.likeCount,
+      viewCount: existingPost.viewCount,
+      author: existingPost.author,
+      images: existingPost.images,
+      replies: existingPost.replies,
+      title: input.title,
+      content: input.content,
+      contentSnippet: input.content.substring(0, 100) + "...",
+      tags: (input.tags || []).map((t) => ({ id: `tag-${t}`, name: t })),
+    };
+
+    mockForumPosts[index] = updatedPost;
+    return updatedPost;
   }
 
   async getReplies(
@@ -164,7 +226,7 @@ class ForumService {
   }
 
   async replyToPost(
-    postId: string,
+    _postId: string,
     input: ICreateReplyInput
   ): Promise<IForumReply> {
     // const response = await authInstance.post(

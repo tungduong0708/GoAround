@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { useRoute } from "vue-router";
 import AppHeader from "./components/Header.vue";
 import AppFooter from "./components/Footer.vue";
+import { Toaster } from "@/components/ui/sonner";
 
 const route = useRoute();
 const showHeader = computed(() => route.meta.hideHeader !== true);
@@ -15,6 +16,7 @@ const showFooter = computed(() => route.meta.hideFooter !== true);
     <div class="content-shell">
       <RouterView class="router-view" />
       <AppFooter v-if="showFooter" />
+      <Toaster />
     </div>
   </div>
 </template>

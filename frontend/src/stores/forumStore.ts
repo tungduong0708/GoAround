@@ -4,6 +4,7 @@ import type {
   IForumPost,
   IForumSearchQuery,
   IPaginationMeta,
+  ICreatePostInput,
 } from "@/utils/interfaces";
 import ForumService from "@/services/ForumService";
 
@@ -35,5 +36,30 @@ export const useForumStore = defineStore("forum", () => {
     loading,
     error,
     fetchPosts,
+    createPost: async (payload: ICreatePostInput) => {
+      loading.value = true;
+      try {
+        await ForumService.createPost(payload);
+      } catch (err) {
+        error.value =
+          err instanceof Error ? err.message : "Failed to create post";
+        throw err;
+      } finally {
+        loading.value = false;
+      }
+    },
+    updatePost: async (id: string, payload: ICreatePostInput) => {
+      loading.value = true;
+      try {
+        await ForumService.updatePost(id, payload);
+      } catch (err) {
+        error.value =
+          err instanceof Error ? err.message : "Failed to update post";
+        throw err;
+      } finally {
+        loading.value = false;
+      }
+    },
+    getPostById: ForumService.getPostById, // Expose service method or wrap it if needed for state
   };
 });

@@ -2,8 +2,10 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { SearchIcon, PlusIcon } from "lucide-vue-next";
+import { useRouter } from "vue-router";
 
 const modelValue = defineModel<string>();
+const router = useRouter();
 </script>
 
 <template>
@@ -18,9 +20,10 @@ const modelValue = defineModel<string>();
       <Button
         size="lg"
         class="bg-orange-500 hover:bg-orange-600 text-white rounded-xl h-12 px-6 font-semibold shadow-lg shadow-orange-500/20"
+        @click="router.push('/forums/create')"
       >
         <PlusIcon class="mr-2 size-5" />
-        Create Trip
+        Write a Post
       </Button>
     </div>
 

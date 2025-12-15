@@ -1,4 +1,5 @@
 import { authInstance } from "@/config";
+import { mockTrips } from "@/utils/constants/mockData";
 import type {
   ITrip,
   ITripStop,
@@ -24,8 +25,19 @@ class TripService {
   }
 
   async getTrips(): Promise<IPaginatedResponse<ITrip[]>> {
-    const response = await authInstance.get("/trips");
-    return response.data as IPaginatedResponse<ITrip[]>;
+    // TODO: Waiting for API implementation
+    // Currently, just use the mock data
+    // const response = await authInstance.get("/trips");
+    // return response.data as IPaginatedResponse<ITrip[]>;
+    return {
+      status: "success",
+      data: mockTrips,
+      meta: {
+        page: 1,
+        limit: 10,
+        totalItems: mockTrips.length,
+      },
+    };
   }
 
   async createTrip(input: ICreateTripInput): Promise<ITrip> {
@@ -39,13 +51,18 @@ class TripService {
   }
 
   async getTripById(id: string): Promise<ITrip> {
-    const response = await authInstance.get(`/trips/${id}`);
-    return (response.data as IApiResponse<ITrip>).data;
+    // TODO: Waiting for API implementation
+    // Currently, just use the mock data
+    // const response = await authInstance.get(`/trips/${id}`);
+    // return (response.data as IApiResponse<ITrip>).data;
+    const trip = mockTrips.find((trip) => trip.id === id);
+    if (!trip) throw new Error(`Trip with id ${id} not found`);
+    return trip;
   }
 
   async addPlaceToTrip(
     tripId: string,
-    input: IAddPlaceToTripInput
+    input: IAddPlaceToTripInput,
   ): Promise<ITripStop> {
     const response = await authInstance.post(`/trips/${tripId}/places`, input);
     return (response.data as IApiResponse<ITripStop>).data;
@@ -54,21 +71,21 @@ class TripService {
   async updateTripStop(
     tripId: string,
     stopId: string,
-    input: IUpdateTripStopInput
+    input: IUpdateTripStopInput,
   ): Promise<ITripStop> {
     const response = await authInstance.put(
       `/trips/${tripId}/places/${stopId}`,
-      input
+      input,
     );
     return (response.data as IApiResponse<ITripStop>).data;
   }
 
   async removePlaceFromTrip(
     tripId: string,
-    stopId: string
+    stopId: string,
   ): Promise<{ message: string }> {
     const response = await authInstance.delete(
-      `/trips/${tripId}/places/${stopId}`
+      `/trips/${tripId}/places/${stopId}`,
     );
     return (response.data as IApiResponse<{ message: string }>).data;
   }

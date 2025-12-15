@@ -4,5 +4,11 @@ export {
   getInitialTheme,
   applyThemeClass,
   getToggledTheme,
-} from './theme'
+} from "./theme";
 
+export {
+  getLocationDisplay,
+  formatDate,
+  formatDateRange,
+  getPlaceCountText,
+} from "./trip";

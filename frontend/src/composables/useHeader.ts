@@ -1,39 +1,54 @@
-import { computed } from 'vue'
-import type { RouteLocationRaw } from 'vue-router'
+import { computed } from "vue";
+import { storeToRefs } from "pinia";
+import type { RouteLocationRaw } from "vue-router";
+import { useAuthStore } from "@/stores/authStore";
 
-interface HeaderProps {
-  isAuthenticated: boolean
-  displayName: string
-}
+export function useHeader() {
+  const authStore = useAuthStore();
+  const { isAuthenticated, user } = storeToRefs(authStore);
 
-export function useHeader(props: HeaderProps) {
-  const profileLink = computed<RouteLocationRaw>(() =>
-    props.isAuthenticated
-      ? { name: 'profile' }
-      : { name: 'login' }
-  )
+  const displayName = computed(() => {
+    return (
+      user.value?.user_metadata?.full_name ||
+      user.value?.email?.split("@")[0] ||
+      "Guest"
+    );
+  });
 
-  const profileLabel = computed(() =>
-    props.isAuthenticated ? props.displayName : 'Log in'
-  )
+  const avatarUrl = computed(() => {
+    return user.value?.user_metadata?.avatar_url || "";
+  });
 
-  const profileSubtext = computed(() =>
-    props.isAuthenticated ? 'View profile' : 'Access your trips'
-  )
+  const profileLink = computed<RouteLocationRaw>(() => {
+    return isAuthenticated.value ? { name: "profile" } : { name: "login" };
+  });
+
+  const profileLabel = computed(() => {
+    return isAuthenticated.value ? displayName.value : "Sign In";
+  });
+
+  const profileSubtext = computed(() => {
+    return isAuthenticated.value ? "My Account" : "Get Started";
+  });
 
   const initials = computed(() => {
-    const chunks = props.displayName
-      .split(' ')
-      .filter(Boolean)
-      .map((part) => part[0]?.toUpperCase() ?? '')
-
-    return chunks.slice(0, 2).join('') || 'GA'
-  })
+    if (!displayName.value || displayName.value === "Guest") return "G";
+    return displayName.value
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  });
 
   return {
+    isAuthenticated,
+    user,
+    displayName,
+    avatarUrl,
     profileLink,
     profileLabel,
     profileSubtext,
-    initials
-  }
+    initials,
+  };
 }

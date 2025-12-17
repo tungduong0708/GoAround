@@ -12,3 +12,4 @@ export * from "./useTrips";
 
 export * from "./useForumMain";
 export * from "./useForumPost";
+export * from "./usePlanTrip";

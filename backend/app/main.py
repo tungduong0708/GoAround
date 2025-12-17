@@ -10,6 +10,9 @@ from app.core.db import sessionmanager
 
 
 def init_app(init_db: bool) -> FastAPI:
+    if init_db:
+        sessionmanager.init(settings.SQLALCHEMY_DATABASE_URI.unicode_string())
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         yield

@@ -2,9 +2,12 @@
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 import AppHeader from "./components/Header.vue";
+import AppFooter from "./components/Footer.vue";
+import { Toaster } from "@/components/ui/sonner";
 
 const route = useRoute();
 const showHeader = computed(() => route.meta.hideHeader !== true);
+const showFooter = computed(() => route.meta.hideFooter !== true);
 </script>
 
 <template>
@@ -12,6 +15,8 @@ const showHeader = computed(() => route.meta.hideHeader !== true);
     <AppHeader v-if="showHeader" class="app-header" />
     <div class="content-shell">
       <RouterView class="router-view" />
+      <AppFooter v-if="showFooter" />
+      <Toaster />
     </div>
   </div>
 </template>
@@ -30,6 +35,7 @@ html {
   min-height: 100vh;
   overflow: hidden;
 }
+
 .content-shell {
   position: relative;
   flex: 1;
@@ -40,8 +46,7 @@ html {
 }
 
 .router-view {
-  flex: 1;
-  overflow: auto;
+  flex: 1 0 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;

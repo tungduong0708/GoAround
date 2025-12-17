@@ -46,7 +46,7 @@ export function useTripDetails(options: UseTripDetailsOptions) {
   const sortedStops = computed(() => {
     if (!currentTrip.value?.stops) return [];
     return [...currentTrip.value.stops].sort(
-      (a, b) => a.stopOrder - b.stopOrder,
+      (a, b) => a.stop_order - b.stop_order,
     );
   });
 
@@ -61,8 +61,8 @@ export function useTripDetails(options: UseTripDetailsOptions) {
     const groupedByDate = new Map<string, ITripStop[]>();
 
     stops.forEach((stop) => {
-      const dateKey = stop.arrivalTime
-        ? new Date(stop.arrivalTime).toLocaleDateString()
+      const dateKey = stop.arrival_time
+        ? new Date(stop.arrival_time).toLocaleDateString()
         : "unscheduled";
 
       if (!groupedByDate.has(dateKey)) {
@@ -75,7 +75,7 @@ export function useTripDetails(options: UseTripDetailsOptions) {
     let groupIndex = 0;
     groupedByDate.forEach((groupStops, dateKey) => {
       const isUnscheduled = dateKey === "unscheduled";
-      const groupDate = isUnscheduled ? undefined : groupStops[0]?.arrivalTime;
+      const groupDate = isUnscheduled ? undefined : groupStops[0]?.arrival_time;
 
       groups.push({
         id: `group-${groupIndex++}`,
@@ -91,7 +91,7 @@ export function useTripDetails(options: UseTripDetailsOptions) {
     if (groups.length === 0 && stops.length > 0) {
       groups.push({
         id: "main",
-        title: currentTrip.value.tripName,
+        title: currentTrip.value.trip_name,
         stops: stops,
       });
     }
@@ -103,14 +103,14 @@ export function useTripDetails(options: UseTripDetailsOptions) {
     if (!currentTrip.value) return null;
 
     return {
-      name: currentTrip.value.tripName,
+      name: currentTrip.value.trip_name,
       dateRange: formatDateRange(
-        currentTrip.value.startDate,
-        currentTrip.value.endDate,
+        currentTrip.value.start_date,
+        currentTrip.value.end_date,
       ),
-      placeCount: getPlaceCountText(currentTrip.value.stopCount),
+      placeCount: getPlaceCountText(currentTrip.value.stop_count),
       hasDateRange: !!(
-        currentTrip.value.startDate || currentTrip.value.endDate
+        currentTrip.value.start_date || currentTrip.value.end_date
       ),
     };
   });
@@ -182,7 +182,7 @@ export function useTripDetails(options: UseTripDetailsOptions) {
 
   const getStopOrder = (stopId: string): number => {
     const stop = currentTrip.value?.stops?.find((s) => s.id === stopId);
-    return stop?.stopOrder || 0;
+    return stop?.stop_order || 0;
   };
 
   // Initialize

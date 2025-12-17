@@ -117,7 +117,7 @@ const {
                 <Avatar class="size-12 border-2 border-background shadow-sm">
                   <AvatarImage
                     :src="
-                      post.author.avatarUrl ||
+                      post.author.avatar_url ||
                       `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author.username}`
                     "
                     :alt="post.author.username"
@@ -142,7 +142,7 @@ const {
                   >
                     <span>@{{ post.author.id }}</span>
                     <span>•</span>
-                    <span>{{ formatDate(post.createdAt) }}</span>
+                    <span>{{ formatDate(post.created_at) }}</span>
                   </div>
                 </div>
               </div>
@@ -179,7 +179,7 @@ const {
 
             <!-- Post Content -->
             <p class="text-foreground/90 leading-relaxed whitespace-pre-wrap">
-              {{ post.content || post.contentSnippet }}
+              {{ post.content || post.content_snippet }}
             </p>
 
             <!-- Tags (inline hashtags) -->
@@ -213,9 +213,9 @@ const {
 
             <!-- Stats -->
             <ForumPostStats
-              :reply-count="post.replyCount || 0"
-              :like-count="post.likeCount || 0"
-              :view-count="post.viewCount || 0"
+              :reply-count="post.reply_count || 0"
+              :like-count="post.like_count || 0"
+              :view-count="post.view_count || 0"
               :format-number="formatNumber"
             />
           </CardContent>
@@ -232,7 +232,7 @@ const {
                 <MessageCircleIcon class="size-5" />
                 Replies
                 <span class="text-muted-foreground font-normal text-sm">
-                  ({{ replyPagination?.totalItems || 0 }})
+                  ({{ replyPagination?.total_items || 0 }})
                 </span>
               </h2>
 

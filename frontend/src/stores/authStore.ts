@@ -91,7 +91,7 @@ export const useAuthStore = defineStore('auth', () => {
       const { user: newUser, session: newSession } = await AuthenticationService.signUp({
         email: input.email,
         password: input.password,
-        fullName: input.fullName ?? '',
+        full_name: input.fullName ?? '',
         phone: input.phone ?? '',
         username: input.username ?? '',
         role: input.role ?? UserRole.TRAVELLER,

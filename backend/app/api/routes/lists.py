@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app import crud
+from app import services
 from app.api.deps import CurrentUser, SessionDep
 from app.schemas import (
     APIResponse,
@@ -24,7 +24,7 @@ async def list_lists(
     page: int = 1,
     limit: int = 20,
 ):
-    lists, total = await crud.list_saved_lists(session, current_user.id, page, limit)
+    lists, total = await services.list_saved_lists(session, current_user.id, page, limit)
     return APIResponse(
         status="success",
         data=lists,
@@ -37,7 +37,7 @@ async def get_list(
     session: SessionDep, current_user: CurrentUser, list_id: uuid.UUID
 ):
     try:
-        detail = await crud.get_saved_list(session, current_user.id, list_id)
+        detail = await services.get_saved_list(session, current_user.id, list_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     item_count = len(detail.items)
@@ -52,7 +52,7 @@ async def get_list(
 async def create_list(
     session: SessionDep, current_user: CurrentUser, body: SavedListCreate
 ):
-    sl = await crud.create_saved_list(session, current_user.id, body)
+    sl = await services.create_saved_list(session, current_user.id, body)
     return APIResponse(status="success", data=sl)
 
 
@@ -68,7 +68,7 @@ async def add_place(
     body: AddPlaceToListRequest,
 ):
     try:
-        await crud.add_place_to_list(session, list_id, current_user.id, body)
+        await services.add_place_to_list(session, list_id, current_user.id, body)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return APIResponse(status="success", data=Message(message="Place added to list."))
@@ -81,7 +81,7 @@ async def remove_place(
     session: SessionDep, current_user: CurrentUser, list_id: uuid.UUID, place_id: uuid.UUID
 ):
     try:
-        await crud.remove_place_from_list(session, list_id, current_user.id, place_id)
+        await services.remove_place_from_list(session, list_id, current_user.id, place_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return APIResponse(status="success", data=Message(message="Place removed from list."))

@@ -3,7 +3,7 @@ from typing import Any, List
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app import crud
+from app import services
 from app.api.deps import CurrentUser, SessionDep
 from app.models import Place
 from app.schemas import (
@@ -39,7 +39,7 @@ async def search_places(
             detail="Location (lat,lng) is required for distance sorting.",
         )
 
-    results, total = await crud.search_places(session, filter_params)
+    results, total = await services.search_places(session, filter_params)
 
     return APIResponse(
         status="success",
@@ -58,7 +58,7 @@ async def read_my_places(
     """
     Get places owned by the current user.
     """
-    places = await crud.get_places_by_owner(session, current_user.id)
+    places = await services.get_places_by_owner(session, current_user.id)
     return APIResponse(status="success", data=places)
 
 
@@ -67,7 +67,7 @@ async def get_place(session: SessionDep, id: uuid.UUID) -> Any:
     """
     Get detailed information for a single place.
     """
-    place = await crud.get_place(session, id)
+    place = await services.get_place(session, id)
     if not place:
         raise HTTPException(status_code=404, detail="Place not found")
 
@@ -83,7 +83,7 @@ async def list_reviews_for_place(
     if not exists:
         raise HTTPException(status_code=404, detail="Place not found")
 
-    reviews, total = await crud.list_reviews_for_place(session, id, page, limit)
+    reviews, total = await services.list_reviews_for_place(session, id, page, limit)
     return APIResponse(
         status="success",
         data=reviews,
@@ -103,7 +103,7 @@ async def create_place(
     """
     Create a new place.
     """
-    place = await crud.create_place(session, place_in, current_user.id)
+    place = await services.create_place(session, place_in, current_user.id)
     return APIResponse(status="success", data=place)
 
 
@@ -128,7 +128,7 @@ async def update_place(
             status_code=403, detail="Not authorized to update this place"
         )
 
-    updated_place = await crud.update_place(session, db_place, place_in)
+    updated_place = await services.update_place(session, db_place, place_in)
     return APIResponse(status="success", data=updated_place)
 
 
@@ -151,7 +151,7 @@ async def delete_place(
             status_code=403, detail="Not authorized to delete this place"
         )
 
-    await crud.delete_place(session, db_place)
+    await services.delete_place(session, db_place)
     return APIResponse(
         status="success", data=Message(message="Place deleted successfully")
     )
@@ -177,7 +177,7 @@ async def transfer_ownership(
             status_code=403, detail="Not authorized to transfer this place"
         )
 
-    target_user = await crud.get_profile_by_email(
+    target_user = await services.get_profile_by_email(
         session, transfer_request.new_owner_email
     )
     if not target_user:

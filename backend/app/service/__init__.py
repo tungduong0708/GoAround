@@ -1,11 +1,5 @@
-"""
-CRUD operations - Re-exports from service layer for backward compatibility.
+"""Service layer for business logic operations."""
 
-This module maintains backward compatibility for existing imports while 
-the implementation has been moved to the app.service package.
-"""
-
-# Re-export all functions from service modules
 from app.service.place_service import (
     create_place,
     delete_place,

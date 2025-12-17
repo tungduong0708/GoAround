@@ -8,7 +8,7 @@ export { useSearchResults } from "./useSearchResults";
 
 export * from "./usePlaceDetails";
 export * from "./useTripDetails";
-export * from "./useTrip";
+export * from "./useTrips";
 
 export * from "./useForumMain";
 export * from "./useForumPost";

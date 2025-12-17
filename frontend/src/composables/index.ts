@@ -5,7 +5,10 @@ export { useLoginForm } from "./useLoginForm";
 export { useSearchCategories } from "./useSearchCategories";
 export { useRecommendations } from "./useRecommendations";
 export { useSearchResults } from "./useSearchResults";
+
 export * from "./usePlaceDetails";
+export * from "./useTripDetails";
+export * from "./useTrip";
 
 export * from "./useForumMain";
 export * from "./useForumPost";

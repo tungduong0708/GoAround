@@ -348,12 +348,15 @@ async def get_profile_by_email(session: AsyncSession, email: str) -> Profile | N
 async def search_places(
     session: AsyncSession, filter_params: PlaceSearchFilter
 ) -> tuple[Sequence[PlacePublic], int]:
+    # Load all possible subclasses to prevent lazy loading of polymorphic attributes
+    poly = with_polymorphic(Place, [Hotel, Restaurant, Landmark, Cafe])
+    
     # We MUST selectinload relationships used in _enrich_place_public
     # otherwise accessing them on async objects triggers MissingGreenlet errors
-    query = select(Place).options(
-        selectinload(Place.tags),
-        selectinload(Place.images),  # For primary_image
-        selectinload(Place.reviews),  # For average_rating calculation
+    query = select(poly).options(
+        selectinload(poly.tags),
+        selectinload(poly.images),  # For primary_image
+        selectinload(poly.reviews),  # For average_rating calculation
     )
 
     # 1. Keyword (Name only as Description is generic only in some subclasses)
@@ -361,16 +364,16 @@ async def search_places(
         term = f"%{filter_params.q}%"
         # We search name. Searching subclass specific 'description' requires complicated joins
         # or casting. For V1, we search Name.
-        query = query.where(Place.name.ilike(term))
+        query = query.where(poly.name.ilike(term))
 
     # 2. Type Filter
     if filter_params.place_type:
-        query = query.where(Place.place_type == filter_params.place_type)
+        query = query.where(poly.place_type == filter_params.place_type)
 
     # 3. Tags
     if filter_params.tags:
         tag_list = [t.strip() for t in filter_params.tags.split(",")]
-        query = query.join(Place.tags).where(Tag.name.in_(tag_list))
+        query = query.join(poly.tags).where(Tag.name.in_(tag_list))
 
     # 4. Geo
     distance_expr = None
@@ -381,13 +384,13 @@ async def search_places(
             user_geo = func.ST_SetSRID(func.ST_MakePoint(lng, lat), 4326).cast(
                 Geography
             )
-            distance_expr = func.ST_Distance(Place.location, user_geo)
+            distance_expr = func.ST_Distance(poly.location, user_geo)
 
             if filter_params.radius:
                 # Radius in meters
                 query = query.where(
                     func.ST_DWithin(
-                        Place.location, user_geo, filter_params.radius * 1000
+                        poly.location, user_geo, filter_params.radius * 1000
                     )
                 )
         except ValueError:
@@ -397,16 +400,16 @@ async def search_places(
     if filter_params.sort_by == "distance" and distance_expr is not None:
         query = query.order_by(distance_expr.asc())
     elif filter_params.sort_by == "rating":
-        query = query.order_by(Place.average_rating.desc())
+        query = query.order_by(poly.average_rating.desc())
     else:
         # Default newest.
         # Fallback to sorting by ID if created_at is missing on the polymorphic base
         # (Though snippet for PlaceImage had created_at, Place usually has it too)
         # Using name asc as safe fallback if created_at isn't guaranteed
-        query = query.order_by(Place.name.asc())
+        query = query.order_by(poly.name.asc())
 
     # Count
-    count_query = select(func.count(Place.id)).select_from(query.subquery())
+    count_query = select(func.count(poly.id)).select_from(query.subquery())
     result = await session.execute(count_query)
     total = result.scalar() or 0
 
@@ -415,7 +418,7 @@ async def search_places(
     query = query.offset(offset).limit(filter_params.limit)
 
     result = await session.execute(query)
-    results = result.scalars().all()
+    results = result.unique().scalars().all()
     return [_enrich_place_public(p) for p in results], total
 
 

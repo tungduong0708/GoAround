@@ -1,5 +1,4 @@
 import { authInstance } from "@/config";
-import { mockTrips } from "@/utils/constants/mockData";
 import type {
   ITrip,
   ITripStop,
@@ -25,19 +24,8 @@ class TripService {
   }
 
   async getTrips(): Promise<IPaginatedResponse<ITrip[]>> {
-    // TODO: Waiting for API implementation
-    // Currently, just use the mock data
-    // const response = await authInstance.get("/trips");
-    // return response.data as IPaginatedResponse<ITrip[]>;
-    return {
-      status: "success",
-      data: mockTrips,
-      meta: {
-        page: 1,
-        limit: 10,
-        totalItems: mockTrips.length,
-      },
-    };
+    const response = await authInstance.get("/trips");
+    return response.data as IPaginatedResponse<ITrip[]>;
   }
 
   async createTrip(input: ICreateTripInput): Promise<ITrip> {
@@ -51,13 +39,8 @@ class TripService {
   }
 
   async getTripById(id: string): Promise<ITrip> {
-    // TODO: Waiting for API implementation
-    // Currently, just use the mock data
-    // const response = await authInstance.get(`/trips/${id}`);
-    // return (response.data as IApiResponse<ITrip>).data;
-    const trip = mockTrips.find((trip) => trip.id === id);
-    if (!trip) throw new Error(`Trip with id ${id} not found`);
-    return trip;
+    const response = await authInstance.get(`/trips/${id}`);
+    return (response.data as IApiResponse<ITrip>).data;
   }
 
   async addPlaceToTrip(

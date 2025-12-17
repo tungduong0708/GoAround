@@ -1,5 +1,4 @@
 import { authInstance, commonInstance } from "@/config";
-import { mockPlaces } from "@/utils/constants/mockData";
 import type {
   IPlace,
   ICreatePlaceInput,

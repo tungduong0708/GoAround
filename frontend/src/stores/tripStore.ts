@@ -2,7 +2,6 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import type { ITrip } from "@/utils/interfaces";
 import { TripService } from "@/services";
-import { mockTrips } from "@/utils/constants/mockData";
 
 export const useTripStore = defineStore("trip", () => {
   // State
@@ -36,9 +35,6 @@ export const useTripStore = defineStore("trip", () => {
       trips.value = response.data;
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Failed to load trips";
-      // Fallback to mock data on error
-      console.warn("Failed to load trips from API, using mock data");
-      trips.value = mockTrips;
     } finally {
       loading.value = false;
     }

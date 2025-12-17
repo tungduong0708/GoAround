@@ -1,3 +1,3 @@
 export interface ITransferOwnershipInput {
-  recipientEmail: string;
+  recipient_email: string;
 }

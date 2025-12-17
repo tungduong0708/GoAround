@@ -2,24 +2,24 @@ import type { PlaceType } from "./IPlace";
 
 export interface ICreatePlaceInput {
   name: string;
-  placeType: PlaceType;
+  place_type: PlaceType;
   address?: string;
   city?: string;
   country?: string;
   location?: { lat: number; lng: number };
-  mainImageUrl?: string;
+  main_image_url?: string;
 
   // Hotel specific
-  starRating?: number;
-  pricePerNight?: number;
+  star_rating?: number;
+  price_per_night?: number;
   amenities?: string[];
 
   // Restaurant specific
-  cuisineType?: string;
-  openingHours?: Record<string, string>;
-  priceRange?: string;
+  cuisine_type?: string;
+  opening_hours?: Record<string, string>;
+  price_range?: string;
 
   // Landmark specific
   description?: string;
-  ticketPrice?: number;
+  ticket_price?: number;
 }

@@ -1,5 +1,5 @@
 export interface IUpdateTripStopInput {
-  arrivalTime?: string;
-  orderIndex?: number;
+  arrival_time?: string;
+  order_index?: number;
   notes?: string;
 }

@@ -1,5 +1,5 @@
 export interface IUpdateProfileInput {
   username?: string;
-  fullName?: string;
-  avatarUrl?: string;
+  full_name?: string;
+  avatar_url?: string;
 }

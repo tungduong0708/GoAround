@@ -1,4 +1,4 @@
 export interface ICreateReplyInput {
   content: string;
-  parentReplyId?: string;
+  parent_reply_id?: string;
 }

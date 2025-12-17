@@ -1,6 +1,6 @@
 export interface ICreateReviewInput {
-  placeId: string;
+  place_id: string;
   rating: number;
-  reviewText?: string;
+  review_text?: string;
   images?: string[];
 }

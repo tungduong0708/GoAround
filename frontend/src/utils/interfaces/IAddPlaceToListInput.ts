@@ -1,3 +1,3 @@
 export interface IAddPlaceToListInput {
-  placeId: string;
+  place_id: string;
 }

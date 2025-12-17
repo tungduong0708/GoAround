@@ -3,9 +3,9 @@ import type { UserRole } from "../types/UserRole";
 export interface ICurrentUserResponse {
   id: string;
   username: string | null;
-  fullName: string | null;
-  avatarUrl: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
   role: UserRole;
-  isVerifiedBusiness: boolean;
+  is_verified_business: boolean;
   email: string;
 }

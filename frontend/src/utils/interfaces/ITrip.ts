@@ -3,16 +3,16 @@ import type { IPlace } from "./IPlace";
 export interface ITripStop {
   id: string;
   place: IPlace;
-  stopOrder: number;
-  arrivalTime: string;
+  stop_order: number;
+  arrival_time: string;
   notes?: string;
 }
 
 export interface ITrip {
   id: string;
-  tripName: string;
-  startDate?: string;
-  endDate?: string;
-  stopCount?: number;
+  trip_name: string;
+  start_date?: string;
+  end_date?: string;
+  stop_count?: number;
   stops?: ITripStop[];
 }

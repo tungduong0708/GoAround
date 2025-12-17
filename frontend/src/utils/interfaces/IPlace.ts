@@ -1,11 +1,11 @@
 export interface ILocation {
-  type: "Point";
-  coordinates: [number, number];
+  lat: number;
+  lng: number;
 }
 
 export interface IImage {
   id: string;
-  imageUrl: string;
+  image_url: string;
   caption?: string;
 }
 
@@ -18,32 +18,32 @@ export type PlaceType = "hotel" | "restaurant" | "landmark";
 
 export interface IPlace {
   id: string;
-  ownerId?: string | null;
+  owner_id?: string | null;
   name: string;
-  placeType: PlaceType;
+  place_type: PlaceType;
   address: string;
   city: string;
   country: string;
   location: ILocation;
-  mainImageUrl: string;
-  averageRating: number;
-  reviewCount: number;
+  main_image_url: string;
+  average_rating: number;
+  review_count: number;
 
   // Detail fields
   images?: IImage[];
-  tags?: ITag[];
+  tags?: string[];
 
   // Hotel specific
-  starRating?: number;
-  pricePerNight?: number;
+  star_rating?: number;
+  price_per_night?: number;
   amenities?: string[];
 
   // Restaurant specific
-  cuisineType?: string;
-  openingHours?: Record<string, string>; // e.g. { "mon": "9-22" }
-  priceRange?: string | null;
+  cuisine_type?: string;
+  opening_hours?: Record<string, string>; // e.g. { "mon": "9-22" }
+  price_range?: string | null;
 
   // Landmark specific
   description?: string;
-  ticketPrice?: number;
+  ticket_price?: number;
 }

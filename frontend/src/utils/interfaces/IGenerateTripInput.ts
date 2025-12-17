@@ -2,6 +2,6 @@ export interface IGenerateTripInput {
   destination: string;
   days: number;
   style?: string;
-  startDate?: string;
-  endDate?: string;
+  start_date?: string;
+  end_date?: string;
 }

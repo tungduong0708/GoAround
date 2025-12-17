@@ -16,7 +16,7 @@ export interface IApiResponse<T> {
 export interface IPaginationMeta {
   page: number;
   limit: number;
-  totalItems: number;
+  total_items: number;
 }
 
 /**

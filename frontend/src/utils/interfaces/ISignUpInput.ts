@@ -4,7 +4,7 @@ export interface ISignUpInput {
   username: string;
   email: string;
   password: string;
-  fullName?: string;
+  full_name?: string;
   phone?: string;
   role?: UserRole;
 }

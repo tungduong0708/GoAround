@@ -5,10 +5,10 @@ export interface IReporter {
 
 export interface IReport {
   id: string;
-  targetType: string;
-  targetId: string;
+  target_type: string;
+  target_id: string;
   reason: string;
   status: string;
-  createdAt: string;
+  created_at: string;
   reporter: IReporter;
 }

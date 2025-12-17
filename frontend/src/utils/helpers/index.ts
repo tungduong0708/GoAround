@@ -4,5 +4,5 @@ export {
   getInitialTheme,
   applyThemeClass,
   getToggledTheme,
-} from './theme'
-
+} from "./theme";
+export { capitalize } from "./capitalize";

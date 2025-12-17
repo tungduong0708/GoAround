@@ -1,5 +1,5 @@
 export interface IAddPlaceToTripInput {
-  placeId: string;
-  arrivalTime: string;
+  place_id: string;
+  arrival_time: string;
   notes?: string;
 }

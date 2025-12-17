@@ -1,6 +1,6 @@
 export interface ICreateReportInput {
-  targetType: "post" | "comment" | "review";
-  targetId: string;
+  target_type: "post" | "comment" | "review";
+  target_id: string;
   reason: string;
   details?: string;
 }

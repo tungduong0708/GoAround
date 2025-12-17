@@ -10,7 +10,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import Button from "@/components/ui/button/Button.vue";
 import Input from "@/components/ui/input/Input.vue";
 import Label from "@/components/ui/label/Label.vue";
-import { Separator } from "@/components/ui/separator";
 import { MapPin, Calendar, Trash2, Star } from "lucide-vue-next";
 import type { IPlace } from "@/utils/interfaces";
 
@@ -160,13 +159,11 @@ const addPlaceFromInput = () => {
     <Dialog :open="props.open" @update:open="handleOpenChange">
         <DialogContent class="plan-trip-modal">
             <DialogHeader class="modal-header">
-                <DialogTitle class="modal-title">Plan a New Trip</DialogTitle>
+                <DialogTitle class="modl-title">Plan a New Trip</DialogTitle>
                 <p class="modal-subtitle">
                     Create and organize your perfect itinerary
                 </p>
             </DialogHeader>
-
-            <Separator class="dotted-separator" />
 
             <div class="modal-body">
                 <!-- Trip Name -->
@@ -312,7 +309,6 @@ const addPlaceFromInput = () => {
             </div>
 
             <!-- Footer Actions -->
-            <Separator />
             <div class="modal-footer">
                 <Button
                     type="button"
@@ -347,7 +343,7 @@ const addPlaceFromInput = () => {
 }
 
 .modal-header {
-    padding: 1.25rem 1.5rem 1rem;
+    padding: 0rem 1.5rem;
 }
 
 .dotted-separator {
@@ -371,7 +367,7 @@ const addPlaceFromInput = () => {
 }
 
 .modal-body {
-    padding: 1.25rem 1.5rem;
+    padding: 0 1.5rem;
     flex: 1;
     overflow-y: auto;
     display: flex;

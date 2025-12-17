@@ -3,7 +3,7 @@ name = "app"
 version = "0.1.0"
 description = "Backend for GoAround project, CS300"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.17.2",
     "fastapi[standard]>=0.121.1",

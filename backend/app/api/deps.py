@@ -19,22 +19,32 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
-async def get_current_user(
-    session: SessionDep,
-    token_payload: TokenPayload = Depends(get_token_payload),
-) -> Profile:
-    """
-    Dependency to get the current authenticated user (Profile).
-    """
+# JWT Token Dependency
+TokenPayloadDep = Annotated[TokenPayload, Depends(get_token_payload)]
+
+
+def get_user_id(token_payload: TokenPayloadDep) -> uuid.UUID:
     try:
         # Sub is the UUID from auth.users, which maps to Profile.id
-        user_id = uuid.UUID(token_payload.sub)
+        return uuid.UUID(token_payload.sub)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid user ID in token",
         )
 
+
+# Current User ID Dependency
+CurrentUserIdDep = Annotated[uuid.UUID, Depends(get_user_id)]
+
+
+async def get_current_user(
+    session: SessionDep,
+    user_id: CurrentUserIdDep,
+) -> Profile:
+    """
+    Dependency to get the current authenticated user (Profile).
+    """
     result = await session.execute(select(Profile).where(Profile.id == user_id))
     user = result.scalars().first()
 
@@ -48,4 +58,4 @@ async def get_current_user(
 
 
 # Current User Dependency
-CurrentUser = Annotated[Profile, Depends(get_current_user)]
+CurrentUserDep = Annotated[Profile, Depends(get_current_user)]

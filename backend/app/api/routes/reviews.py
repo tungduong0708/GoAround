@@ -3,14 +3,16 @@ import uuid
 from fastapi import APIRouter, HTTPException
 
 from app import crud
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUserDep, SessionDep
 from app.schemas import APIResponse, Message, ReviewCreate, ReviewSchema, ReviewUpdate
 
 router = APIRouter(tags=["reviews"], prefix="/reviews")
 
 
 @router.post("", response_model=APIResponse[ReviewSchema], status_code=201)
-async def create_review(session: SessionDep, current_user: CurrentUser, body: ReviewCreate):
+async def create_review(
+    session: SessionDep, current_user: CurrentUserDep, body: ReviewCreate
+):
     try:
         review = await crud.create_review(session, current_user.id, body)
     except ValueError as e:
@@ -27,7 +29,12 @@ async def read_review(session: SessionDep, review_id: uuid.UUID):
 
 
 @router.put("/{review_id}", response_model=APIResponse[ReviewSchema])
-async def update_review(session: SessionDep, current_user: CurrentUser, review_id: uuid.UUID, body: ReviewUpdate):
+async def update_review(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    review_id: uuid.UUID,
+    body: ReviewUpdate,
+):
     try:
         review = await crud.update_review(session, current_user.id, review_id, body)
     except ValueError as e:
@@ -38,7 +45,9 @@ async def update_review(session: SessionDep, current_user: CurrentUser, review_i
 
 
 @router.delete("/{review_id}", response_model=APIResponse[Message])
-async def delete_review(session: SessionDep, current_user: CurrentUser, review_id: uuid.UUID):
+async def delete_review(
+    session: SessionDep, current_user: CurrentUserDep, review_id: uuid.UUID
+):
     try:
         await crud.delete_review(session, current_user.id, review_id)
     except ValueError as e:

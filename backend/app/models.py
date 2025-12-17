@@ -28,6 +28,7 @@ auth_users = Table(
     "users",
     Base.metadata,
     Column("id", UUID(as_uuid=True), primary_key=True),
+    Column("email", String(255)),
     schema="auth",
 )
 
@@ -97,7 +98,9 @@ class Profile(Base):
     username: Mapped[str | None] = mapped_column(String(50), unique=True)
     full_name: Mapped[str | None] = mapped_column(String(100))
     avatar_url: Mapped[str | None] = mapped_column(String(255))
-    role: Mapped[str] = mapped_column(String(20), default="Traveler")
+    role: Mapped[Literal["Admin", "Traveler", "Business"]] = mapped_column(
+        String(20), default="Traveler"
+    )
     is_verified_business: Mapped[bool] = mapped_column(Boolean, default=False)
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -146,7 +149,9 @@ class Place(Base):
     )
     owner_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("profiles.id"))
     name: Mapped[str] = mapped_column(String(100))
-    place_type: Mapped[Literal["hotel", "restaurant", "landmark", "cafe"]] = mapped_column(String(50))
+    place_type: Mapped[Literal["hotel", "restaurant", "landmark", "cafe"]] = (
+        mapped_column(String(50))
+    )
     address: Mapped[str | None] = mapped_column(Text)
     city: Mapped[str | None] = mapped_column(String(100))
     country: Mapped[str | None] = mapped_column(String(100))

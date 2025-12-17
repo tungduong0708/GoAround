@@ -9,7 +9,6 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
-    ValidationInfo,
     field_validator,
 )
 from shapely.geometry import Point
@@ -87,7 +86,34 @@ class Message(BaseModel):
     message: str
 
 
-# --- Base Data Models ---
+# --- User Data Schemas ---
+
+
+class UserBase(BaseModel):
+    username: str | None = None
+    full_name: str | None = None
+    avatar_url: str | None = None
+
+
+class UserCreate(UserBase):
+    signup_type: Literal["Traveler", "Business"]
+
+
+class UserUpdate(UserBase):
+    pass
+
+
+class UserPublic(UserBase):
+    id: uuid.UUID
+    role: Literal["Admin", "Traveler", "Business"]
+    is_verified_business: bool
+
+
+class UserDetail(UserPublic):
+    email: EmailStr | None
+
+
+# --- Place Data Schemas ---
 
 
 class PlaceBase(BaseModel):
@@ -104,9 +130,6 @@ class PlaceBase(BaseModel):
     place_type: Literal["hotel", "restaurant", "landmark", "cafe"] = Field(
         ..., description="Type of place"
     )
-
-
-# --- Request Schemas ---
 
 
 class PlaceCreate(PlaceBase):
@@ -177,9 +200,7 @@ class PlaceSearchFilter(BaseModel):
 
     @field_validator("location")
     @classmethod
-    def validate_location_string(
-        cls, v: str | None, info: ValidationInfo
-    ) -> str | None:
+    def validate_location_string(cls, v: str | None) -> str | None:
         if v is not None:
             try:
                 lat, lng = map(float, v.split(","))
@@ -192,9 +213,6 @@ class PlaceSearchFilter(BaseModel):
 
 class TransferOwnershipRequest(BaseModel):
     new_owner_email: EmailStr
-
-
-# --- Response Data Schemas ---
 
 
 class PlacePublic(BaseModel):

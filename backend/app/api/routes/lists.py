@@ -3,15 +3,15 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 
 from app import crud
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUserDep, SessionDep
 from app.schemas import (
+    AddPlaceToListRequest,
     APIResponse,
     Message,
-    SavedListCreate,
-    SavedListSchema,
-    AddPlaceToListRequest,
-    SavedListDetailSchema,
     MetaData,
+    SavedListCreate,
+    SavedListDetailSchema,
+    SavedListSchema,
 )
 
 router = APIRouter(tags=["lists"], prefix="/lists")
@@ -20,7 +20,7 @@ router = APIRouter(tags=["lists"], prefix="/lists")
 @router.get("", response_model=APIResponse[list[SavedListSchema]])
 async def list_lists(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: CurrentUserDep,
     page: int = 1,
     limit: int = 20,
 ):
@@ -34,7 +34,7 @@ async def list_lists(
 
 @router.get("/{list_id}", response_model=APIResponse[SavedListDetailSchema])
 async def get_list(
-    session: SessionDep, current_user: CurrentUser, list_id: uuid.UUID
+    session: SessionDep, current_user: CurrentUserDep, list_id: uuid.UUID
 ):
     try:
         detail = await crud.get_saved_list(session, current_user.id, list_id)
@@ -50,7 +50,7 @@ async def get_list(
 
 @router.post("", response_model=APIResponse[SavedListSchema], status_code=201)
 async def create_list(
-    session: SessionDep, current_user: CurrentUser, body: SavedListCreate
+    session: SessionDep, current_user: CurrentUserDep, body: SavedListCreate
 ):
     sl = await crud.create_saved_list(session, current_user.id, body)
     return APIResponse(status="success", data=sl)
@@ -63,7 +63,7 @@ async def create_list(
 )
 async def add_place(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: CurrentUserDep,
     list_id: uuid.UUID,
     body: AddPlaceToListRequest,
 ):
@@ -74,14 +74,17 @@ async def add_place(
     return APIResponse(status="success", data=Message(message="Place added to list."))
 
 
-@router.delete(
-    "/{list_id}/places/{place_id}", response_model=APIResponse[Message]
-)
+@router.delete("/{list_id}/places/{place_id}", response_model=APIResponse[Message])
 async def remove_place(
-    session: SessionDep, current_user: CurrentUser, list_id: uuid.UUID, place_id: uuid.UUID
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    list_id: uuid.UUID,
+    place_id: uuid.UUID,
 ):
     try:
         await crud.remove_place_from_list(session, list_id, current_user.id, place_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    return APIResponse(status="success", data=Message(message="Place removed from list."))
+    return APIResponse(
+        status="success", data=Message(message="Place removed from list.")
+    )

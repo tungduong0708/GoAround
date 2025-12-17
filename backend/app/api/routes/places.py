@@ -4,18 +4,18 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException
 
 from app import crud
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUserDep, SessionDep
 from app.models import Place
 from app.schemas import (
     APIResponse,
     Message,
     MetaData,
-    ReviewSchema,
     PlaceCreate,
     PlaceDetail,
     PlacePublic,
     PlaceSearchFilter,
     PlaceUpdate,
+    ReviewSchema,
     TransferOwnershipRequest,
 )
 
@@ -53,7 +53,7 @@ async def search_places(
 @router.get("/mine/all", response_model=APIResponse[List[PlacePublic]])
 async def read_my_places(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: CurrentUserDep,
 ) -> Any:
     """
     Get places owned by the current user.
@@ -97,7 +97,7 @@ async def list_reviews_for_place(
 @router.post("", response_model=APIResponse[PlaceDetail], status_code=201)
 async def create_place(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: CurrentUserDep,
     place_in: PlaceCreate,
 ) -> Any:
     """
@@ -110,7 +110,7 @@ async def create_place(
 @router.put("/{id}", response_model=APIResponse[PlaceDetail])
 async def update_place(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: CurrentUserDep,
     id: uuid.UUID,
     place_in: PlaceUpdate,
 ) -> Any:
@@ -135,7 +135,7 @@ async def update_place(
 @router.delete("/{id}", response_model=APIResponse[Message])
 async def delete_place(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: CurrentUserDep,
     id: uuid.UUID,
 ) -> Any:
     """
@@ -160,7 +160,7 @@ async def delete_place(
 @router.post("/{id}/transfer", response_model=APIResponse[Message])
 async def transfer_ownership(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: CurrentUserDep,
     id: uuid.UUID,
     transfer_request: TransferOwnershipRequest,
 ) -> Any:

@@ -4,9 +4,9 @@ import uuid
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, with_polymorphic
 
-from app.models import Place, SavedList, SavedListItem
+from app.models import Place, SavedList, SavedListItem, Hotel, Restaurant, Cafe, Landmark
 from app.schemas import (
     AddPlaceToListRequest,
     SavedListCreate,
@@ -70,12 +70,15 @@ async def get_saved_list(
     session: AsyncSession, user_id: uuid.UUID, list_id: uuid.UUID
 ) -> SavedListDetailSchema:
     """Get a saved list with all its items."""
+    # Use with_polymorphic to eagerly load subclass attributes
+    poly_place = with_polymorphic(Place, [Hotel, Restaurant, Cafe, Landmark])
+
     stmt = (
         select(SavedList)
         .options(
             selectinload(SavedList.items)
-            .selectinload(SavedListItem.place)
-            .selectinload(Place.tags)
+            .selectinload(SavedListItem.place.of_type(poly_place))
+            .selectinload(poly_place.tags)
         )
         .where(SavedList.id == list_id)
     )

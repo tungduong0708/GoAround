@@ -315,16 +315,19 @@ async def get_places_by_owner(
     session: AsyncSession, owner_id: uuid.UUID
 ) -> Sequence[PlacePublic]:
     """Get all places owned by a specific user."""
+    # Use with_polymorphic to eagerly load subclass attributes
+    poly = with_polymorphic(Place, [Hotel, Restaurant, Landmark, Cafe])
+
     stmt = (
-        select(Place)
+        select(poly)
         .options(
-            selectinload(Place.tags),
-            selectinload(Place.images),  # Needed for primary_image in enrich
+            selectinload(poly.tags),
+            selectinload(poly.images),  # Needed for primary_image in enrich
             selectinload(
-                Place.reviews
+                poly.reviews
             ),  # Needed for stats in enrich (if not cached on model)
         )
-        .where(Place.owner_id == owner_id)
+        .where(poly.owner_id == owner_id)
     )
     result = await session.execute(stmt)
     places = result.scalars().all()

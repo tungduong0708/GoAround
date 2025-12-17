@@ -268,11 +268,19 @@ class PlaceDetail(PlacePublic):
 # --- Trip / Itinerary Schemas ---
 
 
+class TripStopCreate(BaseModel):
+    place_id: uuid.UUID
+    stop_order: int | None = Field(None, ge=1)
+    arrival_time: datetime
+    notes: str | None = None
+
+
 class TripCreate(BaseModel):
     trip_name: str = Field(..., min_length=1, max_length=100)
     start_date: date | None = None
     end_date: date | None = None
     tags: list[str] = Field(default_factory=list)
+    stops: list[TripStopCreate] = Field(default_factory=list)
 
 
 class TripUpdate(BaseModel):
@@ -280,13 +288,6 @@ class TripUpdate(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     tags: list[str] | None = None
-
-
-class TripStopCreate(BaseModel):
-    place_id: uuid.UUID
-    stop_order: int | None = Field(None, ge=1)
-    arrival_time: datetime
-    notes: str | None = None
 
 
 class TripStopUpdate(BaseModel):

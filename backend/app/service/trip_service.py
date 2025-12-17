@@ -4,9 +4,9 @@ import uuid
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, with_polymorphic
 
-from app.models import Place, Tag, Trip, TripStop
+from app.models import Place, Tag, Trip, TripStop, Hotel, Restaurant, Cafe, Landmark
 from app.schemas import (
     TripCreate,
     TripListSchema,
@@ -22,12 +22,15 @@ from app.service.place_service import _enrich_place_public
 
 async def _load_trip_detail(session: AsyncSession, trip: Trip) -> TripSchema:
     """Load trip with all its details including stops and places."""
+    # Use with_polymorphic to eagerly load subclass attributes
+    poly_place = with_polymorphic(Place, [Hotel, Restaurant, Cafe, Landmark])
+    
     res = await session.execute(
         select(Trip)
         .options(
             selectinload(Trip.stops)
-            .selectinload(TripStop.place)
-            .selectinload(Place.tags),
+            .selectinload(TripStop.place.of_type(poly_place))
+            .selectinload(poly_place.tags),
             selectinload(Trip.tags),
         )
         .where(Trip.id == trip.id)
@@ -104,6 +107,7 @@ async def create_trip(
         trip_name=data.trip_name,
         start_date=data.start_date,
         end_date=data.end_date,
+        tags=[],  # Initialize tags list to avoid lazy load
     )
     session.add(trip)
     await session.flush()
@@ -124,6 +128,20 @@ async def create_trip(
                     if not tag:
                         raise ValueError(f"Failed to create or find tag: {tag_name}")
             trip.tags.append(tag)
+
+    if data.stops:
+        for i, stop_data in enumerate(data.stops):
+            # If stop_order is not provided, use 1-based index
+            order = stop_data.stop_order if stop_data.stop_order is not None else (i + 1)
+            trip_stop = TripStop(
+                trip_id=trip.id,
+                place_id=stop_data.place_id,
+                stop_order=order,
+                arrival_time=stop_data.arrival_time,
+                notes=stop_data.notes,
+            )
+            session.add(trip_stop)
+
     await session.commit()
     await session.refresh(trip)
     return await _load_trip_detail(session, trip)

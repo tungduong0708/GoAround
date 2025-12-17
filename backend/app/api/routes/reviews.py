@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, HTTPException
 
-from app import services
+from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.schemas import APIResponse, Message, ReviewCreate, ReviewSchema, ReviewUpdate
 
@@ -12,7 +12,7 @@ router = APIRouter(tags=["reviews"], prefix="/reviews")
 @router.post("", response_model=APIResponse[ReviewSchema], status_code=201)
 async def create_review(session: SessionDep, current_user: CurrentUser, body: ReviewCreate):
     try:
-        review = await services.create_review(session, current_user.id, body)
+        review = await crud.create_review(session, current_user.id, body)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return APIResponse(status="success", data=review)
@@ -20,7 +20,7 @@ async def create_review(session: SessionDep, current_user: CurrentUser, body: Re
 
 @router.get("/{review_id}", response_model=APIResponse[ReviewSchema])
 async def read_review(session: SessionDep, review_id: uuid.UUID):
-    review = await services.get_review(session, review_id)
+    review = await crud.get_review(session, review_id)
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
     return APIResponse(status="success", data=review)
@@ -29,7 +29,7 @@ async def read_review(session: SessionDep, review_id: uuid.UUID):
 @router.put("/{review_id}", response_model=APIResponse[ReviewSchema])
 async def update_review(session: SessionDep, current_user: CurrentUser, review_id: uuid.UUID, body: ReviewUpdate):
     try:
-        review = await services.update_review(session, current_user.id, review_id, body)
+        review = await crud.update_review(session, current_user.id, review_id, body)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except PermissionError:
@@ -40,7 +40,7 @@ async def update_review(session: SessionDep, current_user: CurrentUser, review_i
 @router.delete("/{review_id}", response_model=APIResponse[Message])
 async def delete_review(session: SessionDep, current_user: CurrentUser, review_id: uuid.UUID):
     try:
-        await services.delete_review(session, current_user.id, review_id)
+        await crud.delete_review(session, current_user.id, review_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except PermissionError:

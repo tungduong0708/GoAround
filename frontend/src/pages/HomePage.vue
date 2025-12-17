@@ -1,10 +1,8 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
 import SearchHero from '@/components/search/SearchHero.vue'
 import RecommendationsCarousel from '@/components/recommendations/RecommendationsCarousel.vue'
+import TripPlannerSection from '@/components/trip/TripPlannerSection.vue'
 import { useRecommendations, useSearchResults } from '@/composables'
-
-const router = useRouter()
 
 const {
   items: recommendations,
@@ -18,6 +16,7 @@ const { searchTerm, performSearch} = useSearchResults({ autoLoad: false })
 const handleSearchSubmit = () => {
   performSearch()
 }
+
 </script>
 
 <template>
@@ -36,6 +35,12 @@ const handleSearchSubmit = () => {
       >
         {{ recommendationsError }}
       </p>
+    </section>
+
+    <section class="mx-auto w-full max-w-6xl">
+      <!-- Temporarily get the recommendations from the useRecommendations composable -->
+       <!-- TODO: Replace with actual trip data -->
+      <TripPlannerSection :trips="recommendations" />
     </section>
   </div>
 </template>

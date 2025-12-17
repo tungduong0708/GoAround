@@ -10,7 +10,7 @@ const backToHome = () => {
 };
 
 const goToForums = () => {
-  router.push({ name: "forum-main" });
+  router.push({ name: "forum-home" });
 };
 
 const goToSearch = () => {

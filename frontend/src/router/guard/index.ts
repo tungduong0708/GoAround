@@ -56,6 +56,15 @@ const guardRoutes: RouteRecordRaw[] = [
           authRequired: true,
         },
       },
+      {
+        path: ":postId",
+        name: "post-details",
+        component: () => import("@/pages/Forums/PostPage.vue"),
+        meta: {
+          title: "Post Details",
+          authRequired: false,
+        },
+      },
       // Not Found
       {
         path: ":catchAll(.*)",
@@ -63,15 +72,6 @@ const guardRoutes: RouteRecordRaw[] = [
         component: () => import("@/pages/NotFound.vue"),
         meta: {
           title: "Not Found",
-          authRequired: false,
-        },
-      },
-      {
-        path: ":postId",
-        name: "post-details",
-        component: () => import("@/pages/Forums/PostPage.vue"),
-        meta: {
-          title: "Post Details",
           authRequired: false,
         },
       },

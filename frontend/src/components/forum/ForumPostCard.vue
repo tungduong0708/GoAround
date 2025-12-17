@@ -153,7 +153,7 @@ const formatDate = (dateStr: string) => {
                 <!-- Mocking likes since interface doesn't have it yet -->
                 <span
                   class="text-sm font-medium text-muted-foreground group-hover:text-red-500"
-                  >{{ formatNumber(36300) }}</span
+                  >{{ formatNumber(post.likeCount || 0) }}</span
                 >
               </div>
               <div class="flex items-center gap-2 group cursor-pointer">
@@ -167,7 +167,7 @@ const formatDate = (dateStr: string) => {
                 <!-- Mocking views -->
                 <span
                   class="text-sm font-medium text-muted-foreground group-hover:text-green-500"
-                  >{{ formatNumber(97400) }}</span
+                  >{{ formatNumber(post.viewCount || 0) }}</span
                 >
               </div>
 

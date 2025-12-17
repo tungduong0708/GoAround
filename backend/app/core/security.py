@@ -16,7 +16,7 @@ class AmrEntry(BaseModel):
     """
 
     method: str
-    timestamp: str
+    timestamp: int
 
 
 class TokenPayload(BaseModel):
@@ -39,11 +39,11 @@ class TokenPayload(BaseModel):
     session_id: str
     email: str
     phone: str
-    is_anonymous: str
+    is_anonymous: bool
 
     # optional claims
     jti: str | None = None
-    nbf: str | None = None
+    nbf: int | None = None
     app_metadata: dict[str, Any] | None = None
     user_metadata: dict[str, Any] | None = None
     amr: list[AmrEntry] | None = None
@@ -71,7 +71,7 @@ def get_token_payload(
         payload = jwt.decode(
             token,
             settings.SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
+            algorithms=["HS256", "ES256", "RS256"],
             issuer=settings.SUPABASE_JWT_ISSUER,
             audience="authenticated",
             options={"verify_signature": True},  # Verify exp, iss, aud

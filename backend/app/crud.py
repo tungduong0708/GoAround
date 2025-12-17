@@ -7,7 +7,7 @@ from geoalchemy2.shape import to_shape
 from shapely.geometry import Point
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, with_polymorphic
 
 from app.models import (
     SavedList,
@@ -77,7 +77,9 @@ def _enrich_place_public(place: Place) -> PlacePublic:
     # Ensure tags are loaded via selectinload in the query
     tag_names = [t.name for t in place.tags] if place.tags else []
 
-    # 3. Polymorphic Data Extraction (Best Effort mapping to Schema)
+    # 3. Polymorphic Data Extraction - get fields that are in PlacePublic
+    opening_hours = getattr(place, "opening_hours", None)
+    price_range = getattr(place, "price_range", None)
 
     return PlacePublic(
         id=place.id,
@@ -90,6 +92,8 @@ def _enrich_place_public(place: Place) -> PlacePublic:
         average_rating=float(place.average_rating or 0.0),
         review_count=place.review_count or 0,
         main_image_url=place.main_image_url,
+        opening_hours=opening_hours,
+        price_range=price_range,
         tags=tag_names,
     )
 
@@ -109,9 +113,8 @@ def _enrich_place_detail(place: Place) -> PlaceDetail:
         owner_data = OwnerSchema.model_validate(place.owner)
 
     # 2. Subclass specific attributes using getattr to handle polymorphism safely
+    # Only get fields that are NOT in PlacePublic (which already has opening_hours and price_range)
     description = getattr(place, "description", None)
-    opening_hours = getattr(place, "opening_hours", None)
-    price_range = getattr(place, "price_range", None)
     hotel_class = getattr(place, "hotel_class", None)
     price_per_night = getattr(place, "price_per_night", None)
     amenities = getattr(place, "amenities", None)
@@ -124,8 +127,6 @@ def _enrich_place_detail(place: Place) -> PlaceDetail:
         images=images_list,
         owner=owner_data,
         description=description,
-        opening_hours=opening_hours,
-        price_range=price_range,
         hotel_class=int(hotel_class) if hotel_class is not None else None,
         price_per_night=float(price_per_night) if price_per_night is not None else None,
         amenities=amenities,
@@ -228,22 +229,25 @@ async def create_place(
 
 async def get_place(session: AsyncSession, place_id: uuid.UUID) -> PlaceDetail | None:
     """
-    Get place by ID with eager loading.
+    Get place by ID with eager loading of all polymorphic subclasses.
     """
+    # Load all possible subclasses to ensure their columns are available
+    poly = with_polymorphic(Place, [Hotel, Restaurant, Landmark, Cafe])
+    
     stmt = (
-        select(Place)
+        select(poly)
         .options(
-            selectinload(Place.images),
-            selectinload(Place.tags),
-            selectinload(Place.owner),
-            # Polymorphic loading usually handled automatically by SQLAlchemy if configured correctly
+            selectinload(poly.images),
+            selectinload(poly.tags),
+            selectinload(poly.owner),
         )
-        .where(Place.id == place_id)
+        .where(poly.id == place_id)
     )
     result = await session.execute(stmt)
-    place = result.scalars().first()
+    place = result.unique().scalars().first()
     if not place:
         return None
+    
     return _enrich_place_detail(place)
 
 

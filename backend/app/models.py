@@ -1,6 +1,6 @@
 import uuid
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Literal
 
 from geoalchemy2 import Geography
 from sqlalchemy import (
@@ -146,7 +146,7 @@ class Place(Base):
     )
     owner_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("profiles.id"))
     name: Mapped[str] = mapped_column(String(100))
-    place_type: Mapped[str] = mapped_column(String(50))
+    place_type: Mapped[Literal["hotel", "restaurant", "landmark", "cafe"]] = mapped_column(String(50))
     address: Mapped[str | None] = mapped_column(Text)
     city: Mapped[str | None] = mapped_column(String(100))
     country: Mapped[str | None] = mapped_column(String(100))

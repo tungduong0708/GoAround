@@ -4,7 +4,7 @@ This module provides debugging endpoints for local developments.
 
 from fastapi import APIRouter, Depends
 
-from app.core.security import get_token_payload
+from app.core.security import TokenPayload, get_token_payload
 
 router = APIRouter(tags=["private"], prefix="/private")
 

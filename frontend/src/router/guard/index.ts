@@ -18,15 +18,16 @@ const guardRoutes: RouteRecordRaw[] = [
       title: "Trips",
       authRequired: true,
     },
-  },
-  {
-    path: "/trip/:tripId",
-    name: "trip-details",
-    component: () => import("@/pages/Trips/TripPage.vue"),
-    meta: {
-      title: "Trip Details",
-      authRequired: true,
-    },
+    children: [
+      { path: ":tripId",
+        name: "trip-details",
+        component: () => import("@/pages/Trips/TripPage.vue"),
+        meta: {
+          title: "Trip Details",
+          authRequired: true,
+        },
+      },
+    ]
   },
   {
     path: "/forums",

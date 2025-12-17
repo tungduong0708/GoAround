@@ -1,6 +1,6 @@
 import { ref, computed, watch } from "vue";
 import { storeToRefs } from "pinia";
-import { useTripStore } from "@/stores";
+import { useAuthStore, useTripStore } from "@/stores";
 import type { ITripStop } from "@/utils/interfaces";
 import { useRouter } from "vue-router";
 import {
@@ -27,9 +27,12 @@ export function useTripDetails(options: UseTripDetailsOptions) {
 
   const router = useRouter();
   const store = useTripStore();
+  const authStore = useAuthStore();
 
   // Reactive state from store
   const { currentTrip, loading, error } = storeToRefs(store);
+  
+  const isAuthenticated = authStore.isAuthenticated;
 
   // Local state
   const isRemoving = ref(false);
@@ -200,6 +203,7 @@ export function useTripDetails(options: UseTripDetailsOptions) {
   return {
     // State
     trip: currentTrip,
+    isAuthenticated, 
     loading,
     error,
     isRemoving,

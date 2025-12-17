@@ -79,7 +79,7 @@ const {
 
           <!-- Pagination -->
           <div
-            v-if="pagination && pagination.totalItems > pagination.limit"
+            v-if="pagination && pagination.total_items > pagination.limit"
             class="flex items-center justify-center gap-4 py-8"
           >
             <Button
@@ -92,13 +92,13 @@ const {
             </Button>
             <span class="text-sm font-medium text-muted-foreground">
               Page {{ currentPage }} of
-              {{ Math.ceil(pagination.totalItems / pagination.limit) }}
+              {{ Math.ceil(pagination.total_items / pagination.limit) }}
             </span>
             <Button
               variant="outline"
               :disabled="
                 currentPage >=
-                Math.ceil(pagination.totalItems / pagination.limit)
+                Math.ceil(pagination.total_items / pagination.limit)
               "
               @click="nextPage"
               class="rounded-xl border-border/50"

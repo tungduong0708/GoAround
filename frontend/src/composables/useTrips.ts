@@ -1,6 +1,6 @@
 import { onMounted } from "vue";
 import { storeToRefs } from "pinia";
-import { useTripStore } from "@/stores";
+import { useAuthStore, useTripStore } from "@/stores";
 import type { ITrip } from "@/utils/interfaces";
 import { useRouter } from "vue-router";
 import {
@@ -19,6 +19,7 @@ export function useTrips(options: UseTripOptions = {}) {
 
   const router = useRouter();
   const store = useTripStore();
+  const authStore = useAuthStore();
 
   // Reactive state from store
   const {
@@ -30,6 +31,9 @@ export function useTrips(options: UseTripOptions = {}) {
     hasTrips,
     sortedTrips,
   } = storeToRefs(store);
+
+  // Computed property for authentication status
+  const isAuthenticated = authStore.isAuthenticated;
 
   // Actions
   const loadTrips = async (force = false) => {
@@ -89,11 +93,11 @@ export function useTrips(options: UseTripOptions = {}) {
   };
 
   const formatTripDateRange = (trip: ITrip): string => {
-    return formatDateRange(trip.startDate, trip.endDate);
+    return formatDateRange(trip.start_date, trip.end_date);
   };
 
   const formatTripPlaceCount = (trip: ITrip): string => {
-    return getPlaceCountText(trip.stopCount);
+    return getPlaceCountText(trip.stop_count);
   };
 
   // Initialize
@@ -108,6 +112,7 @@ export function useTrips(options: UseTripOptions = {}) {
     trips,
     currentTrip,
     loading,
+    isAuthenticated,
     error,
     tripCount,
     hasTrips,

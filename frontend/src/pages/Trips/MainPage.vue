@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { useTrips, usePlanTrip } from "@/composables";
+import { useAuthGuard } from "@/composables/useAuthGuard";
 import Button from "@/components/ui/button/Button.vue";
 import Card from "@/components/ui/card/Card.vue";
 import CardHeader from "@/components/ui/card/CardHeader.vue";
 import CardTitle from "@/components/ui/card/CardTitle.vue";
 import CardContent from "@/components/ui/card/CardContent.vue";
 import PlanTripModal from "@/components/trip/PlanTripModal.vue";
+import LoginPromptModal from "@/components/auth/LoginPromptModal.vue";
 import { MapPin, Calendar, FileText, Plus, Compass } from "lucide-vue-next";
 
 const {
@@ -21,6 +23,12 @@ const {
 
 const { showPlanTripModal, openPlanTripModal, handleTripSubmit } =
   usePlanTrip();
+
+const { showLoginPrompt, guardAction } = useAuthGuard();
+
+const handleNewTrip = () => guardAction(openPlanTripModal);
+const handleSelectTrip = (trip: (typeof trips.value)[number]) =>
+  guardAction(() => handleTripSelect(trip));
 </script>
 
 <template>
@@ -41,7 +49,7 @@ const { showPlanTripModal, openPlanTripModal, handleTripSubmit } =
         <Button
           class="inline-flex items-center gap-2.5 px-6 py-3 bg-coral text-white font-semibold text-base rounded-xl shadow-lg shadow-coral/25 hover:bg-coral-dark hover:-translate-y-0.5 hover:shadow-xl hover:shadow-coral/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 active:translate-y-0 transition-all duration-200"
           type="button"
-          @click="openPlanTripModal"
+          @click="handleNewTrip"
         >
           <Plus :size="20" />
           <span>New Trip</span>
@@ -107,7 +115,7 @@ const { showPlanTripModal, openPlanTripModal, handleTripSubmit } =
           v-for="trip in trips"
           :key="trip.id"
           class="cursor-pointer group overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-coral/10 hover:-translate-y-1 hover:border-coral/40"
-          @click="handleTripSelect(trip)"
+          @click="handleSelectTrip(trip)"
         >
           <!-- Gradient accent bar -->
           <div
@@ -118,7 +126,7 @@ const { showPlanTripModal, openPlanTripModal, handleTripSubmit } =
             <CardTitle
               class="text-xl font-bold text-foreground group-hover:text-coral transition-colors duration-200"
             >
-              {{ trip.tripName }}
+              {{ trip.trip_name }}
             </CardTitle>
           </CardHeader>
 
@@ -163,6 +171,8 @@ const { showPlanTripModal, openPlanTripModal, handleTripSubmit } =
       v-model:open="showPlanTripModal"
       @submit="handleTripSubmit"
     />
+
+    <LoginPromptModal v-model:open="showLoginPrompt" />
   </div>
 </template>
 

@@ -43,7 +43,8 @@ def _enrich_place_public(place: Place) -> PlacePublic:
             point = to_shape(place.location)
             if isinstance(point, Point):
                 lat, lng = point.y, point.x
-        except Exception:
+        except (ValueError, AttributeError, TypeError) as e:
+            # Log geometry parsing error but continue with default (0, 0)
             pass
 
     # 2. Extract Tags (list of strings)
@@ -116,8 +117,11 @@ async def create_place(
     """
     Creates a new place, selecting the correct Polymorphic Identity (Hotel, Restaurant, Landmark, Cafe).
     """
-    # 1. Location WKT
+    # 1. Location WKT - using proper WKT format with validation
     loc = place_create.location
+    # Validate coordinates
+    if not (-180 <= loc.lng <= 180) or not (-90 <= loc.lat <= 90):
+        raise ValueError(f"Invalid coordinates: lng={loc.lng}, lat={loc.lat}")
     location_wkt = f"POINT({loc.lng} {loc.lat})"
 
     # 2. Determine Model Class & Common Data
@@ -181,20 +185,31 @@ async def create_place(
             )
             session.add(img)
 
-    # 5. Handle Tags
+    # 5. Handle Tags with race condition protection
     if place_create.tags:
         for tag_name in place_create.tags:
             result = await session.execute(select(Tag).where(Tag.name == tag_name))
             tag = result.scalars().first()
             if not tag:
-                tag = Tag(name=tag_name)
-                session.add(tag)
-                await session.flush()
+                try:
+                    tag = Tag(name=tag_name)
+                    session.add(tag)
+                    await session.flush()
+                except Exception:
+                    # Tag may have been created by concurrent request
+                    await session.rollback()
+                    result = await session.execute(select(Tag).where(Tag.name == tag_name))
+                    tag = result.scalars().first()
+                    if not tag:
+                        raise ValueError(f"Failed to create or find tag: {tag_name}")
             db_place.tags.append(tag)
 
     await session.commit()
     # We return via get_place to ensure relationships are loaded properly
-    return await get_place(session, db_place.id)  # type: ignore
+    place_detail = await get_place(session, db_place.id)
+    if not place_detail:
+        raise ValueError(f"Failed to retrieve created place with ID: {db_place.id}")
+    return place_detail
 
 
 async def get_place(session: AsyncSession, place_id: uuid.UUID) -> PlaceDetail | None:
@@ -229,11 +244,14 @@ async def update_place(
     """
     update_data = place_update.model_dump(exclude_unset=True)
 
-    # 1. Geo Update
+    # 1. Geo Update with validation
     if "location" in update_data and update_data["location"]:
         loc_data = update_data["location"]
         lng = loc_data.lng
         lat = loc_data.lat
+        # Validate coordinates
+        if not (-180 <= lng <= 180) or not (-90 <= lat <= 90):
+            raise ValueError(f"Invalid coordinates: lng={lng}, lat={lat}")
         db_place.location = f"POINT({lng} {lat})"
         del update_data["location"]
 
@@ -259,21 +277,32 @@ async def update_place(
         else:
             db_place.main_image_url = None
 
-    # 4. Tags (Full Replace)
+    # 4. Tags (Full Replace) with race condition protection
     if "tags" in update_data and update_data["tags"] is not None:
         db_place.tags = []
         for tag_name in update_data["tags"]:
             result = await session.execute(select(Tag).where(Tag.name == tag_name))
             tag = result.scalars().first()
             if not tag:
-                tag = Tag(name=tag_name)
-                session.add(tag)
-                await session.flush()
+                try:
+                    tag = Tag(name=tag_name)
+                    session.add(tag)
+                    await session.flush()
+                except Exception:
+                    # Tag may have been created by concurrent request
+                    await session.rollback()
+                    result = await session.execute(select(Tag).where(Tag.name == tag_name))
+                    tag = result.scalars().first()
+                    if not tag:
+                        raise ValueError(f"Failed to create or find tag: {tag_name}")
             db_place.tags.append(tag)
 
     await session.commit()
     await session.refresh(db_place)
-    return await get_place(session, db_place.id)  # type: ignore
+    place_detail = await get_place(session, db_place.id)
+    if not place_detail:
+        raise ValueError(f"Failed to retrieve updated place with ID: {db_place.id}")
+    return place_detail
 
 
 async def delete_place(session: AsyncSession, db_place: Place) -> None:

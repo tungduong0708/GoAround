@@ -19,7 +19,10 @@ from app.schemas import (
 async def _recalculate_place_rating(
     session: AsyncSession, place_id: uuid.UUID
 ) -> None:
-    """Recalculate average rating and review count for a place."""
+    """Recalculate average rating and review count for a place.
+    
+    Note: This should be called within a transaction to ensure consistency.
+    """
     result = await session.execute(
         select(func.avg(Review.rating), func.count(Review.id)).where(
             Review.place_id == place_id
@@ -28,8 +31,10 @@ async def _recalculate_place_rating(
     avg, count = result.first() or (0, 0)
     place = await session.get(Place, place_id)
     if place:
-        place.average_rating = float(avg or 0)
+        place.average_rating = float(avg or 0.0)
         place.review_count = int(count or 0)
+    else:
+        raise ValueError(f"Place not found with ID: {place_id}")
 
 
 async def create_review(
@@ -40,22 +45,29 @@ async def create_review(
     if not place:
         raise ValueError("Place not found")
 
-    review = Review(
-        place_id=data.place_id,
-        user_id=user_id,
-        rating=data.rating,
-        review_text=data.review_text,
-    )
-    session.add(review)
-    await session.flush()
+    try:
+        review = Review(
+            place_id=data.place_id,
+            user_id=user_id,
+            rating=data.rating,
+            review_text=data.review_text,
+        )
+        session.add(review)
+        await session.flush()
 
-    for url in data.images:
-        session.add(ReviewImage(review_id=review.id, image_url=url))
+        for url in data.images:
+            session.add(ReviewImage(review_id=review.id, image_url=url))
+    except Exception as e:
+        await session.rollback()
+        raise ValueError(f"Failed to create review: {str(e)}")
 
     await _recalculate_place_rating(session, data.place_id)
     await session.commit()
     await session.refresh(review)
-    return await get_review(session, review.id)  # type: ignore
+    review_detail = await get_review(session, review.id)
+    if not review_detail:
+        raise ValueError(f"Failed to retrieve created review with ID: {review.id}")
+    return review_detail
 
 
 async def get_review(session: AsyncSession, review_id: uuid.UUID) -> ReviewSchema | None:
@@ -123,22 +135,29 @@ async def update_review(
     if not review:
         raise ValueError("Review not found")
     if review.user_id != user_id:
-        raise PermissionError("Not allowed")
+        raise PermissionError("Not authorized to update this review")
 
-    upd = data.model_dump(exclude_unset=True)
-    images = upd.pop("images", None)
-    for k, v in upd.items():
-        setattr(review, k, v)
+    try:
+        upd = data.model_dump(exclude_unset=True)
+        images = upd.pop("images", None)
+        for k, v in upd.items():
+            setattr(review, k, v)
 
-    if images is not None:
-        for img in list(review.images):
-            await session.delete(img)
-        for url in images:
-            session.add(ReviewImage(review_id=review.id, image_url=url))
+        if images is not None:
+            # Use ORM relationship to clear images (CASCADE handles deletion)
+            review.images.clear()
+            for url in images:
+                session.add(ReviewImage(review_id=review.id, image_url=url))
+    except Exception as e:
+        await session.rollback()
+        raise ValueError(f"Failed to update review: {str(e)}")
 
     await _recalculate_place_rating(session, review.place_id)
     await session.commit()
-    return await get_review(session, review.id)  # type: ignore
+    review_detail = await get_review(session, review.id)
+    if not review_detail:
+        raise ValueError(f"Failed to retrieve updated review with ID: {review.id}")
+    return review_detail
 
 
 async def delete_review(
@@ -149,7 +168,7 @@ async def delete_review(
     if not review:
         raise ValueError("Review not found")
     if review.user_id != user_id:
-        raise PermissionError("Not allowed")
+        raise PermissionError("Not authorized to delete this review")
     place_id = review.place_id
     await session.delete(review)
     await _recalculate_place_rating(session, place_id)

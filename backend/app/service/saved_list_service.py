@@ -22,11 +22,15 @@ async def create_saved_list(
     session: AsyncSession, user_id: uuid.UUID, data: SavedListCreate
 ) -> SavedListSchema:
     """Create a new saved list for a user."""
-    saved_list = SavedList(user_id=user_id, name=data.name)
-    session.add(saved_list)
-    await session.commit()
-    await session.refresh(saved_list)
-    return SavedListSchema.model_validate(saved_list)
+    try:
+        saved_list = SavedList(user_id=user_id, name=data.name)
+        session.add(saved_list)
+        await session.commit()
+        await session.refresh(saved_list)
+        return SavedListSchema.model_validate(saved_list)
+    except Exception as e:
+        await session.rollback()
+        raise ValueError(f"Failed to create saved list: {str(e)}")
 
 
 async def list_saved_lists(
@@ -77,8 +81,10 @@ async def get_saved_list(
     )
     res = await session.execute(stmt)
     saved_list = res.scalars().first()
-    if not saved_list or saved_list.user_id != user_id:
-        raise ValueError("List not found or access denied")
+    if not saved_list:
+        raise ValueError("Saved list not found")
+    if saved_list.user_id != user_id:
+        raise PermissionError("Not authorized to access this list")
 
     detailed_items = [
         {
@@ -108,8 +114,10 @@ async def add_place_to_list(
 ) -> SavedListItemSchema:
     """Add a place to a saved list."""
     saved_list = await session.get(SavedList, list_id)
-    if not saved_list or saved_list.user_id != user_id:
-        raise ValueError("List not found or access denied")
+    if not saved_list:
+        raise ValueError("Saved list not found")
+    if saved_list.user_id != user_id:
+        raise PermissionError("Not authorized to modify this list")
 
     place = await session.get(Place, req.place_id)
     if not place:
@@ -123,11 +131,15 @@ async def add_place_to_list(
     if existing.scalars().first():
         raise ValueError("Place already in list")
 
-    item = SavedListItem(list_id=list_id, place_id=req.place_id)
-    session.add(item)
-    await session.commit()
-    await session.refresh(item)
-    return SavedListItemSchema.model_validate(item)
+    try:
+        item = SavedListItem(list_id=list_id, place_id=req.place_id)
+        session.add(item)
+        await session.commit()
+        await session.refresh(item)
+        return SavedListItemSchema.model_validate(item)
+    except Exception as e:
+        await session.rollback()
+        raise ValueError(f"Failed to add place to list: {str(e)}")
 
 
 async def remove_place_from_list(
@@ -135,8 +147,11 @@ async def remove_place_from_list(
 ) -> None:
     """Remove a place from a saved list."""
     saved_list = await session.get(SavedList, list_id)
-    if not saved_list or saved_list.user_id != user_id:
-        raise ValueError("List not found or access denied")
+    if not saved_list:
+        raise ValueError("Saved list not found")
+    if saved_list.user_id != user_id:
+        raise PermissionError("Not authorized to modify this list")
+    
     res = await session.execute(
         select(SavedListItem).where(
             SavedListItem.list_id == list_id, SavedListItem.place_id == place_id
@@ -145,5 +160,10 @@ async def remove_place_from_list(
     item = res.scalars().first()
     if not item:
         raise ValueError("Place not found in list")
-    await session.delete(item)
-    await session.commit()
+    
+    try:
+        await session.delete(item)
+        await session.commit()
+    except Exception as e:
+        await session.rollback()
+        raise ValueError(f"Failed to remove place from list: {str(e)}")

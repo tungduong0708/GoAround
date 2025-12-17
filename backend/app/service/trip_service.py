@@ -95,6 +95,10 @@ async def create_trip(
     session: AsyncSession, user_id: uuid.UUID, data: TripCreate
 ) -> TripSchema:
     """Create a new trip for a user."""
+    # Validate dates
+    if data.start_date and data.end_date and data.end_date < data.start_date:
+        raise ValueError("End date cannot be before start date")
+    
     trip = Trip(
         user_id=user_id,
         trip_name=data.trip_name,
@@ -108,9 +112,17 @@ async def create_trip(
             result = await session.execute(select(Tag).where(Tag.name == tag_name))
             tag = result.scalars().first()
             if not tag:
-                tag = Tag(name=tag_name)
-                session.add(tag)
-                await session.flush()
+                try:
+                    tag = Tag(name=tag_name)
+                    session.add(tag)
+                    await session.flush()
+                except Exception:
+                    # Tag may have been created by concurrent request
+                    await session.rollback()
+                    result = await session.execute(select(Tag).where(Tag.name == tag_name))
+                    tag = result.scalars().first()
+                    if not tag:
+                        raise ValueError(f"Failed to create or find tag: {tag_name}")
             trip.tags.append(tag)
     await session.commit()
     await session.refresh(trip)
@@ -135,20 +147,35 @@ async def update_trip(
     if not trip:
         raise ValueError("Trip not found")
     if trip.user_id != user_id:
-        raise PermissionError("Not allowed")
+        raise PermissionError("Not authorized to update this trip")
     upd = data.model_dump(exclude_unset=True)
+    
+    # Validate dates if both are being updated
+    start_date = upd.get("start_date", trip.start_date)
+    end_date = upd.get("end_date", trip.end_date)
+    if start_date and end_date and end_date < start_date:
+        raise ValueError("End date cannot be before start date")
+    
     tags = upd.pop("tags", None)
     for k, v in upd.items():
         setattr(trip, k, v)
     if tags is not None:
-        trip.tags = []
+        trip.tags.clear()
         for tag_name in tags:
             result = await session.execute(select(Tag).where(Tag.name == tag_name))
             tag = result.scalars().first()
             if not tag:
-                tag = Tag(name=tag_name)
-                session.add(tag)
-                await session.flush()
+                try:
+                    tag = Tag(name=tag_name)
+                    session.add(tag)
+                    await session.flush()
+                except Exception:
+                    # Tag may have been created by concurrent request
+                    await session.rollback()
+                    result = await session.execute(select(Tag).where(Tag.name == tag_name))
+                    tag = result.scalars().first()
+                    if not tag:
+                        raise ValueError(f"Failed to create or find tag: {tag_name}")
             trip.tags.append(tag)
     await session.commit()
     await session.refresh(trip)
@@ -158,12 +185,21 @@ async def update_trip(
 async def _insert_stop_at_order(
     session: AsyncSession, trip_id: uuid.UUID, desired_order: int
 ) -> int:
-    """Helper to shift existing stops to make room at desired order position."""
-    await session.execute(
-        TripStop.__table__.update()
+    """Helper to shift existing stops to make room at desired order position.
+    
+    Note: This operation has race condition risk. Consider using SELECT FOR UPDATE
+    or implementing optimistic locking if concurrent stop modifications are common.
+    """
+    # Load and update stops using ORM to maintain event tracking
+    result = await session.execute(
+        select(TripStop)
         .where(TripStop.trip_id == trip_id, TripStop.stop_order >= desired_order)
-        .values(stop_order=TripStop.stop_order + 1)
+        .order_by(TripStop.stop_order.desc())  # Reverse order to avoid conflicts
     )
+    stops = result.scalars().all()
+    for stop in stops:
+        stop.stop_order += 1
+    await session.flush()  # Ensure changes are visible
     return desired_order
 
 
@@ -175,10 +211,14 @@ async def add_trip_stop(
     if not trip:
         raise ValueError("Trip not found")
     if trip.user_id != user_id:
-        raise PermissionError("Not allowed")
+        raise PermissionError("Not authorized to modify this trip")
     place = await session.get(Place, data.place_id)
     if not place:
         raise ValueError("Place not found")
+    
+    # Validate stop_order if provided
+    if data.stop_order is not None and data.stop_order < 1:
+        raise ValueError("Stop order must be a positive integer")
 
     if data.stop_order is None:
         current_max_res = await session.execute(
@@ -214,32 +254,41 @@ async def update_trip_stop(
         raise ValueError("Stop not found")
     trip = await session.get(Trip, stop.trip_id)
     if not trip or trip.user_id != user_id or trip.id != trip_id:
-        raise PermissionError("Not allowed")
+        raise PermissionError("Not authorized to modify this trip stop")
 
     upd = data.model_dump(exclude_unset=True)
     new_order = upd.pop("order_index", None)
 
+    # Validate new_order if provided
+    if new_order is not None and new_order < 1:
+        raise ValueError("Stop order must be a positive integer")
+
     if new_order is not None and new_order != stop.stop_order:
         if new_order < stop.stop_order:
-            await session.execute(
-                TripStop.__table__.update()
-                .where(
+            # Load and update stops using ORM
+            result = await session.execute(
+                select(TripStop).where(
                     TripStop.trip_id == trip_id,
                     TripStop.stop_order >= new_order,
                     TripStop.stop_order < stop.stop_order,
-                )
-                .values(stop_order=TripStop.stop_order + 1)
+                ).order_by(TripStop.stop_order.desc())
             )
+            stops = result.scalars().all()
+            for s in stops:
+                s.stop_order += 1
         else:
-            await session.execute(
-                TripStop.__table__.update()
-                .where(
+            # Load and update stops using ORM
+            result = await session.execute(
+                select(TripStop).where(
                     TripStop.trip_id == trip_id,
                     TripStop.stop_order <= new_order,
                     TripStop.stop_order > stop.stop_order,
-                )
-                .values(stop_order=TripStop.stop_order - 1)
+                ).order_by(TripStop.stop_order.asc())
             )
+            stops = result.scalars().all()
+            for s in stops:
+                s.stop_order -= 1
+        await session.flush()  # Ensure order changes are visible
         stop.stop_order = new_order
 
     for k, v in upd.items():
@@ -256,15 +305,21 @@ async def remove_trip_stop(
     """Remove a stop from a trip."""
     stop = await session.get(TripStop, stop_id)
     if not stop:
-        return
+        raise ValueError("Stop not found")
     trip = await session.get(Trip, stop.trip_id)
     if not trip or trip.user_id != user_id or trip.id != trip_id:
-        raise PermissionError("Not allowed")
+        raise PermissionError("Not authorized to modify this trip")
     removed_order = stop.stop_order
     await session.delete(stop)
-    await session.execute(
-        TripStop.__table__.update()
-        .where(TripStop.trip_id == trip_id, TripStop.stop_order > removed_order)
-        .values(stop_order=TripStop.stop_order - 1)
+    await session.flush()
+    # Reorder remaining stops using ORM
+    result = await session.execute(
+        select(TripStop).where(
+            TripStop.trip_id == trip_id, 
+            TripStop.stop_order > removed_order
+        ).order_by(TripStop.stop_order.asc())
     )
+    stops = result.scalars().all()
+    for s in stops:
+        s.stop_order -= 1
     await session.commit()

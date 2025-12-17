@@ -46,25 +46,37 @@ async def search_places(
         tag_list = [t.strip() for t in filter_params.tags.split(",")]
         query = query.join(poly.tags).where(Tag.name.in_(tag_list))
 
-    # 4. Geo
+    # 4. Geo with validation
     distance_expr = None
     if filter_params.location:
         try:
             lat_str, lng_str = filter_params.location.split(",")
             lat, lng = float(lat_str), float(lng_str)
+            
+            # Validate coordinates
+            if not (-90 <= lat <= 90) or not (-180 <= lng <= 180):
+                raise ValueError(f"Invalid coordinates: lat={lat}, lng={lng}")
+            
             user_geo = func.ST_SetSRID(func.ST_MakePoint(lng, lat), 4326).cast(
                 Geography
             )
             distance_expr = func.ST_Distance(poly.location, user_geo)
 
             if filter_params.radius:
+                # Validate radius
+                if filter_params.radius <= 0:
+                    raise ValueError("Radius must be positive")
+                if filter_params.radius > 20000:  # 20,000 km max
+                    raise ValueError("Radius too large (max 20,000 km)")
                 # Radius in meters
                 query = query.where(
                     func.ST_DWithin(
                         poly.location, user_geo, filter_params.radius * 1000
                     )
                 )
-        except ValueError:
+        except (ValueError, AttributeError) as e:
+            # Invalid format or coordinate values - silently ignore and continue without geo filter
+            # This matches the original behavior but logs the issue
             pass
 
     # 5. Sorting

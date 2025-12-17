@@ -16,7 +16,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 # Session Dependency
-type SessionDep = Annotated[AsyncSession, Depends(get_db)]
+SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
 async def get_current_user(
@@ -48,4 +48,4 @@ async def get_current_user(
 
 
 # Current User Dependency
-type CurrentUser = Annotated[Profile, Depends(get_current_user)]
+CurrentUser = Annotated[Profile, Depends(get_current_user)]

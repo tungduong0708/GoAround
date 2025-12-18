@@ -19,7 +19,6 @@ export interface StopGroup {
 export interface UseTripDetailsOptions {
   tripId: string;
   autoLoad?: boolean;
-  useMockData?: boolean;
 }
 
 export function useTripDetails(options: UseTripDetailsOptions) {
@@ -31,7 +30,7 @@ export function useTripDetails(options: UseTripDetailsOptions) {
 
   // Reactive state from store
   const { currentTrip, loading, error } = storeToRefs(store);
-  
+
   const isAuthenticated = authStore.isAuthenticated;
 
   // Local state
@@ -117,10 +116,10 @@ export function useTripDetails(options: UseTripDetailsOptions) {
 
   // Actions
   const loadTrip = async (force = false) => {
-    if (!tripId) return;
-
-    if (force || !currentTrip.value || currentTrip.value.id !== tripId) {
-      await store.loadTripById(tripId);
+    console.log("Navigating back");
+    if (force || !currentTrip.value?.id) {
+      const id = router.currentRoute.value.params.id as string;
+      await store.loadTripById(id);
     }
   };
 
@@ -187,6 +186,7 @@ export function useTripDetails(options: UseTripDetailsOptions) {
 
   // Initialize
   if (autoLoad) {
+    console.log("Auto loading trip");
     loadTrip();
   }
 
@@ -195,6 +195,7 @@ export function useTripDetails(options: UseTripDetailsOptions) {
     () => options.tripId,
     (newTripId) => {
       if (newTripId && newTripId !== currentTrip.value?.id) {
+        console.log("Navigating back");
         loadTrip(true);
       }
     },
@@ -203,7 +204,7 @@ export function useTripDetails(options: UseTripDetailsOptions) {
   return {
     // State
     trip: currentTrip,
-    isAuthenticated, 
+    isAuthenticated,
     loading,
     error,
     isRemoving,

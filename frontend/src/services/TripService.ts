@@ -25,6 +25,7 @@ class TripService {
 
   async getTrips(): Promise<IPaginatedResponse<ITrip[]>> {
     const response = await authInstance.get("/trips");
+    console.log(response.data);
     return response.data as IPaginatedResponse<ITrip[]>;
   }
 

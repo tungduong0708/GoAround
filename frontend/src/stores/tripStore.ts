@@ -18,9 +18,11 @@ export const useTripStore = defineStore("trip", () => {
 
   const sortedTrips = computed(() => {
     return [...trips.value].sort((a, b) => {
-      if (!a.startDate) return 1;
-      if (!b.startDate) return -1;
-      return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+      if (!a.start_date) return 1;
+      if (!b.start_date) return -1;
+      return (
+        new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
+      );
     });
   });
 

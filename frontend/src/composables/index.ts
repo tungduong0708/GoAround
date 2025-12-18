@@ -6,6 +6,7 @@ export { useSignupForm } from "./useSignupForm";
 export { useSearchCategories } from "./useSearchCategories";
 export { useRecommendations } from "./useRecommendations";
 export { useSearchResults } from "./useSearchResults";
+export { useSavedTrip } from "./useSavedTrip";
 
 export * from "./usePlaceDetails";
 export * from "./useTripDetails";

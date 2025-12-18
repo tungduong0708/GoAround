@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { RouterLink } from "vue-router";
 import { useTrips, usePlanTrip } from "@/composables";
 import { useAuthGuard } from "@/composables/useAuthGuard";
 import Button from "@/components/ui/button/Button.vue";
@@ -11,24 +12,21 @@ import LoginPromptModal from "@/components/auth/LoginPromptModal.vue";
 import { MapPin, Calendar, FileText, Plus, Compass } from "lucide-vue-next";
 
 const {
-  trips,
-  loading,
-  error,
-  hasTrips,
-  handleTripSelect,
-  formatTripLocation,
-  formatTripDateRange,
-  formatTripPlaceCount,
+    trips,
+    loading,
+    error,
+    hasTrips,
+    formatTripLocation,
+    formatTripDateRange,
+    formatTripPlaceCount,
 } = useTrips({ autoLoad: true });
 
 const { showPlanTripModal, openPlanTripModal, handleTripSubmit } =
-  usePlanTrip();
+    usePlanTrip();
 
 const { showLoginPrompt, guardAction } = useAuthGuard();
 
 const handleNewTrip = () => guardAction(openPlanTripModal);
-const handleSelectTrip = (trip: (typeof trips.value)[number]) =>
-  guardAction(() => handleTripSelect(trip));
 </script>
 
 <template>
@@ -57,28 +55,28 @@ const handleSelectTrip = (trip: (typeof trips.value)[number]) =>
       </div>
     </section>
 
-    <!-- Loading State -->
-    <section v-if="loading" class="mx-auto w-full max-w-6xl">
-      <div class="flex items-center justify-center py-16">
-        <div class="text-center">
-          <div
-            class="mx-auto h-14 w-14 animate-spin rounded-full border-4 border-coral border-t-transparent shadow-lg shadow-coral/20"
-          ></div>
-          <p class="mt-5 text-muted-foreground font-medium">
-            Loading your trips...
-          </p>
-        </div>
-      </div>
-    </section>
+        <!-- Loading State -->
+        <section v-if="loading" class="mx-auto w-full max-w-6xl">
+            <div class="flex items-center justify-center py-16">
+                <div class="text-center">
+                    <div
+                        class="mx-auto h-14 w-14 animate-spin rounded-full border-4 border-coral border-t-transparent shadow-lg shadow-coral/20"
+                    ></div>
+                    <p class="mt-5 text-muted-foreground font-medium">
+                        Loading your trips...
+                    </p>
+                </div>
+            </div>
+        </section>
 
-    <!-- Error State -->
-    <section v-else-if="error" class="mx-auto w-full max-w-6xl">
-      <div
-        class="rounded-2xl border border-destructive/30 bg-gradient-to-r from-destructive/5 to-destructive/10 p-8 text-center backdrop-blur-sm"
-      >
-        <p class="text-destructive font-medium text-lg">{{ error }}</p>
-      </div>
-    </section>
+        <!-- Error State -->
+        <section v-else-if="error" class="mx-auto w-full max-w-6xl">
+            <div
+                class="rounded-2xl border border-destructive/30 bg-gradient-to-r from-destructive/5 to-destructive/10 p-8 text-center backdrop-blur-sm"
+            >
+                <p class="text-destructive font-medium text-lg">{{ error }}</p>
+            </div>
+        </section>
 
     <!-- Empty State -->
     <section
@@ -109,86 +107,104 @@ const handleSelectTrip = (trip: (typeof trips.value)[number]) =>
       </div>
     </section>
 
-    <!-- Trips Grid Section -->
-    <section v-else class="mx-auto w-full max-w-6xl">
-      <div
-        class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-        aria-label="Saved trips"
-      >
-        <Card
-          v-for="(trip, index) in trips"
-          :key="trip.id"
-          v-motion
+        <!-- Trips Grid Section -->
+        <section v-else class="mx-auto w-full max-w-6xl">
+            <div
+                class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+                aria-label="Saved trips"
+            >
+                <RouterLink
+                    v-for="(trip, index) in trips"
+                    :key="trip.id"
+                    :to="`/trip/${trip.id}`"
+                    class="block"
+                    custom
+                    v-slot="{ navigate, href }"
+                >
+                    <Card
+                        :as="'a'"
+                        :href="href"
+                        v-motion
           :initial="{ opacity: 0, y: 50 }"
           :enter="{ opacity: 1, y: 0, transition: { delay: index * 100 } }"
           class="cursor-pointer group overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-coral/10 hover:-translate-y-1 hover:border-coral/40"
-          @click="handleSelectTrip(trip)"
-        >
-          <!-- Gradient accent bar -->
-          <div
-            class="h-1.5 bg-gradient-to-r from-coral via-coral-dark to-coral-darker"
-          />
+                        @click="
+                            (e: MouseEvent) => {
+                                e.preventDefault();
+                                guardAction(navigate);
+                            }
+                        "
+                    >
+                        <!-- Gradient accent bar -->
+                        <div
+                            class="h-1.5 bg-gradient-to-r from-coral via-coral-dark to-coral-darker"
+                        />
 
-          <CardHeader class="pb-3">
-            <CardTitle
-              class="text-xl font-bold text-foreground group-hover:text-coral transition-colors duration-200"
-            >
-              {{ trip.trip_name }}
-            </CardTitle>
-          </CardHeader>
+                        <CardHeader class="pb-3">
+                            <CardTitle
+                                class="text-xl font-bold text-foreground group-hover:text-coral transition-colors duration-200"
+                            >
+                                {{ trip.trip_name }}
+                            </CardTitle>
+                        </CardHeader>
 
-          <CardContent class="space-y-3 pt-0">
-            <div
-              class="flex items-center gap-3 text-muted-foreground text-sm group-hover:text-muted-foreground/80 transition-colors"
-            >
-              <div
-                class="flex items-center justify-center w-8 h-8 rounded-lg bg-coral/10 shrink-0"
-              >
-                <MapPin :size="16" class="text-coral" />
-              </div>
-              <span class="truncate">{{ formatTripLocation(trip) }}</span>
+                        <CardContent class="space-y-3 pt-0">
+                            <div
+                                class="flex items-center gap-3 text-muted-foreground text-sm group-hover:text-muted-foreground/80 transition-colors"
+                            >
+                                <div
+                                    class="flex items-center justify-center w-8 h-8 rounded-lg bg-coral/10 shrink-0"
+                                >
+                                    <MapPin :size="16" class="text-coral" />
+                                </div>
+                                <span class="truncate">{{
+                                    formatTripLocation(trip)
+                                }}</span>
+                            </div>
+
+                            <div
+                                class="flex items-center gap-3 text-muted-foreground text-sm"
+                            >
+                                <div
+                                    class="flex items-center justify-center w-8 h-8 rounded-lg bg-coral/10 shrink-0"
+                                >
+                                    <Calendar :size="16" class="text-coral" />
+                                </div>
+                                <span>{{ formatTripDateRange(trip) }}</span>
+                            </div>
+
+                            <div class="flex items-center gap-3 text-sm">
+                                <div
+                                    class="flex items-center justify-center w-8 h-8 rounded-lg bg-coral/10 shrink-0"
+                                >
+                                    <FileText :size="16" class="text-coral" />
+                                </div>
+                                <span class="text-foreground font-semibold">
+                                    {{ formatTripPlaceCount(trip) }}
+                                </span>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </RouterLink>
             </div>
+        </section>
 
-            <div class="flex items-center gap-3 text-muted-foreground text-sm">
-              <div
-                class="flex items-center justify-center w-8 h-8 rounded-lg bg-coral/10 shrink-0"
-              >
-                <Calendar :size="16" class="text-coral" />
-              </div>
-              <span>{{ formatTripDateRange(trip) }}</span>
-            </div>
+        <!-- Plan Trip Modal -->
+        <PlanTripModal
+            v-model:open="showPlanTripModal"
+            @submit="handleTripSubmit"
+        />
 
-            <div class="flex items-center gap-3 text-sm">
-              <div
-                class="flex items-center justify-center w-8 h-8 rounded-lg bg-coral/10 shrink-0"
-              >
-                <FileText :size="16" class="text-coral" />
-              </div>
-              <span class="text-foreground font-semibold">
-                {{ formatTripPlaceCount(trip) }}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </section>
-
-    <!-- Plan Trip Modal -->
-    <PlanTripModal
-      v-model:open="showPlanTripModal"
-      @submit="handleTripSubmit"
-    />
-
-    <LoginPromptModal v-model:open="showLoginPrompt" />
-  </div>
+        <LoginPromptModal v-model:open="showLoginPrompt" />
+    </div>
 </template>
 
 <style scoped>
 /* Responsive adjustment for mobile - make new trip button full width */
 @media (max-width: 640px) {
-  .inline-flex.items-center.gap-2\.5 {
-    width: 100%;
-    justify-content: center;
-  }
+    .inline-flex.items-center.gap-2\.5 {
+        width: 100%;
+        justify-content: center;
+    }
 }
 </style>

@@ -8,10 +8,10 @@ import type {
 } from "@/utils/interfaces";
 export const SEARCH_CATEGORY_VALUES = [
   "all",
-  "hotels",
-  "restaurants",
-  "cafes",
-  "landmarks",
+  "hotel",
+  "restaurant",
+  "cafe",
+  "landmark",
 ] as const;
 export type SearchCategoryValue = (typeof SEARCH_CATEGORY_VALUES)[number];
 

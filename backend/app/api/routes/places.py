@@ -1,7 +1,7 @@
 import uuid
 from typing import Any, List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app import crud
 from app.api.deps import CurrentUserDep, SessionDep
@@ -31,6 +31,7 @@ async def search_places(
 ) -> Any:
     """
     Search places by keyword, tags, price, or location (radius).
+    Only approved places are shown unless the user is an Admin.
     """
     # Validation for distance sorting
     if filter_params.sort_by == "distance" and not filter_params.location:
@@ -101,10 +102,28 @@ async def create_place(
     place_in: PlaceCreate,
 ) -> Any:
     """
-    Create a new place.
+    Create a new place. Place will be pending admin approval.
+    Only verified business accounts can create places.
     """
+    # Check if user is a verified business account
+    if current_user.role != "Business":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only business accounts can create places",
+        )
+
+    if not current_user.is_verified_business:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your business account must be verified to create places",
+        )
+
     place = await crud.create_place(session, place_in, current_user.id)
-    return APIResponse(status="success", data=place)
+    return APIResponse(
+        status="success",
+        data=place,
+        message="Place created successfully and is pending admin approval.",
+    )
 
 
 @router.put("/{id}", response_model=APIResponse[PlaceDetail])
@@ -165,7 +184,7 @@ async def transfer_ownership(
     transfer_request: TransferOwnershipRequest,
 ) -> Any:
     """
-    Transfer ownership of a place to another user via email.
+    Transfer ownership of a place to another verified business account via email.
     """
     db_place = await session.get(Place, id)
 
@@ -182,6 +201,19 @@ async def transfer_ownership(
     )
     if not target_user:
         raise HTTPException(status_code=404, detail="Target user not found")
+
+    # Validate target user is a verified business account
+    if target_user.role != "Business":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Can only transfer ownership to business accounts",
+        )
+
+    if not target_user.is_verified_business:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Target business account must be verified",
+        )
 
     db_place.owner_id = target_user.id
     session.add(db_place)

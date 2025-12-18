@@ -18,10 +18,11 @@ async def search_places(
     """
     Search places with various filters including keyword, type, tags, location, and radius.
     Returns paginated results and total count.
+    Only approved places are shown for all users.
     """
     # Load all possible subclasses to prevent lazy loading of polymorphic attributes
     poly = with_polymorphic(Place, [Hotel, Restaurant, Landmark, Cafe])
-    
+
     # We MUST selectinload relationships used in _enrich_place_public
     # otherwise accessing them on async objects triggers MissingGreenlet errors
     query = select(poly).options(
@@ -29,6 +30,9 @@ async def search_places(
         selectinload(poly.images),  # For primary_image
         selectinload(poly.reviews),  # For average_rating calculation
     )
+
+    # Filter by verification_status = 'approved' - all users only see approved places
+    query = query.where(poly.verification_status == "approved")
 
     # 1. Keyword (Name only as Description is generic only in some subclasses)
     if filter_params.q:
@@ -52,11 +56,11 @@ async def search_places(
         try:
             lat_str, lng_str = filter_params.location.split(",")
             lat, lng = float(lat_str), float(lng_str)
-            
+
             # Validate coordinates
             if not (-90 <= lat <= 90) or not (-180 <= lng <= 180):
                 raise ValueError(f"Invalid coordinates: lat={lat}, lng={lng}")
-            
+
             user_geo = func.ST_SetSRID(func.ST_MakePoint(lng, lat), 4326).cast(
                 Geography
             )
@@ -74,7 +78,7 @@ async def search_places(
                         poly.location, user_geo, filter_params.radius * 1000
                     )
                 )
-        except (ValueError, AttributeError) as e:
+        except (ValueError, AttributeError):
             # Invalid format or coordinate values - silently ignore and continue without geo filter
             # This matches the original behavior but logs the issue
             pass

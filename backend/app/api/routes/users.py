@@ -1,9 +1,20 @@
 import uuid
+from typing import List
 
 from fastapi import APIRouter, HTTPException, status
 
-from app.api.deps import CurrentUserIdDep, SessionDep
-from app.schemas import APIResponse, UserCreate, UserDetail, UserPublic, UserUpdate
+from app.api.deps import CurrentUserDep, CurrentUserIdDep, SessionDep
+from app.schemas import (
+    APIResponse,
+    UserCreate,
+    UserDetail,
+    UserPhotoResponse,
+    UserPostResponse,
+    UserPublic,
+    UserReviewResponse,
+    UserTripResponse,
+    UserUpdate,
+)
 from app.service import user_service
 
 router = APIRouter(tags=["users"], prefix="/users")
@@ -90,9 +101,9 @@ async def get_user(
     user_id: uuid.UUID,
 ):
     """
-    Get user profile by id.
+    Get public profile of another user with activity statistics.
     """
-    user_public = await user_service.get_user_public(session, user_id)
+    user_public = await user_service.get_user_public_with_stats(session, user_id)
     if not user_public:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -100,3 +111,51 @@ async def get_user(
         )
 
     return APIResponse(status="success", data=user_public, meta=None)
+
+
+@router.get("/{user_id}/reviews", response_model=APIResponse[List[UserReviewResponse]])
+async def get_user_reviews(
+    session: SessionDep,
+    user_id: uuid.UUID,
+):
+    """
+    Get list of reviews written by a specific user.
+    """
+    reviews = await user_service.get_user_reviews(session, user_id)
+    return APIResponse(status="success", data=reviews, meta=None)
+
+
+@router.get("/{user_id}/posts", response_model=APIResponse[List[UserPostResponse]])
+async def get_user_posts(
+    session: SessionDep,
+    user_id: uuid.UUID,
+):
+    """
+    Get list of forum threads created by a specific user.
+    """
+    posts = await user_service.get_user_posts(session, user_id)
+    return APIResponse(status="success", data=posts, meta=None)
+
+
+@router.get("/{user_id}/trips", response_model=APIResponse[List[UserTripResponse]])
+async def get_user_trips(
+    session: SessionDep,
+    user_id: uuid.UUID,
+):
+    """
+    Get list of public trips created by a specific user.
+    """
+    trips = await user_service.get_user_trips(session, user_id)
+    return APIResponse(status="success", data=trips, meta=None)
+
+
+@router.get("/{user_id}/photos", response_model=APIResponse[List[UserPhotoResponse]])
+async def get_user_photos(
+    session: SessionDep,
+    user_id: uuid.UUID,
+):
+    """
+    Get gallery of photos uploaded by the user (aggregated from reviews and posts).
+    """
+    photos = await user_service.get_user_photos(session, user_id)
+    return APIResponse(status="success", data=photos, meta=None)

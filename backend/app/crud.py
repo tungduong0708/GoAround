@@ -1,7 +1,7 @@
 """
 CRUD operations - Re-exports from service layer for backward compatibility.
 
-This module maintains backward compatibility for existing imports while 
+This module maintains backward compatibility for existing imports while
 the implementation has been moved to the app.service package.
 """
 
@@ -9,10 +9,12 @@ the implementation has been moved to the app.service package.
 from app.service.place_service import (
     create_place,
     delete_place,
+    get_pending_places,
     get_place,
     get_places_by_owner,
     get_profile_by_email,
     update_place,
+    verify_place,
 )
 from app.service.review_service import (
     create_review,
@@ -43,10 +45,12 @@ __all__ = [
     # Place operations
     "create_place",
     "delete_place",
+    "get_pending_places",
     "get_place",
     "get_places_by_owner",
     "get_profile_by_email",
     "update_place",
+    "verify_place",
     # Search operations
     "search_places",
     # Saved list operations

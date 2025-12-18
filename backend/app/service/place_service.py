@@ -43,7 +43,7 @@ def _enrich_place_public(place: Place) -> PlacePublic:
             point = to_shape(place.location)
             if isinstance(point, Point):
                 lat, lng = point.y, point.x
-        except (ValueError, AttributeError, TypeError) as e:
+        except (ValueError, AttributeError, TypeError):
             # Log geometry parsing error but continue with default (0, 0)
             pass
 
@@ -69,6 +69,8 @@ def _enrich_place_public(place: Place) -> PlacePublic:
         opening_hours=opening_hours,
         price_range=price_range,
         tags=tag_names,
+        verification_status=place.verification_status,
+        created_at=place.created_at,
     )
 
 
@@ -198,7 +200,9 @@ async def create_place(
                 except Exception:
                     # Tag may have been created by concurrent request
                     await session.rollback()
-                    result = await session.execute(select(Tag).where(Tag.name == tag_name))
+                    result = await session.execute(
+                        select(Tag).where(Tag.name == tag_name)
+                    )
                     tag = result.scalars().first()
                     if not tag:
                         raise ValueError(f"Failed to create or find tag: {tag_name}")
@@ -218,7 +222,7 @@ async def get_place(session: AsyncSession, place_id: uuid.UUID) -> PlaceDetail |
     """
     # Load all possible subclasses to ensure their columns are available
     poly = with_polymorphic(Place, [Hotel, Restaurant, Landmark, Cafe])
-    
+
     stmt = (
         select(poly)
         .options(
@@ -232,7 +236,7 @@ async def get_place(session: AsyncSession, place_id: uuid.UUID) -> PlaceDetail |
     place = result.unique().scalars().first()
     if not place:
         return None
-    
+
     return _enrich_place_detail(place)
 
 
@@ -291,7 +295,9 @@ async def update_place(
                 except Exception:
                     # Tag may have been created by concurrent request
                     await session.rollback()
-                    result = await session.execute(select(Tag).where(Tag.name == tag_name))
+                    result = await session.execute(
+                        select(Tag).where(Tag.name == tag_name)
+                    )
                     tag = result.scalars().first()
                     if not tag:
                         raise ValueError(f"Failed to create or find tag: {tag_name}")
@@ -345,3 +351,56 @@ async def get_profile_by_email(session: AsyncSession, email: str) -> Profile | N
     )
     result = await session.execute(stmt)
     return result.scalars().first()
+
+
+async def get_pending_places(
+    session: AsyncSession,
+) -> Sequence:
+    """
+    Get all places with pending verification status.
+    """
+    poly = with_polymorphic(Place, [Hotel, Restaurant, Landmark, Cafe])
+
+    stmt = (
+        select(poly)
+        .options(
+            selectinload(poly.owner),
+        )
+        .where(poly.verification_status == "pending")
+        .order_by(poly.created_at.desc())
+    )
+    result = await session.execute(stmt)
+    places = result.unique().scalars().all()
+
+    return places
+
+
+async def verify_place(
+    session: AsyncSession,
+    place_id: uuid.UUID,
+    status: str,
+    rejection_reason: str | None = None,
+) -> Place | None:
+    """
+    Update verification status of a place.
+    """
+    from typing import cast, Literal
+
+    poly = with_polymorphic(Place, [Hotel, Restaurant, Landmark, Cafe])
+
+    stmt = select(poly).where(poly.id == place_id)
+    result = await session.execute(stmt)
+    place = result.unique().scalars().first()
+
+    if not place:
+        return None
+
+    # Cast to the proper Literal type
+    place.verification_status = cast(Literal["pending", "approved", "rejected"], status)
+    # Note: rejection_reason would need to be added to the Place model
+    # For now, we just update the status
+
+    await session.commit()
+    await session.refresh(place)
+
+    return place

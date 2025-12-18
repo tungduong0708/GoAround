@@ -7,6 +7,7 @@ from sqlalchemy import (
     Boolean,
     Column,
     Date,
+    Enum,
     ForeignKey,
     Integer,
     Numeric,
@@ -163,6 +164,12 @@ class Place(Base):
     review_count: Mapped[int] = mapped_column(Integer, default=0)
     description: Mapped[str | None] = mapped_column(Text)
     opening_hours: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    verification_status: Mapped[Literal["pending", "approved", "rejected"]] = (
+        mapped_column(String(20), default="pending")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now()
+    )
 
     __mapper_args__ = {"polymorphic_identity": "place", "polymorphic_on": place_type}
 

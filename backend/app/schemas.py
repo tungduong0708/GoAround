@@ -62,6 +62,32 @@ class ReviewerSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PlaceMinimal(BaseModel):
+    id: uuid.UUID
+    name: str
+    main_image_url: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ReviewImageSchema(BaseModel):
+    id: uuid.UUID
+    image_url: str
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserReviewResponse(BaseModel):
+    id: uuid.UUID
+    place: PlaceMinimal
+    rating: int
+    review_text: str | None = None
+    created_at: datetime
+    images: list[ReviewImageSchema] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TagSchema(BaseModel):
     name: str
     model_config = ConfigDict(from_attributes=True)
@@ -80,10 +106,71 @@ class APIResponse[T](BaseModel):
     status: Literal["success", "error"] = "success"
     data: T
     meta: MetaData | None = None
+    message: str | None = None
 
 
 class Message(BaseModel):
     message: str
+
+
+class UserPostResponse(BaseModel):
+    id: uuid.UUID
+    title: str
+    content_snippet: str
+    reply_count: int = 0
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserTripResponse(BaseModel):
+    id: uuid.UUID
+    trip_name: str
+    start_date: date | None = None
+    end_date: date | None = None
+    stop_count: int = 0
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserPhotoResponse(BaseModel):
+    id: uuid.UUID
+    image_url: str
+    source_type: Literal["review", "post"]
+    source_id: uuid.UUID
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AdminPlaceOwner(BaseModel):
+    id: uuid.UUID
+    username: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AdminPendingPlace(BaseModel):
+    id: uuid.UUID
+    name: str
+    place_type: Literal["hotel", "restaurant", "landmark", "cafe"]
+    owner: AdminPlaceOwner | None = None
+    submitted_at: datetime
+    verification_status: Literal["pending", "approved", "rejected"]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class VerifyPlaceRequest(BaseModel):
+    status: Literal["approved", "rejected"]
+    rejection_reason: str | None = None
+
+
+class VerifyPlaceResponse(BaseModel):
+    id: uuid.UUID
+    verification_status: Literal["pending", "approved", "rejected"]
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- User Data Schemas ---
@@ -103,10 +190,19 @@ class UserUpdate(UserBase):
     pass
 
 
+class UserStats(BaseModel):
+    reviews_count: int = 0
+    posts_count: int = 0
+    photos_count: int = 0
+    public_trips_count: int = 0
+
+
 class UserPublic(UserBase):
     id: uuid.UUID
     role: Literal["Admin", "Traveler", "Business"]
     is_verified_business: bool
+    stats: UserStats | None = None
+    joined_at: datetime | None = None
 
 
 class UserDetail(UserPublic):
@@ -235,6 +331,10 @@ class PlacePublic(BaseModel):
     price_range: str | None = None  # For restaurants, cafes, hotels (as range)
 
     tags: list[str] = Field(default_factory=list)
+
+    # Verification fields
+    verification_status: Literal["pending", "approved", "rejected"] = "pending"
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -420,13 +520,6 @@ class ReviewUpdate(BaseModel):
     rating: int | None = Field(None, ge=1, le=5)
     review_text: str | None = None
     images: list[str] | None = None
-
-
-class ReviewImageSchema(BaseModel):
-    id: uuid.UUID
-    image_url: str
-    created_at: datetime
-    model_config = ConfigDict(from_attributes=True)
 
 
 class ReviewSchema(BaseModel):

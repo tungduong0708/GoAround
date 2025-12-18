@@ -1,12 +1,22 @@
-import { BedDoubleIcon, CameraIcon, CoffeeIcon, HomeIcon, UtensilsIcon } from 'lucide-vue-next'
-import type { SearchCategoryValue } from '@/stores/searchStore'
+import {
+  BedDoubleIcon,
+  CameraIcon,
+  CoffeeIcon,
+  HomeIcon,
+  UtensilsIcon,
+} from "lucide-vue-next";
+import type { SearchCategoryValue } from "@/stores/searchStore";
 
-type CategoryIcon = typeof HomeIcon
+type CategoryIcon = typeof HomeIcon;
 
-export const categories: Array<{ label: string; value: SearchCategoryValue; icon: CategoryIcon }> = [
-  { label: 'Search all', value: 'all', icon: HomeIcon },
-  { label: 'Hotels', value: 'hotels', icon: BedDoubleIcon },
-  { label: 'Restaurants', value: 'restaurants', icon: UtensilsIcon },
-  { label: 'Café', value: 'cafes', icon: CoffeeIcon },
-  { label: 'Landmarks', value: 'landmarks', icon: CameraIcon },
-]
+export const categories: Array<{
+  label: string;
+  value: SearchCategoryValue;
+  icon: CategoryIcon;
+}> = [
+  { label: "Search all", value: "all", icon: HomeIcon },
+  { label: "Hotels", value: "hotel", icon: BedDoubleIcon },
+  { label: "Restaurants", value: "restaurant", icon: UtensilsIcon },
+  { label: "Café", value: "cafe", icon: CoffeeIcon },
+  { label: "Landmarks", value: "landmark", icon: CameraIcon },
+];

@@ -68,7 +68,7 @@ export function usePlaceDetails() {
     if (!p) return "N/A";
     if (p.price_per_night !== undefined && p.price_per_night !== null)
       return `$${p.price_per_night.toLocaleString()}/night`;
-    if (p.ticket_price !== undefined)
+    if (p.ticket_price !== undefined && p.ticket_price !== null)
       return `$${p.ticket_price.toLocaleString()}`;
     if (p.price_range) return p.price_range;
     return "N/A";

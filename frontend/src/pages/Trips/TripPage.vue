@@ -250,7 +250,7 @@ onMounted(async () => {
                                 <div class="flex items-center gap-4 p-3 sm:p-4">
                                     <!-- Place Image -->
                                     <img
-                                        :src="stop.place.mainImageUrl"
+                                        :src="stop.place.main_image_url"
                                         :alt="stop.place.name"
                                         class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover shrink-0 bg-muted ring-1 ring-border/50 group-hover/card:ring-coral/30 transition-all duration-200"
                                         loading="lazy"
@@ -277,7 +277,7 @@ onMounted(async () => {
                                                     class="text-amber fill-amber"
                                                 />
                                                 <span>{{
-                                                    stop.place.averageRating.toFixed(
+                                                    stop.place.average_rating.toFixed(
                                                         1,
                                                     )
                                                 }}</span>
@@ -304,7 +304,7 @@ onMounted(async () => {
                                                 >•</span
                                             >
                                             <span class="text-muted-foreground">
-                                                {{ stop.place.reviewCount }}
+                                                {{ stop.place.review_count }}
                                                 reviews
                                             </span>
                                         </div>
@@ -312,12 +312,12 @@ onMounted(async () => {
                                         <!-- Stop Info -->
                                         <div
                                             v-if="
-                                                stop.arrivalTime || stop.notes
+                                                stop.arrival_time || stop.notes
                                             "
                                             class="flex flex-col gap-1 pt-1 border-t border-border/50 mt-1"
                                         >
                                             <div
-                                                v-if="stop.arrivalTime"
+                                                v-if="stop.arrival_time"
                                                 class="flex items-center gap-1.5 text-xs text-muted-foreground"
                                             >
                                                 <Clock
@@ -326,7 +326,7 @@ onMounted(async () => {
                                                 />
                                                 <span>{{
                                                     formatArrivalTime(
-                                                        stop.arrivalTime,
+                                                        stop.arrival_time,
                                                     )
                                                 }}</span>
                                             </div>

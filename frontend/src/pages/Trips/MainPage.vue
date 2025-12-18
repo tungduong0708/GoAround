@@ -114,6 +114,7 @@ const handleNewTrip = () => guardAction(openPlanTripModal);
                     v-for="trip in trips"
                     :key="trip.id"
                     :to="`/trip/${trip.id}`"
+                    class="block"
                     custom
                     v-slot="{ navigate, href }"
                 >
@@ -122,7 +123,7 @@ const handleNewTrip = () => guardAction(openPlanTripModal);
                         :href="href"
                         class="cursor-pointer group overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-coral/10 hover:-translate-y-1 hover:border-coral/40"
                         @click="
-                            (e) => {
+                            (e: MouseEvent) => {
                                 e.preventDefault();
                                 guardAction(navigate);
                             }

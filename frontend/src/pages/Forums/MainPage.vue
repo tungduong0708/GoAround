@@ -30,20 +30,25 @@ const {
   <div class="min-h-screen bg-background pb-20">
     <div class="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
       <!-- 1. Search Header -->
-      <ForumSearchHeader v-model="searchQuery" />
+      <ForumSearchHeader
+        v-motion-slide-visible-once-top
+        v-model="searchQuery"
+      />
 
       <!-- 2. Filters -->
-      <ForumFilterBar
-        :sort-options="sortOptions"
-        :active-sort="activeSort"
-        :tag-options="tagOptions"
-        :active-tags="activeTags"
-        :time-options="timeOptions"
-        :active-time-filter="activeTimeFilter"
-        @update:sort="setSort"
-        @toggle:tag="toggleTag"
-        @update:time="setTimeFilter"
-      />
+      <div v-motion-slide-visible-once-top :delay="100">
+        <ForumFilterBar
+          :sort-options="sortOptions"
+          :active-sort="activeSort"
+          :tag-options="tagOptions"
+          :active-tags="activeTags"
+          :time-options="timeOptions"
+          :active-time-filter="activeTimeFilter"
+          @update:sort="setSort"
+          @toggle:tag="toggleTag"
+          @update:time="setTimeFilter"
+        />
+      </div>
 
       <!-- 3. Posts List -->
       <div class="space-y-6">
@@ -65,6 +70,7 @@ const {
         <!-- Empty State -->
         <div
           v-else-if="!posts.length"
+          v-motion-pop-visible-once
           class="text-center py-20 bg-muted/30 rounded-3xl border border-dashed"
         >
           <h3 class="text-xl font-bold">No results found</h3>
@@ -75,7 +81,14 @@ const {
 
         <!-- Posts -->
         <div v-else class="space-y-6">
-          <ForumPostCard v-for="post in posts" :key="post.id" :post="post" />
+          <ForumPostCard
+            v-for="(post, index) in posts"
+            :key="post.id"
+            :post="post"
+            v-motion
+            :initial="{ opacity: 0, y: 50 }"
+            :enter="{ opacity: 1, y: 0, transition: { delay: index * 50 } }"
+          />
 
           <!-- Pagination -->
           <div

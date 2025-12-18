@@ -21,11 +21,11 @@ let autoplayTimer: ReturnType<typeof setInterval> | null = null;
 const AUTOPLAY_DELAY = 5000;
 
 const roundedRating = (trip: IPlace) =>
-  Math.max(0, Math.min(5, Math.round(trip.averageRating ?? 0)));
+  Math.max(0, Math.min(5, Math.round(trip.average_rating ?? 0)));
 const priceLabel = (trip: IPlace) => {
-  if (typeof trip.pricePerNight === "number")
-    return `€${trip.pricePerNight}/Day`;
-  if (typeof trip.ticketPrice === "number") return `€${trip.ticketPrice}`;
+  if (typeof trip.price_per_night === "number")
+    return `€${trip.price_per_night}/Day`;
+  if (typeof trip.ticket_price === "number") return `€${trip.ticket_price}`;
   return "From €—";
 };
 const locationLabel = (trip: IPlace) =>
@@ -91,7 +91,7 @@ onBeforeUnmount(stopAutoplay);
         class="relative grid gap-10 lg:grid-cols-[1.1fr_minmax(320px,480px)] lg:items-center"
       >
         <!-- Left Content -->
-        <div class="space-y-8">
+        <div v-motion-slide-visible-once-left class="space-y-8">
           <div
             class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-coral/10 text-coral"
           >
@@ -142,7 +142,7 @@ onBeforeUnmount(stopAutoplay);
         </div>
 
         <!-- Right Carousel -->
-        <div class="relative px-4">
+        <div v-motion-slide-visible-once-right class="relative px-4">
           <Carousel
             :opts="{ align: 'center', loop: true }"
             class="w-full"
@@ -162,7 +162,7 @@ onBeforeUnmount(stopAutoplay);
                   <!-- Image -->
                   <div class="relative h-[300px] sm:h-[360px] overflow-hidden">
                     <img
-                      :src="trip.mainImageUrl"
+                      :src="trip.main_image_url"
                       :alt="trip.name"
                       class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
@@ -187,7 +187,7 @@ onBeforeUnmount(stopAutoplay);
                       <span
                         class="text-xs font-bold uppercase tracking-[0.2em] text-coral"
                       >
-                        {{ trip.placeType?.toUpperCase() }}
+                        {{ trip.place_type?.toUpperCase() }}
                       </span>
                     </div>
                     <h3

@@ -34,7 +34,7 @@ const handleSelectTrip = (trip: (typeof trips.value)[number]) =>
 <template>
   <div class="flex w-full flex-col gap-12 px-4 py-8 sm:px-6 lg:px-8">
     <!-- Page Header Section -->
-    <section class="mx-auto w-full max-w-6xl">
+    <section v-motion-slide-visible-once-left class="mx-auto w-full max-w-6xl">
       <div class="flex items-center justify-between gap-6 flex-wrap">
         <div class="space-y-2">
           <h1
@@ -81,7 +81,11 @@ const handleSelectTrip = (trip: (typeof trips.value)[number]) =>
     </section>
 
     <!-- Empty State -->
-    <section v-else-if="!hasTrips" class="mx-auto w-full max-w-6xl">
+    <section
+      v-else-if="!hasTrips"
+      v-motion-pop-visible-once
+      class="mx-auto w-full max-w-6xl"
+    >
       <div
         class="text-center py-16 px-6 rounded-3xl bg-gradient-to-br from-muted/30 to-muted/10 border border-dashed border-border"
       >
@@ -112,8 +116,11 @@ const handleSelectTrip = (trip: (typeof trips.value)[number]) =>
         aria-label="Saved trips"
       >
         <Card
-          v-for="trip in trips"
+          v-for="(trip, index) in trips"
           :key="trip.id"
+          v-motion
+          :initial="{ opacity: 0, y: 50 }"
+          :enter="{ opacity: 1, y: 0, transition: { delay: index * 100 } }"
           class="cursor-pointer group overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-coral/10 hover:-translate-y-1 hover:border-coral/40"
           @click="handleSelectTrip(trip)"
         >

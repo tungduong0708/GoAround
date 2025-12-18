@@ -109,7 +109,10 @@ const {
       <!-- Post Content -->
       <template v-else>
         <!-- Main Post Card -->
-        <Card class="rounded-3xl border-border/50 overflow-hidden">
+        <Card
+          v-motion-slide-visible-once-bottom
+          class="rounded-3xl border-border/50 overflow-hidden"
+        >
           <CardContent class="p-6 space-y-4">
             <!-- Author Header -->
             <div class="flex items-start justify-between">
@@ -222,7 +225,11 @@ const {
         </Card>
 
         <!-- Replies Section -->
-        <Card class="rounded-3xl border-border/50 overflow-hidden">
+        <Card
+          v-motion-slide-visible-once-bottom
+          :delay="200"
+          class="rounded-3xl border-border/50 overflow-hidden"
+        >
           <CardContent class="p-6 space-y-6">
             <!-- Replies Header -->
             <div class="flex items-center justify-between">
@@ -264,12 +271,15 @@ const {
             <!-- Replies List -->
             <div v-if="replies.length > 0" class="space-y-2">
               <ForumReplyCard
-                v-for="reply in replies"
+                v-for="(reply, index) in replies"
                 :key="reply.id"
                 :reply="reply"
                 :format-date="formatDate"
                 :format-number="formatNumber"
                 :is-authenticated="isAuthenticated"
+                v-motion
+                :initial="{ opacity: 0, x: -20 }"
+                :enter="{ opacity: 1, x: 0, transition: { delay: index * 50 } }"
                 @report="openReportDialog('comment', $event)"
                 @reply="openReplyEditor"
               />

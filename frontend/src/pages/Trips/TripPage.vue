@@ -61,7 +61,7 @@ onMounted(async () => {
 <template>
   <div class="flex w-full flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
     <!-- Header Section -->
-    <section class="mx-auto w-full max-w-6xl">
+    <section v-motion-slide-visible-once-top class="mx-auto w-full max-w-6xl">
       <Button
         variant="ghost"
         class="mb-4 -ml-2 group hover:bg-coral-light transition-colors duration-200"
@@ -183,7 +183,7 @@ onMounted(async () => {
     <!-- Stops Section -->
     <section v-if="trip && !loading" class="mx-auto w-full max-w-6xl space-y-4">
       <!-- Empty State -->
-      <div v-if="!hasStops" class="text-center py-16">
+      <div v-if="!hasStops" v-motion-pop-visible-once class="text-center py-16">
         <div
           class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-coral/20 to-coral/5 mb-6"
         >
@@ -205,9 +205,12 @@ onMounted(async () => {
       <!-- Stop Groups -->
       <div v-else class="space-y-4">
         <Collapsible
-          v-for="group in stopGroups"
+          v-for="(group, index) in stopGroups"
           :key="group.id"
           :default-open="true"
+          v-motion
+          :initial="{ opacity: 0, y: 50 }"
+          :enter="{ opacity: 1, y: 0, transition: { delay: index * 100 } }"
           class="rounded-2xl bg-card border border-border/80 overflow-hidden shadow-sm hover:shadow-md hover:border-border transition-all duration-200"
         >
           <CollapsibleTrigger

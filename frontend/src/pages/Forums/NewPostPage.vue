@@ -189,7 +189,11 @@ const confirmCancel = () => {
       </div>
 
       <!-- Form -->
-      <form @submit="onSubmit" class="space-y-8">
+      <form
+        v-motion-slide-visible-once-bottom
+        @submit="onSubmit"
+        class="space-y-8"
+      >
         <!-- Title -->
         <FormField v-slot="{ componentField }" name="title">
           <FormItem>

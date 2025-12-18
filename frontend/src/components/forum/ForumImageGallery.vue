@@ -9,6 +9,7 @@ defineProps<{
 <template>
   <div
     v-if="images && images.length"
+    v-motion-fade-visible-once
     class="grid gap-2 rounded-2xl overflow-hidden"
     :class="{
       'grid-cols-1': images.length === 1,

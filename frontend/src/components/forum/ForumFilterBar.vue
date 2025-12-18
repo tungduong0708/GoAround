@@ -24,7 +24,10 @@ const emit = defineEmits<{
     class="space-y-6 rounded-3xl border border-border/50 bg-card/50 p-6 backdrop-blur-sm"
   >
     <!-- Sort -->
-    <div class="flex items-center gap-4 flex-wrap">
+    <div
+      v-motion-slide-visible-once-bottom
+      class="flex items-center gap-4 flex-wrap"
+    >
       <span class="font-semibold">Sort by:</span>
       <div class="flex gap-2 flex-wrap">
         <Button
@@ -53,7 +56,7 @@ const emit = defineEmits<{
     </div>
 
     <!-- Tags -->
-    <div class="space-y-3">
+    <div v-motion-slide-visible-once-bottom :delay="100" class="space-y-3">
       <div
         class="flex items-center gap-2 text-sm font-medium text-muted-foreground"
       >
@@ -79,7 +82,7 @@ const emit = defineEmits<{
     </div>
 
     <!-- Time -->
-    <div class="space-y-3">
+    <div v-motion-slide-visible-once-bottom :delay="200" class="space-y-3">
       <div
         class="flex items-center gap-2 text-sm font-medium text-muted-foreground"
       >

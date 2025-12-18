@@ -10,7 +10,7 @@ const backToHome = () => {
 };
 
 const goToForums = () => {
-  router.push({ name: "forum-home" });
+  router.push({ name: "forums-home" });
 };
 
 const goToSearch = () => {
@@ -31,7 +31,7 @@ const goToSearch = () => {
       </div>
 
       <!-- 404 Text -->
-      <div class="space-y-2">
+      <div v-motion-pop-visible-once class="space-y-2">
         <h1
           class="text-8xl font-bold tracking-tight bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent"
         >

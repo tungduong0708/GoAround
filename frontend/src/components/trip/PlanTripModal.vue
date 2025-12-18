@@ -46,65 +46,65 @@ const places = ref<IPlace[]>([
   {
     id: "1",
     name: "Colosseum",
-    placeType: "landmark",
+    place_type: "landmark",
     address: "Piazza del Colosseo, 1",
     city: "Rome",
     country: "Italy",
     location: {
-      type: "Point",
-      coordinates: [12.4924, 41.8902],
+      lat: 41.8902,
+      lng: 12.4924,
     },
-    mainImageUrl: "684015-58379d421a52?w=400",
-    averageRating: 5,
-    reviewCount: 180,
+    main_image_url: "684015-58379d421a52?w=400",
+    average_rating: 5,
+    review_count: 180,
   },
   {
     id: "3",
     name: "Pantheon",
-    placeType: "landmark",
+    place_type: "landmark",
     address: "Piazza della Rotonda",
     city: "Rome",
     country: "Italy",
     location: {
-      type: "Point",
-      coordinates: [12.4768, 41.8986],
+      lat: 41.8986,
+      lng: 12.4768,
     },
-    mainImageUrl:
+    main_image_url:
       "https://images.unsplash.com/photo-1529260830199-42c24126f198?w=400",
-    averageRating: 5,
-    reviewCount: 220,
+    average_rating: 5,
+    review_count: 220,
   },
   {
     id: "4",
     name: "Vatican Museums",
-    placeType: "landmark",
+    place_type: "landmark",
     address: "Viale Vaticano",
     city: "Vatican City",
     country: "Italy",
     location: {
-      type: "Point",
-      coordinates: [12.4534, 41.9065],
+      lat: 41.9065,
+      lng: 12.4534,
     },
-    mainImageUrl:
+    main_image_url:
       "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=400",
-    averageRating: 5,
-    reviewCount: 300,
+    average_rating: 5,
+    review_count: 300,
   },
   {
     id: "5",
     name: "Roman Forum",
-    placeType: "landmark",
+    place_type: "landmark",
     address: "Via della Salara Vecchia",
     city: "Rome",
     country: "Italy",
     location: {
-      type: "Point",
-      coordinates: [12.4853, 41.8925],
+      lat: 41.8925,
+      lng: 12.4853,
     },
-    mainImageUrl:
+    main_image_url:
       "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400",
-    averageRating: 4.8,
-    reviewCount: 150,
+    average_rating: 4.8,
+    review_count: 150,
   },
 ]);
 const newPlaceInput = ref("");
@@ -279,7 +279,7 @@ const addPlaceFromInput = () => {
                 class="flex items-center gap-3 p-3 border border-border/80 rounded-xl bg-background hover:border-coral/50 hover:shadow-sm transition-all duration-200 group"
               >
                 <img
-                  :src="place.mainImageUrl"
+                  :src="place.main_image_url"
                   :alt="place.name"
                   class="w-14 h-14 rounded-lg object-cover shrink-0 bg-muted ring-1 ring-border/50 group-hover:ring-coral/30 transition-all"
                 />
@@ -298,10 +298,10 @@ const addPlaceFromInput = () => {
                   <div class="flex items-center gap-1.5 text-xs">
                     <Star :size="12" class="text-amber fill-amber" />
                     <span class="font-semibold text-foreground">
-                      {{ place.averageRating }}
+                      {{ place.average_rating }}
                     </span>
                     <span class="text-muted-foreground">
-                      {{ place.reviewCount }} reviews
+                      {{ place.review_count }} reviews
                     </span>
                   </div>
                 </div>

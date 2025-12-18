@@ -12,22 +12,33 @@ const router = useRouter();
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div class="space-y-1">
-        <h1 class="text-4xl font-bold tracking-tight">TRAVEL FORUM</h1>
-        <p class="text-lg text-muted-foreground">
+        <h1
+          v-motion-slide-visible-once-bottom
+          class="text-4xl font-bold tracking-tight"
+        >
+          TRAVEL FORUM
+        </h1>
+        <p
+          v-motion-slide-visible-once-bottom
+          :delay="100"
+          class="text-lg text-muted-foreground"
+        >
           Connect with travelers and share experiences
         </p>
       </div>
-      <Button
-        size="lg"
-        class="bg-orange-500 hover:bg-orange-600 text-white rounded-xl h-12 px-6 font-semibold shadow-lg shadow-orange-500/20"
-        @click="router.push('/forums/create')"
-      >
-        <PlusIcon class="mr-2 size-5" />
-        Write a Post
-      </Button>
+      <div v-motion-slide-visible-once-bottom :delay="200">
+        <Button
+          size="lg"
+          class="bg-orange-500 hover:bg-orange-600 text-white rounded-xl h-12 px-6 font-semibold shadow-lg shadow-orange-500/20"
+          @click="router.push('/forums/create')"
+        >
+          <PlusIcon class="mr-2 size-5" />
+          Write a Post
+        </Button>
+      </div>
     </div>
 
-    <div class="flex gap-4">
+    <div v-motion-slide-visible-once-bottom :delay="300" class="flex gap-4">
       <div class="relative flex-1">
         <SearchIcon
           class="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground"

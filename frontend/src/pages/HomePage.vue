@@ -1,29 +1,36 @@
 <script setup lang="ts">
-import SearchHero from '@/components/search/SearchHero.vue'
-import RecommendationsCarousel from '@/components/recommendations/RecommendationsCarousel.vue'
-import TripPlannerSection from '@/components/trip/TripPlannerSection.vue'
-import { useRecommendations, useSearchResults } from '@/composables'
+import SearchHero from "@/components/search/SearchHero.vue";
+import RecommendationsCarousel from "@/components/recommendations/RecommendationsCarousel.vue";
+import TripPlannerSection from "@/components/trip/TripPlannerSection.vue";
+import { useRecommendations, useSearchResults } from "@/composables";
 
 const {
   items: recommendations,
   loading: recommendationsLoading,
   error: recommendationsError,
   handleRecommendationSelect,
-} = useRecommendations()
+} = useRecommendations();
 
-const { searchTerm, performSearch} = useSearchResults({ autoLoad: false })
+const { searchTerm, performSearch } = useSearchResults({ autoLoad: false });
 
 const handleSearchSubmit = () => {
-  performSearch()
-}
-
+  performSearch();
+};
 </script>
 
 <template>
   <div class="flex w-full flex-col gap-12 px-4 py-8">
-    <SearchHero v-model="searchTerm" @submit="handleSearchSubmit" />
+    <SearchHero
+      v-motion-slide-visible-once-top
+      v-model="searchTerm"
+      @submit="handleSearchSubmit"
+    />
 
-    <section class="mx-auto w-full max-w-6xl">
+    <section
+      v-motion-slide-visible-once-bottom
+      :delay="200"
+      class="mx-auto w-full max-w-6xl"
+    >
       <RecommendationsCarousel
         :items="recommendations"
         :loading="recommendationsLoading"
@@ -37,9 +44,13 @@ const handleSearchSubmit = () => {
       </p>
     </section>
 
-    <section class="mx-auto w-full max-w-6xl">
+    <section
+      v-motion-slide-visible-once-bottom
+      :delay="400"
+      class="mx-auto w-full max-w-6xl"
+    >
       <!-- Temporarily get the recommendations from the useRecommendations composable -->
-       <!-- TODO: Replace with actual trip data -->
+      <!-- TODO: Replace with actual trip data -->
       <TripPlannerSection :trips="recommendations" />
     </section>
   </div>

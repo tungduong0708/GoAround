@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import {
-    NavigationMenu,
-    NavigationMenuItem,
-    NavigationMenuLink,
-    NavigationMenuList,
-    navigationMenuTriggerStyle,
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,103 +17,98 @@ import titleLogo from "@/assets/GoAround-title.svg";
 import ThemeToggle from "./theme/ThemeToggle.vue";
 
 const { avatarUrl, profileLink, profileLabel, profileSubtext, initials } =
-    useHeader();
+  useHeader();
 </script>
 <template>
-    <header
-        class="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75"
-    >
-        <div class="mx-auto flex w-full max-w-6xl items-center gap-4 px-4 py-3">
+  <header
+    class="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75"
+  >
+    <div class="mx-auto flex w-full max-w-6xl items-center gap-4 px-4 py-3">
+      <RouterLink
+        class="flex items-center gap-3 text-xl font-semibold text-foreground"
+        :to="{ name: 'home' }"
+      >
+        <span class="flex size-12 items-center justify-center">
+          <img :src="logo" alt="GoAround Logo" />
+        </span>
+        <span class="flex h-16 items-center">
+          <img
+            :src="titleLogo"
+            alt="GoAround"
+            class="h-full w-auto object-contain dark:invert"
+          />
+        </span>
+      </RouterLink>
+
+      <NavigationMenu class="hidden flex-1 justify-center md:flex">
+        <NavigationMenuList class="flex items-center gap-1">
+          <NavigationMenuItem v-for="link in headerNavLinks" :key="link.label">
             <RouterLink
-                class="flex items-center gap-3 text-xl font-semibold text-foreground"
-                :to="{ name: 'home' }"
+              v-slot="{ href, navigate, isActive }"
+              :to="link.to"
+              custom
             >
-                <span class="flex size-12 items-center justify-center">
-                    <img :src="logo" alt="GoAround Logo" />
-                </span>
-                <span class="flex h-16 items-center">
-                    <img
-                        :src="titleLogo"
-                        alt="GoAround"
-                        class="h-full w-auto object-contain"
-                    />
-                </span>
+              <NavigationMenuLink
+                :href="href"
+                :data-active="isActive ? 'true' : undefined"
+                :aria-current="isActive ? 'page' : undefined"
+                :class="
+                  cn(
+                    navigationMenuTriggerStyle(),
+                    'text-sm font-medium text-muted-foreground transition-colors data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:shadow-sm'
+                  )
+                "
+                @click="navigate"
+              >
+                {{ link.label }}
+              </NavigationMenuLink>
             </RouterLink>
+          </NavigationMenuItem>
+        </NavigationMenuList>
+      </NavigationMenu>
 
-            <NavigationMenu class="hidden flex-1 justify-center md:flex">
-                <NavigationMenuList class="flex items-center gap-1">
-                    <NavigationMenuItem
-                        v-for="link in headerNavLinks"
-                        :key="link.label"
-                    >
-                        <RouterLink
-                            v-slot="{ href, navigate, isActive }"
-                            :to="link.to"
-                            custom
-                        >
-                            <NavigationMenuLink
-                                :href="href"
-                                :data-active="isActive ? 'true' : undefined"
-                                :aria-current="isActive ? 'page' : undefined"
-                                :class="
-                                    cn(
-                                        navigationMenuTriggerStyle(),
-                                        'text-sm font-medium text-muted-foreground transition-colors data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:shadow-sm',
-                                    )
-                                "
-                                @click="navigate"
-                            >
-                                {{ link.label }}
-                            </NavigationMenuLink>
-                        </RouterLink>
-                    </NavigationMenuItem>
-                </NavigationMenuList>
-            </NavigationMenu>
+      <div class="ml-auto flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          class="hidden rounded-full px-4 font-semibold lg:inline-flex"
+          :as-child="true"
+        >
+          <RouterLink :to="{ name: 'search' }"> Search </RouterLink>
+        </Button>
 
-            <div class="ml-auto flex items-center gap-2">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    class="hidden rounded-full px-4 font-semibold lg:inline-flex"
-                    :as-child="true"
-                >
-                    <RouterLink :to="{ name: 'search' }"> Search </RouterLink>
-                </Button>
+        <div class="hidden h-6 w-px bg-border/60 lg:block" />
 
-                <div class="hidden h-6 w-px bg-border/60 lg:block" />
+        <ThemeToggle />
 
-                <ThemeToggle />
-
-                <Button
-                    variant="ghost"
-                    class="h-auto rounded-full px-1 py-0.5"
-                    :as-child="true"
-                >
-                    <RouterLink
-                        :to="profileLink"
-                        class="flex items-center gap-2 px-2 py-1"
-                    >
-                        <Avatar class="size-10 border">
-                            <AvatarImage
-                                v-if="avatarUrl"
-                                :src="avatarUrl"
-                                :alt="profileLabel"
-                            />
-                            <AvatarFallback>{{ initials }}</AvatarFallback>
-                        </Avatar>
-                        <div
-                            class="hidden text-left text-sm sm:flex sm:flex-col"
-                        >
-                            <span class="font-semibold leading-tight">{{
-                                profileLabel
-                            }}</span>
-                            <span class="text-xs text-muted-foreground">{{
-                                profileSubtext
-                            }}</span>
-                        </div>
-                    </RouterLink>
-                </Button>
+        <Button
+          variant="ghost"
+          class="h-auto rounded-full px-1 py-0.5"
+          :as-child="true"
+        >
+          <RouterLink
+            :to="profileLink"
+            class="flex items-center gap-2 px-2 py-1"
+          >
+            <Avatar class="size-10 border">
+              <AvatarImage
+                v-if="avatarUrl"
+                :src="avatarUrl"
+                :alt="profileLabel"
+              />
+              <AvatarFallback>{{ initials }}</AvatarFallback>
+            </Avatar>
+            <div class="hidden text-left text-sm sm:flex sm:flex-col">
+              <span class="font-semibold leading-tight">{{
+                profileLabel
+              }}</span>
+              <span class="text-xs text-muted-foreground">{{
+                profileSubtext
+              }}</span>
             </div>
-        </div>
-    </header>
+          </RouterLink>
+        </Button>
+      </div>
+    </div>
+  </header>
 </template>

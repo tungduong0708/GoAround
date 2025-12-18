@@ -41,7 +41,7 @@ const contactInfo = {
               <img
                 :src="titleLogo"
                 alt="GoAround"
-                class="h-full w-auto object-contain"
+                class="h-full w-auto object-contain dark:invert"
               />
             </span>
           </div>
@@ -82,7 +82,7 @@ const contactInfo = {
               <img
                 :src="social.icon"
                 :alt="social.name"
-                class="w-4 h-4 invert"
+                class="w-4 h-4 invert dark:invert-0"
               />
             </a>
           </div>

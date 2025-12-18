@@ -38,6 +38,10 @@ export function useSavedTrip() {
     }
   };
 
+  const selectList = (id: string) => {
+    listPlaceStore.fetchListCurrentSelection(id);
+  };
+
   return {
     showModal,
     newCollectionName,
@@ -45,5 +49,6 @@ export function useSavedTrip() {
     currentList,
     handleShowModal,
     handleCreateCollection,
+    selectList,
   };
 }

@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/navigation-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 import { cn } from "@/lib/utils";
 
 import { headerNavLinks } from "@/utils/constants/headerRoutes";
@@ -16,8 +17,20 @@ import logo from "@/assets/GoAround-logo.svg";
 import titleLogo from "@/assets/GoAround-title.svg";
 import ThemeToggle from "./theme/ThemeToggle.vue";
 
-const { avatarUrl, profileLink, profileLabel, profileSubtext, initials } =
-  useHeader();
+// Dropdown state and logic
+
+const {
+  isAuthenticated,
+  showDropdown,
+  avatarUrl,
+  profileLink,
+  profileLabel,
+  profileSubtext,
+  initials,
+  handleProfile,
+  handleLogout,
+} = useHeader();
+
 </script>
 <template>
   <header
@@ -81,30 +94,68 @@ const { avatarUrl, profileLink, profileLabel, profileSubtext, initials } =
 
         <ThemeToggle />
 
+        <div class="relative" v-if="isAuthenticated">
+          <Button
+            variant="ghost"
+            class="h-auto rounded-full px-1 py-0.5"
+            @click="showDropdown = !showDropdown"
+          >
+            <span class="flex items-center gap-2 px-2 py-1">
+              <Avatar class="size-10 border">
+                <AvatarImage
+                  v-if="avatarUrl"
+                  :src="avatarUrl"
+                  :alt="profileLabel"
+                />
+                <AvatarFallback>{{ initials }}</AvatarFallback>
+              </Avatar>
+              <div class="hidden text-left text-sm sm:flex sm:flex-col">
+                <span class="font-semibold leading-tight">{{ profileLabel }}</span>
+                <span class="text-xs text-muted-foreground">{{ profileSubtext }}</span>
+              </div>
+            </span>
+          </Button>
+          <transition name="fade">
+            <div
+              v-if="showDropdown"
+              class="absolute right-0 mt-2 w-40 rounded-md border bg-popover shadow-lg z-50"
+              @click.outside="showDropdown = false"
+            >
+              <ul class="py-1">
+                <li>
+                  <button
+                    class="w-full text-left px-4 py-2 hover:bg-accent hover:text-accent-foreground text-sm"
+                    @click="handleProfile"
+                  >
+                    Profile
+                  </button>
+                </li>
+                <li>
+                  <button
+                    class="w-full text-left px-4 py-2 hover:bg-accent hover:text-accent-foreground text-sm"
+                    @click="handleLogout"
+                  >
+                    Log out
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </transition>
+        </div>
+
         <Button
+          v-else
           variant="ghost"
           class="h-auto rounded-full px-1 py-0.5"
           :as-child="true"
         >
-          <RouterLink
-            :to="profileLink"
-            class="flex items-center gap-2 px-2 py-1"
-          >
+          <RouterLink :to="profileLink" class="flex items-center gap-2 px-2 py-1">
             <Avatar class="size-10 border">
-              <AvatarImage
-                v-if="avatarUrl"
-                :src="avatarUrl"
-                :alt="profileLabel"
-              />
               <AvatarFallback>{{ initials }}</AvatarFallback>
             </Avatar>
             <div class="hidden text-left text-sm sm:flex sm:flex-col">
-              <span class="font-semibold leading-tight">{{
-                profileLabel
-              }}</span>
-              <span class="text-xs text-muted-foreground">{{
-                profileSubtext
-              }}</span>
+              <span class="font-semibold leading-tight">{{ profileLabel }}</span>
+              <span class="text-xs text-muted-foreground">{{ profileSubtext }}</span>
             </div>
           </RouterLink>
         </Button>
@@ -112,3 +163,14 @@ const { avatarUrl, profileLink, profileLabel, profileSubtext, initials } =
     </div>
   </header>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

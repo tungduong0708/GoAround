@@ -20,14 +20,7 @@ const emit = defineEmits<{
 
 const { normalizedValue, handleSubmit: submitSearch } = useSearchBar(props, emit)
 
-const defaultSuggestions = [
-	'Sapa mountain escape',
-	'Ho Chi Minh food tour',
-	'Lan Ha Bay cruise',
-	'Hoi An coffee crawl',
-]
 
-const suggestionChips = computed(() => props.suggestions?.length ? props.suggestions : defaultSuggestions)
 const showClear = computed(() => normalizedValue.value.trim().length > 0 && !props.loading)
 
 const handleFormSubmit = () => {
@@ -38,11 +31,6 @@ const handleClear = () => {
 	emit('update:modelValue', '')
 }
 
-const handleSuggestion = (value: string) => {
-	emit('update:modelValue', value)
-	//TODO: Trigger search immediately on suggestion click
-	submitSearch()
-}
 </script>
 
 <template>
@@ -76,21 +64,6 @@ const handleSuggestion = (value: string) => {
 					<span>{{ loading ? 'Searching…' : 'Search' }}</span>
 				</Button>
 			</Form>
-		</div>
-		<div v-if="suggestionChips.length" class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-			<span class="font-medium uppercase tracking-wide text-foreground/70">Popular:</span>
-			<div class="flex flex-wrap gap-2">
-				<Button
-					v-for="chip in suggestionChips"
-					:key="chip"
-					variant="secondary"
-					size="sm"
-					class="rounded-full border border-border/60 bg-secondary/50 text-foreground/80"
-					@click="handleSuggestion(chip)"
-				>
-					{{ chip }}
-				</Button>
-			</div>
 		</div>
 	</div>
 </template>

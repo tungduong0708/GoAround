@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import SearchBar from "@/components/SearchBar.vue";
+import SearchBar from "@/components/search/SearchBar.vue";
 import SearchResultCard from "@/components/search/SearchResultCard.vue";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";

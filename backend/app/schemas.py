@@ -146,6 +146,7 @@ class UserPhotoResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+
 # --- User Data Schemas ---
 
 
@@ -304,6 +305,7 @@ class PlacePublic(BaseModel):
     price_range: str | None = None  # For restaurants, cafes, hotels (as range)
 
     tags: list[str] = Field(default_factory=list)
+
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -502,3 +504,90 @@ class ReviewSchema(BaseModel):
     user: ReviewerSchema | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# --- Forum Schemas ---
+
+
+class ForumAuthorSchema(BaseModel):
+    id: uuid.UUID
+    username: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ForumTagSchema(BaseModel):
+    id: uuid.UUID
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ForumPostListItem(BaseModel):
+    id: uuid.UUID
+    title: str
+    content_snippet: str
+    author: ForumAuthorSchema
+    tags: list[ForumTagSchema] = Field(default_factory=list)
+    reply_count: int = 0
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ForumPostImageSchema(BaseModel):
+    id: uuid.UUID
+    image_url: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ForumCommentUserSchema(BaseModel):
+    id: uuid.UUID
+    username: str | None = None
+    avatar_url: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ForumCommentSchema(BaseModel):
+    id: uuid.UUID
+    content: str
+    user: ForumCommentUserSchema
+    created_at: datetime
+    parent_id: uuid.UUID | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ForumPostDetail(BaseModel):
+    id: uuid.UUID
+    title: str
+    content: str
+    author: ForumAuthorSchema
+    images: list[ForumPostImageSchema] = Field(default_factory=list)
+    tags: list[ForumTagSchema] = Field(default_factory=list)
+    replies: list[ForumCommentSchema] = Field(default_factory=list)
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ForumPostCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=150)
+    content: str = Field(..., min_length=1)
+    tags: list[str] = Field(default_factory=list)
+    images: list[str] = Field(default_factory=list)
+
+
+class ForumReplyCreate(BaseModel):
+    content: str = Field(..., min_length=1)
+    parent_reply_id: uuid.UUID | None = None
+
+
+class ForumSearchFilter(BaseModel):
+    q: str | None = None
+    tag: str | None = None
+    sort: Literal["newest", "oldest", "popular"] = "newest"
+    page: int = 1
+    limit: int = 20

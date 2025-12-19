@@ -6,6 +6,12 @@ the implementation has been moved to the app.service package.
 """
 
 # Re-export all functions from service modules
+from app.service.forum_service import (
+    create_forum_post,
+    create_forum_reply,
+    get_forum_post,
+    list_forum_posts,
+)
 from app.service.place_service import (
     create_place,
     delete_place,
@@ -69,4 +75,9 @@ __all__ = [
     "remove_trip_stop",
     "update_trip",
     "update_trip_stop",
+    # Forum operations
+    "create_forum_post",
+    "create_forum_reply",
+    "get_forum_post",
+    "list_forum_posts",
 ]

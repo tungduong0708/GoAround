@@ -109,7 +109,6 @@ class MetaData(BaseModel):
 
 
 class APIResponse[T](BaseModel):
-    status: Literal["success", "error"] = "success"
     data: T
     meta: MetaData | None = None
     message: str | None = None

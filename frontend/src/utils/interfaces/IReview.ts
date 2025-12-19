@@ -1,20 +1,39 @@
-export interface IReviewUser {
+export interface IReviewUserSchema {
   id: string;
   username: string;
   avatar_url: string;
 }
 
-export interface IReviewImage {
+export interface IReviewImageSchema {
   id: string;
   image_url: string;
+  created_at: string;
 }
 
-export interface IReview {
+export interface IReviewSchema {
   id: string;
   place_id: string;
-  user: IReviewUser;
+  rating: number;
+  review_text?: string;
+  created_at: string;
+  images: IReviewImageSchema[];
+  user: IReviewUserSchema;
+}
+export interface IReviewCreate {
+  place_id: string;
+  rating: number;
+  review_text?: string;
+  images?: string[];
+}
+export interface IReviewUpdate {
   rating: number;
   review_text: string;
-  created_at: string;
-  images: IReviewImage[];
+  images: string[];
+}
+
+//-------------------------------------------- Deprecated --------------------------------------------
+export interface IReviewSearchQuery {
+  sort?: string;
+  page?: number;
+  limit?: number;
 }

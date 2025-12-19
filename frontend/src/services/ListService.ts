@@ -1,10 +1,13 @@
+// Temporarily done for refactoring api calls and error handling
 import { authInstance } from "@/config";
 import type {
-  ISavedList,
-  ICreateListInput,
-  IAddPlaceToListInput,
+  ISavedListDetailedSchema,
+  ISavedListSchema,
+  ISavedListCreate,
+  IAddPlaceToListRequest,
   IApiResponse,
   IPaginatedResponse,
+  IMessage,
 } from "@/utils/interfaces";
 
 class ListService {
@@ -20,37 +23,61 @@ class ListService {
     return ListService.instance;
   }
 
-  async getLists(): Promise<IPaginatedResponse<ISavedList[]>> {
+  async getLists(): Promise<IPaginatedResponse<ISavedListSchema[]>> {
     const response = await authInstance.get("/lists");
-    return response.data as IPaginatedResponse<ISavedList[]>;
+    return response.data as IPaginatedResponse<ISavedListSchema[]>;
   }
 
-  async createList(input: ICreateListInput): Promise<ISavedList> {
+  async createList(input: ISavedListCreate): Promise<ISavedListSchema> {
     const response = await authInstance.post("/lists", input);
-    return (response.data as IApiResponse<ISavedList>).data;
+    return (response.data as IApiResponse<ISavedListSchema>).data;
   }
 
-  async getListById(id: string): Promise<IPaginatedResponse<ISavedList>> {
-    const response = await authInstance.get(`/lists/${id}`);
-    return response.data as IPaginatedResponse<ISavedList>;
+  async getListById(id: string): Promise<IPaginatedResponse<ISavedListDetailedSchema>> {
+    try {
+      const response = await authInstance.get(`/lists/${id}`);
+      return response.data as IPaginatedResponse<ISavedListDetailedSchema>;
+    } catch (error: any) {
+      if (error.response && error.response.status === 403) {
+        console.error("Access Forbidden: ", error.response.data.detail);
+        // Handle specific logic here (e.g., redirect to home, show a toast)
+      }
+      throw error; // Re-throw so the calling component knows the request failed
+    }
   }
 
   async addPlaceToList(
     listId: string,
-    input: IAddPlaceToListInput
+    input: IAddPlaceToListRequest
   ): Promise<{ message: string }> {
-    const response = await authInstance.post(`/lists/${listId}/places`, input);
-    return (response.data as IApiResponse<{ message: string }>).data;
+    try {
+      const response = await authInstance.post(`/lists/${listId}/places`, input);
+      return (response.data as IApiResponse<{ message: string }>).data;
+    } catch (error: any) {
+      if (error.response && error.response.status === 404) {
+        console.error("Access Forbidden: ", error.response.data.detail);
+        // Handle specific logic here (e.g., redirect to home, show a toast)
+      }
+      throw error; // Re-throw so the calling component knows the request failed
+    }
   }
 
   async removePlaceFromList(
     listId: string,
     placeId: string
   ): Promise<{ message: string }> {
+    try {
     const response = await authInstance.delete(
       `/lists/${listId}/places/${placeId}`
     );
-    return (response.data as IApiResponse<{ message: string }>).data;
+    return (response.data as IApiResponse<IMessage>).data;
+    } catch (error: any) {
+      if (error.response && error.response.status === 404) {
+        console.error("Access Forbidden: ", error.response.data.detail);
+        // Handle specific logic here (e.g., redirect to home, show a toast)
+      }
+      throw error; // Re-throw so the calling component knows the request failed
+    }
   }
 }
 

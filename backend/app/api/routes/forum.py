@@ -6,12 +6,16 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.deps import CurrentUserDep, SessionDep
 from app.schemas import (
     APIResponse,
+    ContentReportCreate,
     ForumCommentSchema,
     ForumPostCreate,
     ForumPostDetail,
     ForumPostListItem,
+    ForumPostUpdate,
     ForumReplyCreate,
     ForumSearchFilter,
+    HTTPError,
+    Message,
     MetaData,
 )
 from app.service.forum_service import (
@@ -106,3 +110,99 @@ async def create_reply(
         raise HTTPException(status_code=404, detail=str(e))
 
     return APIResponse(data=reply)
+
+
+@router.put(
+    "/posts/{id}",
+    response_model=APIResponse[ForumPostDetail],
+    status_code=501,
+    responses={
+        404: {"model": HTTPError},
+        501: {"model": HTTPError},
+    },
+)
+async def update_post(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    id: uuid.UUID,
+    data: ForumPostUpdate,
+) -> Any:
+    """
+    Update a forum post.
+    """
+    raise HTTPException(
+        status_code=501,
+        detail="Update forum post not yet implemented",
+    )
+
+
+@router.delete(
+    "/posts/{id}",
+    response_model=APIResponse[Message],
+    status_code=501,
+    responses={
+        404: {"model": HTTPError},
+        501: {"model": HTTPError},
+    },
+)
+async def delete_post(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    id: uuid.UUID,
+) -> Any:
+    """
+    Delete a forum post.
+    """
+    raise HTTPException(
+        status_code=501,
+        detail="Delete forum post not yet implemented",
+    )
+
+
+@router.post(
+    "/posts/{id}/report",
+    response_model=APIResponse[Message],
+    status_code=501,
+    responses={
+        404: {"model": HTTPError},
+        501: {"model": HTTPError},
+    },
+)
+async def report_post(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    id: uuid.UUID,
+    data: ContentReportCreate,
+) -> Any:
+    """
+    Report a forum post for moderation.
+    """
+    raise HTTPException(
+        status_code=501,
+        detail="Report forum post not yet implemented",
+    )
+
+
+@router.post(
+    "/posts/{post_id}/replies/{reply_id}/report",
+    response_model=APIResponse[Message],
+    status_code=501,
+    responses={
+        404: {"model": HTTPError},
+        501: {"model": HTTPError},
+    },
+)
+async def report_reply(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    post_id: uuid.UUID,
+    reply_id: uuid.UUID,
+    data: ContentReportCreate,
+) -> Any:
+    """
+    Report a forum reply for moderation.
+    """
+    raise HTTPException(
+        status_code=501,
+        detail="Report forum reply not yet implemented",
+    )

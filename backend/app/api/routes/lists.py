@@ -5,14 +5,13 @@ from fastapi import APIRouter, HTTPException, status
 from app import crud
 from app.api.deps import CurrentUserDep, SessionDep
 from app.schemas import (
-    AddPlaceToListRequest,
     APIResponse,
     HTTPError,
-    Message,
     MetaData,
     SavedListCreate,
     SavedListDetailSchema,
     SavedListSchema,
+    SavedListUpdate,
 )
 
 router = APIRouter(tags=["lists"], prefix="/lists")
@@ -70,43 +69,25 @@ async def create_list(
     return APIResponse(data=sl)
 
 
-@router.post(
-    "/{list_id}/places",
-    status_code=status.HTTP_201_CREATED,
-    response_model=APIResponse[Message],
-    responses={
-        404: {"model": HTTPError, "description": "List or place not found"},
-    },
-)
-async def add_place(
-    session: SessionDep,
-    current_user: CurrentUserDep,
-    list_id: uuid.UUID,
-    body: AddPlaceToListRequest,
-):
-    try:
-        await crud.add_place_to_list(session, list_id, current_user.id, body)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    return APIResponse(data=Message(message="Place added to list."))
-
-
-@router.delete(
-    "/{list_id}/places/{place_id}",
-    status_code=status.HTTP_200_OK,
-    response_model=APIResponse[Message],
+@router.put(
+    "/{list_id}",
+    response_model=APIResponse[SavedListDetailSchema],
+    status_code=501,
     responses={
         404: {"model": HTTPError},
+        501: {"model": HTTPError},
     },
 )
-async def remove_place(
+async def update_list(
     session: SessionDep,
     current_user: CurrentUserDep,
     list_id: uuid.UUID,
-    place_id: uuid.UUID,
+    body: SavedListUpdate,
 ):
-    try:
-        await crud.remove_place_from_list(session, list_id, current_user.id, place_id)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    return APIResponse(data=Message(message="Place removed from list."))
+    """
+    Update a saved list (name and/or places).
+    """
+    raise HTTPException(
+        status_code=501,
+        detail="Update list endpoint not yet implemented",
+    )

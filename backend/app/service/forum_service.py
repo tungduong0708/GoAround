@@ -6,7 +6,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import ForumPost, PostComment, PostImage, Tag, post_tags
+from app.models import ForumPost, PostReply, PostImage, Tag, post_tags
 from app.schemas import (
     ForumAuthorSchema,
     ForumCommentSchema,
@@ -40,7 +40,9 @@ async def list_forum_posts(
 
     # Apply tag filter
     if filter_params.tag:
-        base_query = base_query.join(post_tags).join(Tag).where(Tag.name == filter_params.tag)
+        base_query = (
+            base_query.join(post_tags).join(Tag).where(Tag.name == filter_params.tag)
+        )
 
     # Count total
     total_res = await session.execute(
@@ -49,12 +51,9 @@ async def list_forum_posts(
     total = int(total_res.scalar() or 0)
 
     # Build main query using cached reply_count from database
-    main_query = (
-        select(ForumPost)
-        .options(
-            selectinload(ForumPost.author),
-            selectinload(ForumPost.tags),
-        )
+    main_query = select(ForumPost).options(
+        selectinload(ForumPost.author),
+        selectinload(ForumPost.tags),
     )
 
     # Apply search filter to main query
@@ -69,7 +68,9 @@ async def list_forum_posts(
 
     # Apply tag filter to main query
     if filter_params.tag:
-        main_query = main_query.join(post_tags).join(Tag).where(Tag.name == filter_params.tag)
+        main_query = (
+            main_query.join(post_tags).join(Tag).where(Tag.name == filter_params.tag)
+        )
 
     # Apply sorting
     if filter_params.sort == "newest":
@@ -80,15 +81,17 @@ async def list_forum_posts(
         main_query = main_query.order_by(ForumPost.reply_count.desc())
 
     # Apply pagination
-    main_query = main_query.offset((filter_params.page - 1) * filter_params.limit).limit(
-        filter_params.limit
-    )
+    main_query = main_query.offset(
+        (filter_params.page - 1) * filter_params.limit
+    ).limit(filter_params.limit)
 
     res = await session.execute(main_query)
     posts = []
     for post in res.scalars().all():
         # Create content snippet (first 200 characters)
-        content_snippet = post.content[:200] + "..." if len(post.content) > 200 else post.content
+        content_snippet = (
+            post.content[:200] + "..." if len(post.content) > 200 else post.content
+        )
 
         posts.append(
             ForumPostListItem(
@@ -99,10 +102,7 @@ async def list_forum_posts(
                     id=post.author.id,
                     username=post.author.username,
                 ),
-                tags=[
-                    ForumTagSchema(id=tag.id, name=tag.name)
-                    for tag in post.tags
-                ],
+                tags=[ForumTagSchema(id=tag.id, name=tag.name) for tag in post.tags],
                 reply_count=post.reply_count,
                 created_at=post.created_at,
             )
@@ -121,7 +121,7 @@ async def get_forum_post(
             selectinload(ForumPost.author),
             selectinload(ForumPost.images),
             selectinload(ForumPost.tags),
-            selectinload(ForumPost.comments).selectinload(PostComment.user),
+            selectinload(ForumPost.replies).selectinload(PostReply.user),
         )
         .where(ForumPost.id == post_id)
     )
@@ -141,10 +141,7 @@ async def get_forum_post(
             ForumPostImageSchema(id=img.id, image_url=img.image_url)
             for img in post.images
         ],
-        tags=[
-            ForumTagSchema(id=tag.id, name=tag.name)
-            for tag in post.tags
-        ],
+        tags=[ForumTagSchema(id=tag.id, name=tag.name) for tag in post.tags],
         replies=[
             ForumCommentSchema(
                 id=comment.id,
@@ -157,7 +154,7 @@ async def get_forum_post(
                 created_at=comment.created_at,
                 parent_id=comment.parent_id,
             )
-            for comment in post.comments
+            for comment in post.replies
         ],
         created_at=post.created_at,
     )
@@ -172,9 +169,7 @@ async def create_forum_post(
     if data.tags:
         for tag_name in data.tags:
             # Check if tag exists
-            tag_res = await session.execute(
-                select(Tag).where(Tag.name == tag_name)
-            )
+            tag_res = await session.execute(select(Tag).where(Tag.name == tag_name))
             tag = tag_res.scalars().first()
             if not tag:
                 tag = Tag(name=tag_name)
@@ -202,11 +197,17 @@ async def create_forum_post(
     await session.refresh(post)
 
     # Return the created post with full details
-    return await get_forum_post(session, post.id)
+    result = await get_forum_post(session, post.id)
+    if result is None:
+        raise RuntimeError("Failed to retrieve created post")
+    return result
 
 
 async def create_forum_reply(
-    session: AsyncSession, post_id: uuid.UUID, user_id: uuid.UUID, data: ForumReplyCreate
+    session: AsyncSession,
+    post_id: uuid.UUID,
+    user_id: uuid.UUID,
+    data: ForumReplyCreate,
 ) -> ForumCommentSchema:
     """Create a reply to a forum post."""
     # Get the post to update reply_count
@@ -217,9 +218,9 @@ async def create_forum_reply(
     # Verify parent reply exists if provided
     if data.parent_reply_id:
         parent_res = await session.execute(
-            select(PostComment).where(
-                PostComment.id == data.parent_reply_id,
-                PostComment.post_id == post_id,
+            select(PostReply).where(
+                PostReply.id == data.parent_reply_id,
+                PostReply.post_id == post_id,
             )
         )
         parent = parent_res.scalars().first()
@@ -227,7 +228,7 @@ async def create_forum_reply(
             raise ValueError("Parent reply not found")
 
     # Create the comment
-    comment = PostComment(
+    comment = PostReply(
         post_id=post_id,
         user_id=user_id,
         content=data.content,
@@ -242,12 +243,15 @@ async def create_forum_reply(
 
     # Load user info
     res = await session.execute(
-        select(PostComment)
-        .options(selectinload(PostComment.user))
-        .where(PostComment.id == comment.id)
+        select(PostReply)
+        .options(selectinload(PostReply.user))
+        .where(PostReply.id == comment.id)
     )
     comment = res.scalars().first()
 
+    if not comment:
+        raise RuntimeError("Failed to retrieve created reply")
+    
     return ForumCommentSchema(
         id=comment.id,
         content=comment.content,

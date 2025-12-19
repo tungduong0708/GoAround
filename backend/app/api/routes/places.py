@@ -59,7 +59,7 @@ async def search_places(
 
 
 @router.get(
-    "/mine/all",
+    "/me",
     status_code=status.HTTP_200_OK,
     response_model=APIResponse[List[PlacePublic]],
 )

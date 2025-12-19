@@ -7,7 +7,6 @@ from sqlalchemy import (
     Boolean,
     Column,
     Date,
-    Enum,
     ForeignKey,
     Integer,
     Numeric,
@@ -96,13 +95,14 @@ class Profile(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("auth.users.id"), primary_key=True
     )
-    username: Mapped[str | None] = mapped_column(String(50), unique=True)
+    username: Mapped[str | None] = mapped_column(String(50))
     full_name: Mapped[str | None] = mapped_column(String(100))
     avatar_url: Mapped[str | None] = mapped_column(String(255))
-    role: Mapped[Literal["Admin", "Traveler", "Business"]] = mapped_column(
-        String(20), default="Traveler"
+    role: Mapped[Literal["admin", "traveler", "business"]] = mapped_column(
+        String(20), default="traveler"
     )
     is_verified_business: Mapped[bool] = mapped_column(Boolean, default=False)
+    ban_until: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -116,8 +116,8 @@ class Profile(Base):
     posts: Mapped[list["ForumPost"]] = relationship(
         "ForumPost", back_populates="author"
     )
-    comments: Mapped[list["PostComment"]] = relationship(
-        "PostComment", back_populates="user"
+    replies: Mapped[list["PostReply"]] = relationship(
+        "PostReply", back_populates="user"
     )
     reports: Mapped[list["ContentReport"]] = relationship(
         "ContentReport", back_populates="reporter"
@@ -330,6 +330,10 @@ class Trip(Base):
     trip_name: Mapped[str] = mapped_column(String(100))
     start_date: Mapped[date | None] = mapped_column(Date)
     end_date: Mapped[date | None] = mapped_column(Date)
+    public: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now()
+    )
 
     user: Mapped["Profile"] = relationship("Profile", back_populates="trips")
     tags: Mapped[list["Tag"]] = relationship(
@@ -377,10 +381,16 @@ class ForumPost(Base):
 
     author: Mapped["Profile"] = relationship("Profile", back_populates="posts")
     images: Mapped[list["PostImage"]] = relationship(
-        "PostImage", back_populates="post", cascade="all, delete-orphan", lazy="selectin"
+        "PostImage",
+        back_populates="post",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
-    comments: Mapped[list["PostComment"]] = relationship(
-        "PostComment", back_populates="post", cascade="all, delete-orphan", lazy="selectin"
+    replies: Mapped[list["PostReply"]] = relationship(
+        "PostReply",
+        back_populates="post",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
     tags: Mapped[list["Tag"]] = relationship(
         "Tag", secondary=post_tags, back_populates="posts", lazy="selectin"
@@ -402,8 +412,8 @@ class PostImage(Base):
     post: Mapped["ForumPost"] = relationship("ForumPost", back_populates="images")
 
 
-class PostComment(Base):
-    __tablename__ = "post_comments"
+class PostReply(Base):
+    __tablename__ = "post_replies"
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
@@ -412,19 +422,19 @@ class PostComment(Base):
     )
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profiles.id"))
     parent_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("post_comments.id", ondelete="CASCADE"), nullable=True
+        ForeignKey("post_replies.id", ondelete="CASCADE"), nullable=True
     )
     content: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()
     )
-    post: Mapped["ForumPost"] = relationship("ForumPost", back_populates="comments")
-    user: Mapped["Profile"] = relationship("Profile", back_populates="comments")
-    parent: Mapped["PostComment | None"] = relationship(
-        "PostComment", remote_side=[id], back_populates="replies"
+    post: Mapped["ForumPost"] = relationship("ForumPost", back_populates="replies")
+    user: Mapped["Profile"] = relationship("Profile", back_populates="replies")
+    parent: Mapped["PostReply | None"] = relationship(
+        "PostReply", remote_side=[id], back_populates="child_replies"
     )
-    replies: Mapped[list["PostComment"]] = relationship(
-        "PostComment", back_populates="parent", cascade="all, delete-orphan"
+    child_replies: Mapped[list["PostReply"]] = relationship(
+        "PostReply", back_populates="parent", cascade="all, delete-orphan"
     )
 
 
@@ -437,5 +447,24 @@ class ContentReport(Base):
     target_type: Mapped[str] = mapped_column(String(20))
     target_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
     reason: Mapped[str] = mapped_column(Text)
-    status: Mapped[str] = mapped_column(String(20), default="pending")
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now()
+    )
     reporter: Mapped["Profile"] = relationship("Profile", back_populates="reports")
+
+
+class ModerationTarget(Base):
+    __tablename__ = "moderation_targets"
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    target_type: Mapped[str] = mapped_column(String(20))
+    target_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    status: Mapped[Literal["pending", "approved", "rejected"]] = mapped_column(
+        String(20), default="pending"
+    )
+    reason: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now()
+    )
+    resolved_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))

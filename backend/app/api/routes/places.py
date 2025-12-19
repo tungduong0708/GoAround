@@ -27,6 +27,7 @@ router = APIRouter(tags=["places"], prefix="/places")
 
 @router.get(
     "",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[List[PlacePublic]],
     responses={
         400: {"model": HTTPError},
@@ -57,7 +58,11 @@ async def search_places(
     )
 
 
-@router.get("/mine/all", response_model=APIResponse[List[PlacePublic]])
+@router.get(
+    "/mine/all",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[List[PlacePublic]],
+)
 async def read_my_places(
     session: SessionDep,
     current_user: CurrentUserDep,
@@ -71,6 +76,7 @@ async def read_my_places(
 
 @router.get(
     "/{id}",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[PlaceDetail],
     responses={
         404: {"model": HTTPError},
@@ -89,6 +95,7 @@ async def get_place(session: SessionDep, id: uuid.UUID) -> Any:
 
 @router.get(
     "/{id}/reviews",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[list[ReviewSchema]],
     responses={
         404: {"model": HTTPError},
@@ -114,8 +121,8 @@ async def list_reviews_for_place(
 
 @router.post(
     "",
+    status_code=status.HTTP_201_CREATED,
     response_model=APIResponse[PlaceDetail],
-    status_code=201,
     responses={
         403: {"model": HTTPError},
     },
@@ -150,6 +157,7 @@ async def create_place(
 
 @router.put(
     "/{id}",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[PlaceDetail],
     responses={
         403: {"model": HTTPError},
@@ -182,6 +190,7 @@ async def update_place(
 
 @router.delete(
     "/{id}",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[Message],
     responses={
         403: {"model": HTTPError},

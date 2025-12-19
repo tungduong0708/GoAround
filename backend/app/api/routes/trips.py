@@ -21,7 +21,11 @@ from app.schemas import (
 router = APIRouter(tags=["trips"], prefix="/trips")
 
 
-@router.get("", response_model=APIResponse[list[TripListSchema]])
+@router.get(
+    "",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[list[TripListSchema]],
+)
 async def list_trips(
     session: SessionDep,
     current_user: CurrentUserDep,
@@ -37,6 +41,7 @@ async def list_trips(
 
 @router.get(
     "/{trip_id}",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[TripSchema],
     responses={
         404: {"model": HTTPError},
@@ -52,7 +57,11 @@ async def get_trip(
     return APIResponse(data=trip)
 
 
-@router.post("", response_model=APIResponse[TripSchema], status_code=201)
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    response_model=APIResponse[TripSchema],
+)
 async def create_trip(
     session: SessionDep, current_user: CurrentUserDep, body: TripCreate
 ):
@@ -62,16 +71,17 @@ async def create_trip(
 
 @router.post(
     "/generate",
-    response_model=APIResponse[Message],
     status_code=status.HTTP_501_NOT_IMPLEMENTED,
+    response_model=APIResponse[Message],
 )
 async def generate_trip():
     # Placeholder for future AI itinerary generation
-    return APIResponse(data=Message(message="Trip generation not implemented yet."))
+    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED)
 
 
 @router.put(
     "/{trip_id}",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[TripSchema],
     responses={
         403: {"model": HTTPError},
@@ -95,8 +105,8 @@ async def update_trip(
 
 @router.post(
     "/{trip_id}/places",
+    status_code=status.HTTP_201_CREATED,
     response_model=APIResponse[TripStopSchema],
-    status_code=201,
     responses={
         403: {"model": HTTPError},
         404: {"model": HTTPError},
@@ -119,6 +129,7 @@ async def add_stop(
 
 @router.put(
     "/{trip_id}/places/{stop_id}",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[TripStopSchema],
     responses={
         403: {"model": HTTPError},
@@ -145,6 +156,7 @@ async def update_stop(
 
 @router.delete(
     "/{trip_id}/places/{stop_id}",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[Message],
     responses={
         403: {"model": HTTPError},

@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException, status
 
 from app import crud
 from app.api.deps import CurrentUserDep, SessionDep
@@ -18,7 +18,11 @@ from app.schemas import (
 router = APIRouter(tags=["lists"], prefix="/lists")
 
 
-@router.get("", response_model=APIResponse[list[SavedListSchema]])
+@router.get(
+    "",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[list[SavedListSchema]],
+)
 async def list_lists(
     session: SessionDep,
     current_user: CurrentUserDep,
@@ -34,6 +38,7 @@ async def list_lists(
 
 @router.get(
     "/{list_id}",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[SavedListDetailSchema],
     responses={
         404: {"model": HTTPError},
@@ -53,7 +58,11 @@ async def get_list(
     )
 
 
-@router.post("", response_model=APIResponse[SavedListSchema], status_code=201)
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    response_model=APIResponse[SavedListSchema],
+)
 async def create_list(
     session: SessionDep, current_user: CurrentUserDep, body: SavedListCreate
 ):
@@ -63,8 +72,8 @@ async def create_list(
 
 @router.post(
     "/{list_id}/places",
+    status_code=status.HTTP_201_CREATED,
     response_model=APIResponse[Message],
-    status_code=201,
     responses={
         404: {"model": HTTPError, "description": "List or place not found"},
     },
@@ -84,6 +93,7 @@ async def add_place(
 
 @router.delete(
     "/{list_id}/places/{place_id}",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[Message],
     responses={
         404: {"model": HTTPError},

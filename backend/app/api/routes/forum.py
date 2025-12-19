@@ -1,7 +1,7 @@
 import uuid
-from typing import Any, List
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.deps import CurrentUserDep, SessionDep
 from app.schemas import (
@@ -27,7 +27,11 @@ router = APIRouter(tags=["forum"], prefix="/forum")
 # --- Public Endpoints ---
 
 
-@router.get("/posts", response_model=APIResponse[List[ForumPostListItem]])
+@router.get(
+    "/posts",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[list[ForumPostListItem]],
+)
 async def search_forum_posts(
     session: SessionDep,
     filter_params: ForumSearchFilter = Depends(),
@@ -39,7 +43,6 @@ async def search_forum_posts(
     results, total = await list_forum_posts(session, filter_params)
 
     return APIResponse(
-        status="success",
         data=results,
         meta=MetaData(
             page=filter_params.page, limit=filter_params.limit, total_items=total
@@ -47,7 +50,11 @@ async def search_forum_posts(
     )
 
 
-@router.get("/posts/{id}", response_model=APIResponse[ForumPostDetail])
+@router.get(
+    "/posts/{id}",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[ForumPostDetail],
+)
 async def get_forum_post_detail(session: SessionDep, id: uuid.UUID) -> Any:
     """
     Get thread details and replies.
@@ -56,13 +63,17 @@ async def get_forum_post_detail(session: SessionDep, id: uuid.UUID) -> Any:
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
-    return APIResponse(status="success", data=post)
+    return APIResponse(data=post)
 
 
 # --- Protected Endpoints ---
 
 
-@router.post("/posts", response_model=APIResponse[ForumPostDetail], status_code=201)
+@router.post(
+    "/posts",
+    status_code=status.HTTP_201_CREATED,
+    response_model=APIResponse[ForumPostDetail],
+)
 async def create_post(
     session: SessionDep,
     current_user: CurrentUserDep,
@@ -72,11 +83,13 @@ async def create_post(
     Create a forum thread.
     """
     post = await create_forum_post(session, current_user.id, data)
-    return APIResponse(status="success", data=post)
+    return APIResponse(data=post)
 
 
 @router.post(
-    "/posts/{id}/replies", response_model=APIResponse[ForumCommentSchema], status_code=201
+    "/posts/{id}/replies",
+    status_code=status.HTTP_201_CREATED,
+    response_model=APIResponse[ForumCommentSchema],
 )
 async def create_reply(
     session: SessionDep,
@@ -92,4 +105,4 @@ async def create_reply(
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-    return APIResponse(status="success", data=reply)
+    return APIResponse(data=reply)

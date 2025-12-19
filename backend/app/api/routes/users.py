@@ -3,7 +3,7 @@ from typing import List
 
 from fastapi import APIRouter, HTTPException, status
 
-from app.api.deps import CurrentUserDep, CurrentUserIdDep, SessionDep
+from app.api.deps import CurrentUserIdDep, SessionDep
 from app.schemas import (
     APIResponse,
     HTTPError,
@@ -23,6 +23,7 @@ router = APIRouter(tags=["users"], prefix="/users")
 
 @router.get(
     "/me",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[UserDetail],
     responses={
         404: {"model": HTTPError, "description": "User profile not found"},
@@ -50,6 +51,7 @@ async def get_current_user(
 
 @router.post(
     "",
+    status_code=status.HTTP_201_CREATED,
     response_model=APIResponse[UserDetail],
     responses={
         409: {"model": HTTPError},
@@ -78,6 +80,7 @@ async def create_user(
 
 @router.put(
     "/me",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[UserDetail],
     responses={
         404: {"model": HTTPError},
@@ -114,6 +117,7 @@ async def update_current_user(
 
 @router.get(
     "/{user_id}",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[UserPublic],
     responses={
         404: {"model": HTTPError},
@@ -136,7 +140,11 @@ async def get_user(
     return APIResponse(data=user_public, meta=None)
 
 
-@router.get("/{user_id}/reviews", response_model=APIResponse[List[UserReviewResponse]])
+@router.get(
+    "/{user_id}/reviews",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[List[UserReviewResponse]],
+)
 async def get_user_reviews(
     session: SessionDep,
     user_id: uuid.UUID,
@@ -148,7 +156,11 @@ async def get_user_reviews(
     return APIResponse(data=reviews, meta=None)
 
 
-@router.get("/{user_id}/posts", response_model=APIResponse[List[UserPostResponse]])
+@router.get(
+    "/{user_id}/posts",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[List[UserPostResponse]],
+)
 async def get_user_posts(
     session: SessionDep,
     user_id: uuid.UUID,
@@ -160,7 +172,11 @@ async def get_user_posts(
     return APIResponse(data=posts, meta=None)
 
 
-@router.get("/{user_id}/trips", response_model=APIResponse[List[UserTripResponse]])
+@router.get(
+    "/{user_id}/trips",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[List[UserTripResponse]],
+)
 async def get_user_trips(
     session: SessionDep,
     user_id: uuid.UUID,
@@ -172,7 +188,11 @@ async def get_user_trips(
     return APIResponse(data=trips, meta=None)
 
 
-@router.get("/{user_id}/photos", response_model=APIResponse[List[UserPhotoResponse]])
+@router.get(
+    "/{user_id}/photos",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[List[UserPhotoResponse]],
+)
 async def get_user_photos(
     session: SessionDep,
     user_id: uuid.UUID,

@@ -111,7 +111,6 @@ class MetaData(BaseModel):
 class APIResponse[T](BaseModel):
     data: T
     meta: MetaData | None = None
-    message: str | None = None
 
 
 class Message(BaseModel):
@@ -143,37 +142,6 @@ class UserPhotoResponse(BaseModel):
     image_url: str
     source_type: Literal["review", "post"]
     source_id: uuid.UUID
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class AdminPlaceOwner(BaseModel):
-    id: uuid.UUID
-    username: str | None = None
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class AdminPendingPlace(BaseModel):
-    id: uuid.UUID
-    name: str
-    place_type: Literal["hotel", "restaurant", "landmark", "cafe"]
-    owner: AdminPlaceOwner | None = None
-    submitted_at: datetime
-    verification_status: Literal["pending", "approved", "rejected"]
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class VerifyPlaceRequest(BaseModel):
-    status: Literal["approved", "rejected"]
-    rejection_reason: str | None = None
-
-
-class VerifyPlaceResponse(BaseModel):
-    id: uuid.UUID
-    verification_status: Literal["pending", "approved", "rejected"]
-    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -336,9 +304,6 @@ class PlacePublic(BaseModel):
     price_range: str | None = None  # For restaurants, cafes, hotels (as range)
 
     tags: list[str] = Field(default_factory=list)
-
-    # Verification fields
-    verification_status: Literal["pending", "approved", "rejected"] = "pending"
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

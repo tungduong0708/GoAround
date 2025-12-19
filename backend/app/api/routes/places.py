@@ -50,7 +50,6 @@ async def search_places(
     results, total = await crud.search_places(session, filter_params)
 
     return APIResponse(
-        status="success",
         data=results,
         meta=MetaData(
             page=filter_params.page, limit=filter_params.limit, total_items=total
@@ -67,7 +66,7 @@ async def read_my_places(
     Get places owned by the current user.
     """
     places = await crud.get_places_by_owner(session, current_user.id)
-    return APIResponse(status="success", data=places)
+    return APIResponse(data=places)
 
 
 @router.get(
@@ -85,7 +84,7 @@ async def get_place(session: SessionDep, id: uuid.UUID) -> Any:
     if not place:
         raise HTTPException(status_code=404, detail="Place not found")
 
-    return APIResponse(status="success", data=place)
+    return APIResponse(data=place)
 
 
 @router.get(
@@ -105,7 +104,6 @@ async def list_reviews_for_place(
 
     reviews, total = await crud.list_reviews_for_place(session, id, page, limit)
     return APIResponse(
-        status="success",
         data=reviews,
         meta=MetaData(page=page, limit=limit, total_items=total),
     )
@@ -146,9 +144,7 @@ async def create_place(
 
     place = await crud.create_place(session, place_in, current_user.id)
     return APIResponse(
-        status="success",
         data=place,
-        message="Place created successfully and is pending admin approval.",
     )
 
 
@@ -181,7 +177,7 @@ async def update_place(
         )
 
     updated_place = await crud.update_place(session, db_place, place_in)
-    return APIResponse(status="success", data=updated_place)
+    return APIResponse(data=updated_place)
 
 
 @router.delete(
@@ -211,9 +207,7 @@ async def delete_place(
         )
 
     await crud.delete_place(session, db_place)
-    return APIResponse(
-        status="success", data=Message(message="Place deleted successfully")
-    )
+    return APIResponse(data=Message(message="Place deleted successfully"))
 
 
 @router.post(
@@ -269,6 +263,5 @@ async def transfer_ownership(
 
     username_display = target_user.username or target_user.full_name or "user"
     return APIResponse(
-        status="success",
         data=Message(message=f"Ownership transferred to {username_display}"),
     )

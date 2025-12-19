@@ -30,7 +30,6 @@ async def list_trips(
 ):
     trips, total = await crud.list_trips(session, current_user.id, page, limit)
     return APIResponse(
-        status="success",
         data=trips,
         meta=MetaData(page=page, limit=limit, total_items=total),
     )
@@ -50,7 +49,7 @@ async def get_trip(
         trip = await crud.get_trip(session, current_user.id, trip_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    return APIResponse(status="success", data=trip)
+    return APIResponse(data=trip)
 
 
 @router.post("", response_model=APIResponse[TripSchema], status_code=201)
@@ -58,7 +57,7 @@ async def create_trip(
     session: SessionDep, current_user: CurrentUserDep, body: TripCreate
 ):
     trip = await crud.create_trip(session, current_user.id, body)
-    return APIResponse(status="success", data=trip)
+    return APIResponse(data=trip)
 
 
 @router.post(
@@ -68,9 +67,7 @@ async def create_trip(
 )
 async def generate_trip():
     # Placeholder for future AI itinerary generation
-    return APIResponse(
-        status="error", data=Message(message="Trip generation not implemented yet.")
-    )
+    return APIResponse(data=Message(message="Trip generation not implemented yet."))
 
 
 @router.put(
@@ -93,7 +90,7 @@ async def update_trip(
         raise HTTPException(status_code=404, detail=str(e))
     except PermissionError:
         raise HTTPException(status_code=403, detail="Not allowed")
-    return APIResponse(status="success", data=trip)
+    return APIResponse(data=trip)
 
 
 @router.post(
@@ -117,7 +114,7 @@ async def add_stop(
         raise HTTPException(status_code=404, detail=str(e))
     except PermissionError:
         raise HTTPException(status_code=403, detail="Not allowed")
-    return APIResponse(status="success", data=stop)
+    return APIResponse(data=stop)
 
 
 @router.put(
@@ -143,7 +140,7 @@ async def update_stop(
         raise HTTPException(status_code=404, detail=str(e))
     except PermissionError:
         raise HTTPException(status_code=403, detail="Not allowed")
-    return APIResponse(status="success", data=stop)
+    return APIResponse(data=stop)
 
 
 @router.delete(
@@ -163,4 +160,4 @@ async def remove_stop(
         await crud.remove_trip_stop(session, current_user.id, trip_id, stop_id)
     except PermissionError:
         raise HTTPException(status_code=403, detail="Not allowed")
-    return APIResponse(status="success", data=Message(message="Stop removed."))
+    return APIResponse(data=Message(message="Stop removed."))

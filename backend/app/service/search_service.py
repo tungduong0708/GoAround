@@ -31,9 +31,6 @@ async def search_places(
         selectinload(poly.reviews),  # For average_rating calculation
     )
 
-    # Filter by verification_status = 'approved' - all users only see approved places
-    query = query.where(poly.verification_status == "approved")
-
     # 1. Keyword (Name only as Description is generic only in some subclasses)
     if filter_params.q:
         term = f"%{filter_params.q}%"
@@ -96,7 +93,9 @@ async def search_places(
         query = query.order_by(poly.name.asc())
 
     # Count
-    count_query = select(func.count(func.distinct(poly.id))).select_from(query.subquery())
+    count_query = select(func.count(func.distinct(poly.id))).select_from(
+        query.subquery()
+    )
     result = await session.execute(count_query)
     total = result.scalar() or 0
 

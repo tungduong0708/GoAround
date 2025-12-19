@@ -69,7 +69,6 @@ def _enrich_place_public(place: Place) -> PlacePublic:
         opening_hours=opening_hours,
         price_range=price_range,
         tags=tag_names,
-        verification_status=place.verification_status,
         created_at=place.created_at,
     )
 
@@ -351,56 +350,3 @@ async def get_profile_by_email(session: AsyncSession, email: str) -> Profile | N
     )
     result = await session.execute(stmt)
     return result.scalars().first()
-
-
-async def get_pending_places(
-    session: AsyncSession,
-) -> Sequence:
-    """
-    Get all places with pending verification status.
-    """
-    poly = with_polymorphic(Place, [Hotel, Restaurant, Landmark, Cafe])
-
-    stmt = (
-        select(poly)
-        .options(
-            selectinload(poly.owner),
-        )
-        .where(poly.verification_status == "pending")
-        .order_by(poly.created_at.desc())
-    )
-    result = await session.execute(stmt)
-    places = result.unique().scalars().all()
-
-    return places
-
-
-async def verify_place(
-    session: AsyncSession,
-    place_id: uuid.UUID,
-    status: str,
-    rejection_reason: str | None = None,
-) -> Place | None:
-    """
-    Update verification status of a place.
-    """
-    from typing import cast, Literal
-
-    poly = with_polymorphic(Place, [Hotel, Restaurant, Landmark, Cafe])
-
-    stmt = select(poly).where(poly.id == place_id)
-    result = await session.execute(stmt)
-    place = result.unique().scalars().first()
-
-    if not place:
-        return None
-
-    # Cast to the proper Literal type
-    place.verification_status = cast(Literal["pending", "approved", "rejected"], status)
-    # Note: rejection_reason would need to be added to the Place model
-    # For now, we just update the status
-
-    await session.commit()
-    await session.refresh(place)
-
-    return place

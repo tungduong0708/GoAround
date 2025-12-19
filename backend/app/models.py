@@ -164,9 +164,6 @@ class Place(Base):
     review_count: Mapped[int] = mapped_column(Integer, default=0)
     description: Mapped[str | None] = mapped_column(Text)
     opening_hours: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
-    verification_status: Mapped[Literal["pending", "approved", "rejected"]] = (
-        mapped_column(String(20), default="pending")
-    )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()
     )
@@ -374,16 +371,19 @@ class ForumPost(Base):
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()
     )
+    view_count: Mapped[int] = mapped_column(Integer, default=0)
+    like_count: Mapped[int] = mapped_column(Integer, default=0)
+    reply_count: Mapped[int] = mapped_column(Integer, default=0)
 
     author: Mapped["Profile"] = relationship("Profile", back_populates="posts")
     images: Mapped[list["PostImage"]] = relationship(
-        "PostImage", back_populates="post", cascade="all, delete-orphan"
+        "PostImage", back_populates="post", cascade="all, delete-orphan", lazy="selectin"
     )
     comments: Mapped[list["PostComment"]] = relationship(
-        "PostComment", back_populates="post", cascade="all, delete-orphan"
+        "PostComment", back_populates="post", cascade="all, delete-orphan", lazy="selectin"
     )
     tags: Mapped[list["Tag"]] = relationship(
-        "Tag", secondary=post_tags, back_populates="posts"
+        "Tag", secondary=post_tags, back_populates="posts", lazy="selectin"
     )
 
 
@@ -411,9 +411,21 @@ class PostComment(Base):
         ForeignKey("forum_posts.id", ondelete="CASCADE")
     )
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profiles.id"))
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("post_comments.id", ondelete="CASCADE"), nullable=True
+    )
     content: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now()
+    )
     post: Mapped["ForumPost"] = relationship("ForumPost", back_populates="comments")
     user: Mapped["Profile"] = relationship("Profile", back_populates="comments")
+    parent: Mapped["PostComment | None"] = relationship(
+        "PostComment", remote_side=[id], back_populates="replies"
+    )
+    replies: Mapped[list["PostComment"]] = relationship(
+        "PostComment", back_populates="parent", cascade="all, delete-orphan"
+    )
 
 
 class ContentReport(Base):

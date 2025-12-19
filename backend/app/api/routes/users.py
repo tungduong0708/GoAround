@@ -43,7 +43,6 @@ async def get_current_user(
         )
 
     return APIResponse(
-        status="success",
         data=user_detail,
         meta=None,
     )
@@ -67,7 +66,6 @@ async def create_user(
     try:
         user_detail = await user_service.create_user(session, user_id, user_create)
         return APIResponse(
-            status="success",
             data=user_detail,
             meta=None,
         )
@@ -109,7 +107,6 @@ async def update_current_user(
         )
 
     return APIResponse(
-        status="success",
         data=user_detail,
         meta=None,
     )
@@ -136,7 +133,7 @@ async def get_user(
             detail="User profile not found",
         )
 
-    return APIResponse(status="success", data=user_public, meta=None)
+    return APIResponse(data=user_public, meta=None)
 
 
 @router.get("/{user_id}/reviews", response_model=APIResponse[List[UserReviewResponse]])
@@ -148,7 +145,7 @@ async def get_user_reviews(
     Get list of reviews written by a specific user.
     """
     reviews = await user_service.get_user_reviews(session, user_id)
-    return APIResponse(status="success", data=reviews, meta=None)
+    return APIResponse(data=reviews, meta=None)
 
 
 @router.get("/{user_id}/posts", response_model=APIResponse[List[UserPostResponse]])
@@ -160,7 +157,7 @@ async def get_user_posts(
     Get list of forum threads created by a specific user.
     """
     posts = await user_service.get_user_posts(session, user_id)
-    return APIResponse(status="success", data=posts, meta=None)
+    return APIResponse(data=posts, meta=None)
 
 
 @router.get("/{user_id}/trips", response_model=APIResponse[List[UserTripResponse]])
@@ -172,7 +169,7 @@ async def get_user_trips(
     Get list of public trips created by a specific user.
     """
     trips = await user_service.get_user_trips(session, user_id)
-    return APIResponse(status="success", data=trips, meta=None)
+    return APIResponse(data=trips, meta=None)
 
 
 @router.get("/{user_id}/photos", response_model=APIResponse[List[UserPhotoResponse]])
@@ -184,4 +181,4 @@ async def get_user_photos(
     Get gallery of photos uploaded by the user (aggregated from reviews and posts).
     """
     photos = await user_service.get_user_photos(session, user_id)
-    return APIResponse(status="success", data=photos, meta=None)
+    return APIResponse(data=photos, meta=None)

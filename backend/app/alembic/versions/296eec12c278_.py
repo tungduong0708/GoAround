@@ -1,20 +1,20 @@
-"""Initial schema
+"""empty message
 
-Revision ID: 166f4b799a2b
+Revision ID: 296eec12c278
 Revises:
-Create Date: 2025-11-28 21:03:30.499072
+Create Date: 2025-12-19 21:51:40.566404
 
 """
 
 from typing import Sequence, Union
 
 import geoalchemy2
-import sqlalchemy as sa
 from alembic import op
+import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = "166f4b799a2b"
+revision: str = "296eec12c278"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -79,6 +79,9 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
+        sa.Column("view_count", sa.Integer(), nullable=False),
+        sa.Column("like_count", sa.Integer(), nullable=False),
+        sa.Column("reply_count", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(
             ["author_id"],
             ["profiles.id"],
@@ -109,18 +112,22 @@ def upgrade() -> None:
         sa.Column("main_image_url", sa.String(length=255), nullable=True),
         sa.Column("average_rating", sa.Numeric(precision=2, scale=1), nullable=False),
         sa.Column("review_count", sa.Integer(), nullable=False),
+        sa.Column("description", sa.Text(), nullable=True),
+        sa.Column(
+            "opening_hours", postgresql.JSONB(astext_type=sa.Text()), nullable=True
+        ),
+        sa.Column(
+            "created_at",
+            postgresql.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(
             ["owner_id"], ["profiles.id"], name=op.f("fk_places_owner_id_profiles")
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_places")),
     )
-    # op.create_index(
-    #     "idx_places_location",
-    #     "places",
-    #     ["location"],
-    #     unique=False,
-    #     postgresql_using="gist",
-    # )
+    # op.create_index('idx_places_location', 'places', ['location'], unique=False, postgresql_using='gist')
     op.create_table(
         "saved_lists",
         sa.Column("id", sa.UUID(), nullable=False),
@@ -153,9 +160,20 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id", name=op.f("pk_trips")),
     )
     op.create_table(
+        "cafes",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("coffee_specialties", sa.String(length=255), nullable=True),
+        sa.Column("amenities", postgresql.ARRAY(sa.String()), nullable=True),
+        sa.Column("price_range", sa.String(length=10), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["id"], ["places.id"], name=op.f("fk_cafes_id_places"), ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_cafes")),
+    )
+    op.create_table(
         "hotels",
         sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("star_rating", sa.Numeric(precision=2, scale=1), nullable=True),
+        sa.Column("hotel_class", sa.Integer(), nullable=True),
         sa.Column("price_per_night", sa.Numeric(), nullable=True),
         sa.Column("amenities", postgresql.ARRAY(sa.String()), nullable=True),
         sa.ForeignKeyConstraint(
@@ -166,7 +184,6 @@ def upgrade() -> None:
     op.create_table(
         "landmarks",
         sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("description", sa.Text(), nullable=True),
         sa.Column("ticket_price", sa.Numeric(), nullable=True),
         sa.ForeignKeyConstraint(
             ["id"],
@@ -219,7 +236,20 @@ def upgrade() -> None:
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("post_id", sa.UUID(), nullable=False),
         sa.Column("user_id", sa.UUID(), nullable=False),
+        sa.Column("parent_id", sa.UUID(), nullable=True),
         sa.Column("content", sa.Text(), nullable=False),
+        sa.Column(
+            "created_at",
+            postgresql.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(
+            ["parent_id"],
+            ["post_comments.id"],
+            name=op.f("fk_post_comments_parent_id_post_comments"),
+            ondelete="CASCADE",
+        ),
         sa.ForeignKeyConstraint(
             ["post_id"],
             ["forum_posts.id"],
@@ -272,9 +302,6 @@ def upgrade() -> None:
         "restaurants",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("cuisine_type", sa.String(length=50), nullable=True),
-        sa.Column(
-            "opening_hours", postgresql.JSONB(astext_type=sa.Text()), nullable=True
-        ),
         sa.Column("price_range", sa.String(length=10), nullable=True),
         sa.ForeignKeyConstraint(
             ["id"],
@@ -398,6 +425,8 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
+    op.execute("DROP EXTENSION IF EXISTS postgis")
+
     # ### commands auto generated by Alembic - please adjust! ###
     op.drop_table("review_images")
     op.drop_table("trip_tags")
@@ -412,9 +441,10 @@ def downgrade() -> None:
     op.drop_table("place_images")
     op.drop_table("landmarks")
     op.drop_table("hotels")
+    op.drop_table("cafes")
     op.drop_table("trips")
     op.drop_table("saved_lists")
-    # op.drop_index("idx_places_location", table_name="places", postgresql_using="gist")
+    # op.drop_index('idx_places_location', table_name='places', postgresql_using='gist')
     op.drop_table("places")
     op.drop_table("forum_posts")
     op.drop_table("content_reports")

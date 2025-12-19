@@ -31,7 +31,7 @@ async def create_review(
         review = await crud.create_review(session, current_user.id, body)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    return APIResponse(status="success", data=review)
+    return APIResponse(data=review)
 
 
 @router.get(
@@ -45,7 +45,7 @@ async def read_review(session: SessionDep, review_id: uuid.UUID):
     review = await crud.get_review(session, review_id)
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
-    return APIResponse(status="success", data=review)
+    return APIResponse(data=review)
 
 
 @router.put(
@@ -68,7 +68,7 @@ async def update_review(
         raise HTTPException(status_code=404, detail=str(e))
     except PermissionError:
         raise HTTPException(status_code=403, detail="Not allowed")
-    return APIResponse(status="success", data=review)
+    return APIResponse(data=review)
 
 
 @router.delete(
@@ -88,4 +88,4 @@ async def delete_review(
         raise HTTPException(status_code=404, detail=str(e))
     except PermissionError:
         raise HTTPException(status_code=403, detail="Not allowed")
-    return APIResponse(status="success", data=Message(message="Review deleted"))
+    return APIResponse(data=Message(message="Review deleted"))

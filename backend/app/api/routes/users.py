@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, status
 from app.api.deps import CurrentUserDep, CurrentUserIdDep, SessionDep
 from app.schemas import (
     APIResponse,
+    HTTPError,
     UserCreate,
     UserDetail,
     UserPhotoResponse,
@@ -20,7 +21,13 @@ from app.service import user_service
 router = APIRouter(tags=["users"], prefix="/users")
 
 
-@router.get("/me", response_model=APIResponse[UserDetail])
+@router.get(
+    "/me",
+    response_model=APIResponse[UserDetail],
+    responses={
+        404: {"model": HTTPError, "description": "User profile not found"},
+    },
+)
 async def get_current_user(
     session: SessionDep,
     user_id: CurrentUserIdDep,
@@ -42,7 +49,13 @@ async def get_current_user(
     )
 
 
-@router.post("", response_model=APIResponse[UserDetail])
+@router.post(
+    "",
+    response_model=APIResponse[UserDetail],
+    responses={
+        409: {"model": HTTPError},
+    },
+)
 async def create_user(
     session: SessionDep,
     user_id: CurrentUserIdDep,
@@ -65,7 +78,14 @@ async def create_user(
         )
 
 
-@router.put("/me", response_model=APIResponse[UserDetail])
+@router.put(
+    "/me",
+    response_model=APIResponse[UserDetail],
+    responses={
+        404: {"model": HTTPError},
+        409: {"model": HTTPError},
+    },
+)
 async def update_current_user(
     session: SessionDep,
     user_id: CurrentUserIdDep,
@@ -95,7 +115,13 @@ async def update_current_user(
     )
 
 
-@router.get("/{user_id}", response_model=APIResponse[UserPublic])
+@router.get(
+    "/{user_id}",
+    response_model=APIResponse[UserPublic],
+    responses={
+        404: {"model": HTTPError},
+    },
+)
 async def get_user(
     session: SessionDep,
     user_id: uuid.UUID,

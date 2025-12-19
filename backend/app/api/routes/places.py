@@ -8,6 +8,7 @@ from app.api.deps import CurrentUserDep, SessionDep
 from app.models import Place
 from app.schemas import (
     APIResponse,
+    HTTPError,
     Message,
     MetaData,
     PlaceCreate,
@@ -24,7 +25,13 @@ router = APIRouter(tags=["places"], prefix="/places")
 # --- Public Endpoints ---
 
 
-@router.get("", response_model=APIResponse[List[PlacePublic]])
+@router.get(
+    "",
+    response_model=APIResponse[List[PlacePublic]],
+    responses={
+        400: {"model": HTTPError},
+    },
+)
 async def search_places(
     session: SessionDep,
     filter_params: PlaceSearchFilter = Depends(),
@@ -63,7 +70,13 @@ async def read_my_places(
     return APIResponse(status="success", data=places)
 
 
-@router.get("/{id}", response_model=APIResponse[PlaceDetail])
+@router.get(
+    "/{id}",
+    response_model=APIResponse[PlaceDetail],
+    responses={
+        404: {"model": HTTPError},
+    },
+)
 async def get_place(session: SessionDep, id: uuid.UUID) -> Any:
     """
     Get detailed information for a single place.
@@ -75,7 +88,13 @@ async def get_place(session: SessionDep, id: uuid.UUID) -> Any:
     return APIResponse(status="success", data=place)
 
 
-@router.get("/{id}/reviews", response_model=APIResponse[list[ReviewSchema]])
+@router.get(
+    "/{id}/reviews",
+    response_model=APIResponse[list[ReviewSchema]],
+    responses={
+        404: {"model": HTTPError},
+    },
+)
 async def list_reviews_for_place(
     session: SessionDep, id: uuid.UUID, page: int = 1, limit: int = 20
 ) -> Any:
@@ -95,7 +114,14 @@ async def list_reviews_for_place(
 # --- Protected Endpoints ---
 
 
-@router.post("", response_model=APIResponse[PlaceDetail], status_code=201)
+@router.post(
+    "",
+    response_model=APIResponse[PlaceDetail],
+    status_code=201,
+    responses={
+        403: {"model": HTTPError},
+    },
+)
 async def create_place(
     session: SessionDep,
     current_user: CurrentUserDep,
@@ -126,7 +152,14 @@ async def create_place(
     )
 
 
-@router.put("/{id}", response_model=APIResponse[PlaceDetail])
+@router.put(
+    "/{id}",
+    response_model=APIResponse[PlaceDetail],
+    responses={
+        403: {"model": HTTPError},
+        404: {"model": HTTPError},
+    },
+)
 async def update_place(
     session: SessionDep,
     current_user: CurrentUserDep,
@@ -151,7 +184,14 @@ async def update_place(
     return APIResponse(status="success", data=updated_place)
 
 
-@router.delete("/{id}", response_model=APIResponse[Message])
+@router.delete(
+    "/{id}",
+    response_model=APIResponse[Message],
+    responses={
+        403: {"model": HTTPError},
+        404: {"model": HTTPError},
+    },
+)
 async def delete_place(
     session: SessionDep,
     current_user: CurrentUserDep,
@@ -176,7 +216,15 @@ async def delete_place(
     )
 
 
-@router.post("/{id}/transfer", response_model=APIResponse[Message])
+@router.post(
+    "/{id}/transfer",
+    response_model=APIResponse[Message],
+    responses={
+        400: {"model": HTTPError},
+        403: {"model": HTTPError},
+        404: {"model": HTTPError},
+    },
+)
 async def transfer_ownership(
     session: SessionDep,
     current_user: CurrentUserDep,

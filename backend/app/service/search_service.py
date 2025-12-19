@@ -96,7 +96,7 @@ async def search_places(
         query = query.order_by(poly.name.asc())
 
     # Count
-    count_query = select(func.count(poly.id)).select_from(query.subquery())
+    count_query = select(func.count(func.distinct(poly.id))).select_from(query.subquery())
     result = await session.execute(count_query)
     total = result.scalar() or 0
 

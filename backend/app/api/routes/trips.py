@@ -6,6 +6,7 @@ from app import crud
 from app.api.deps import CurrentUserDep, SessionDep
 from app.schemas import (
     APIResponse,
+    HTTPError,
     Message,
     MetaData,
     TripCreate,
@@ -35,7 +36,13 @@ async def list_trips(
     )
 
 
-@router.get("/{trip_id}", response_model=APIResponse[TripSchema])
+@router.get(
+    "/{trip_id}",
+    response_model=APIResponse[TripSchema],
+    responses={
+        404: {"model": HTTPError},
+    },
+)
 async def get_trip(
     session: SessionDep, current_user: CurrentUserDep, trip_id: uuid.UUID
 ):
@@ -66,7 +73,14 @@ async def generate_trip():
     )
 
 
-@router.put("/{trip_id}", response_model=APIResponse[TripSchema])
+@router.put(
+    "/{trip_id}",
+    response_model=APIResponse[TripSchema],
+    responses={
+        403: {"model": HTTPError},
+        404: {"model": HTTPError},
+    },
+)
 async def update_trip(
     session: SessionDep,
     current_user: CurrentUserDep,
@@ -86,6 +100,10 @@ async def update_trip(
     "/{trip_id}/places",
     response_model=APIResponse[TripStopSchema],
     status_code=201,
+    responses={
+        403: {"model": HTTPError},
+        404: {"model": HTTPError},
+    },
 )
 async def add_stop(
     session: SessionDep,
@@ -102,7 +120,14 @@ async def add_stop(
     return APIResponse(status="success", data=stop)
 
 
-@router.put("/{trip_id}/places/{stop_id}", response_model=APIResponse[TripStopSchema])
+@router.put(
+    "/{trip_id}/places/{stop_id}",
+    response_model=APIResponse[TripStopSchema],
+    responses={
+        403: {"model": HTTPError},
+        404: {"model": HTTPError},
+    },
+)
 async def update_stop(
     session: SessionDep,
     current_user: CurrentUserDep,
@@ -121,7 +146,13 @@ async def update_stop(
     return APIResponse(status="success", data=stop)
 
 
-@router.delete("/{trip_id}/places/{stop_id}", response_model=APIResponse[Message])
+@router.delete(
+    "/{trip_id}/places/{stop_id}",
+    response_model=APIResponse[Message],
+    responses={
+        403: {"model": HTTPError},
+    },
+)
 async def remove_stop(
     session: SessionDep,
     current_user: CurrentUserDep,

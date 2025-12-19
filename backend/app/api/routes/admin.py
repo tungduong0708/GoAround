@@ -7,9 +7,10 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.api.deps import CurrentUserDep, SessionDep
 from app.schemas import (
-    APIResponse,
     AdminPendingPlace,
     AdminPlaceOwner,
+    APIResponse,
+    HTTPError,
     VerifyPlaceRequest,
     VerifyPlaceResponse,
 )
@@ -18,7 +19,13 @@ from app.service.place_service import get_pending_places, verify_place
 router = APIRouter(tags=["admin"], prefix="/admin")
 
 
-@router.get("/places/pending", response_model=APIResponse[List[AdminPendingPlace]])
+@router.get(
+    "/places/pending",
+    response_model=APIResponse[List[AdminPendingPlace]],
+    responses={
+        403: {"model": HTTPError},
+    },
+)
 async def get_pending_places_for_review(
     session: SessionDep,
     current_user: CurrentUserDep,
@@ -57,7 +64,14 @@ async def get_pending_places_for_review(
     return APIResponse(status="success", data=pending_places, meta=None)
 
 
-@router.put("/places/{id}/verify", response_model=APIResponse[VerifyPlaceResponse])
+@router.put(
+    "/places/{id}/verify",
+    response_model=APIResponse[VerifyPlaceResponse],
+    responses={
+        403: {"model": HTTPError},
+        404: {"model": HTTPError},
+    },
+)
 async def verify_place_status(
     session: SessionDep,
     current_user: CurrentUserDep,

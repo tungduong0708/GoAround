@@ -7,6 +7,7 @@ from app.api.deps import CurrentUserDep, SessionDep
 from app.schemas import (
     AddPlaceToListRequest,
     APIResponse,
+    HTTPError,
     Message,
     MetaData,
     SavedListCreate,
@@ -32,7 +33,13 @@ async def list_lists(
     )
 
 
-@router.get("/{list_id}", response_model=APIResponse[SavedListDetailSchema])
+@router.get(
+    "/{list_id}",
+    response_model=APIResponse[SavedListDetailSchema],
+    responses={
+        404: {"model": HTTPError},
+    },
+)
 async def get_list(
     session: SessionDep, current_user: CurrentUserDep, list_id: uuid.UUID
 ):
@@ -60,6 +67,9 @@ async def create_list(
     "/{list_id}/places",
     response_model=APIResponse[Message],
     status_code=201,
+    responses={
+        404: {"model": HTTPError, "description": "List or place not found"},
+    },
 )
 async def add_place(
     session: SessionDep,
@@ -74,7 +84,13 @@ async def add_place(
     return APIResponse(status="success", data=Message(message="Place added to list."))
 
 
-@router.delete("/{list_id}/places/{place_id}", response_model=APIResponse[Message])
+@router.delete(
+    "/{list_id}/places/{place_id}",
+    response_model=APIResponse[Message],
+    responses={
+        404: {"model": HTTPError},
+    },
+)
 async def remove_place(
     session: SessionDep,
     current_user: CurrentUserDep,

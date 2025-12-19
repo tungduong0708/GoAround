@@ -30,6 +30,12 @@ def parse_db_geometry(v: Any) -> Any:
 # --- Shared & Nested Schemas ---
 
 
+class HTTPError(BaseModel):
+    """Error response model for OpenAPI documentation."""
+
+    detail: str
+
+
 class LocationSchema(BaseModel):
     lat: float = Field(..., ge=-90, le=90)
     lng: float = Field(..., ge=-180, le=180)

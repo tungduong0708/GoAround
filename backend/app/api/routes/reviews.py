@@ -4,12 +4,26 @@ from fastapi import APIRouter, HTTPException
 
 from app import crud
 from app.api.deps import CurrentUserDep, SessionDep
-from app.schemas import APIResponse, Message, ReviewCreate, ReviewSchema, ReviewUpdate
+from app.schemas import (
+    APIResponse,
+    HTTPError,
+    Message,
+    ReviewCreate,
+    ReviewSchema,
+    ReviewUpdate,
+)
 
 router = APIRouter(tags=["reviews"], prefix="/reviews")
 
 
-@router.post("", response_model=APIResponse[ReviewSchema], status_code=201)
+@router.post(
+    "",
+    response_model=APIResponse[ReviewSchema],
+    status_code=201,
+    responses={
+        404: {"model": HTTPError},
+    },
+)
 async def create_review(
     session: SessionDep, current_user: CurrentUserDep, body: ReviewCreate
 ):
@@ -20,7 +34,13 @@ async def create_review(
     return APIResponse(status="success", data=review)
 
 
-@router.get("/{review_id}", response_model=APIResponse[ReviewSchema])
+@router.get(
+    "/{review_id}",
+    response_model=APIResponse[ReviewSchema],
+    responses={
+        404: {"model": HTTPError},
+    },
+)
 async def read_review(session: SessionDep, review_id: uuid.UUID):
     review = await crud.get_review(session, review_id)
     if not review:
@@ -28,7 +48,14 @@ async def read_review(session: SessionDep, review_id: uuid.UUID):
     return APIResponse(status="success", data=review)
 
 
-@router.put("/{review_id}", response_model=APIResponse[ReviewSchema])
+@router.put(
+    "/{review_id}",
+    response_model=APIResponse[ReviewSchema],
+    responses={
+        403: {"model": HTTPError},
+        404: {"model": HTTPError},
+    },
+)
 async def update_review(
     session: SessionDep,
     current_user: CurrentUserDep,
@@ -44,7 +71,14 @@ async def update_review(
     return APIResponse(status="success", data=review)
 
 
-@router.delete("/{review_id}", response_model=APIResponse[Message])
+@router.delete(
+    "/{review_id}",
+    response_model=APIResponse[Message],
+    responses={
+        403: {"model": HTTPError},
+        404: {"model": HTTPError},
+    },
+)
 async def delete_review(
     session: SessionDep, current_user: CurrentUserDep, review_id: uuid.UUID
 ):

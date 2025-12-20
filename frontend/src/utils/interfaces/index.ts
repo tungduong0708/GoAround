@@ -13,7 +13,7 @@ export * from "./IReview";
 export * from "./ITrip";
 export * from "./ICreateTripInput";
 export * from "./IGenerateTripInput";
-export * from "./IAddPlaceToTripInput";
+export * from "./IContentReport"; 
 export * from "./ISavedList";
 export * from "./IForumPost";
 export * from "./ICreatePostInput";

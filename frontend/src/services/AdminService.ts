@@ -8,9 +8,12 @@ import type {
 import type {
   IContentReportResponse,
   IContentReportCreate,
+
   IResolveReportRequest,
 } from "@/utils/interfaces";
-import { IBussinessVerificationDetail } from "@/utils/interfaces/IBussiness";
+import type { 
+  IBussinessVerificationDetail,
+  IVerifyBusinessRequest } from "@/utils/interfaces";
 
 class AdminService {
   private static instance: AdminService;
@@ -54,7 +57,7 @@ class AdminService {
         `/admin/reports/${reportId}/resolve`,
         reportRequest,
       );
-      return response.data as IApiResponse<IAIMessage>;
+      return response.data as IApiResponse<IMessage>;
     } catch (error: any) {
       // Handle error
       if (error.response && error.response.status === 403) {
@@ -94,10 +97,14 @@ class AdminService {
       throw error;
     }
   }
-  async verifyBusiness(id: string): Promise<IMessage> {
+  async verifyBusiness(
+    id: string,
+    input: IVerifyBusinessRequest,
+  ): Promise<IMessage> {
     try {
       const response = await authInstance.post(
         `/admin/businesses/${id}/verify`,
+        input,
       );
       return (response.data as IApiResponse<IMessage>).data;
     } catch (error: any) {

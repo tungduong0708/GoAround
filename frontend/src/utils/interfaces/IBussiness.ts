@@ -1,4 +1,4 @@
-import { IUserPublic } from "./IUser";
+import type { IUserPublic } from "./IUser";
 
 export interface IBussinessVerificationDetail {
   user: IUserPublic;
@@ -12,3 +12,10 @@ export interface IBussinessVerificationDetail {
   created_at: string;
   reviewed_at: string;
 }
+
+
+export interface IVerifyBusinessRequest {
+  // TODO: Use enum later
+  action: string;
+  notes: string; 
+} 

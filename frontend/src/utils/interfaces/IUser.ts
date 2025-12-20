@@ -11,7 +11,7 @@ export interface IUserDetail {
     is_verified_business: boolean;
     stats: IUserStats; 
 
-    joined_at: string;
+    created_at: string;
     email: string;
 }
 
@@ -20,6 +20,7 @@ export interface IUserStats {
     posts_count: number;
     photos_count: number;
     public_trips_count: number;
+    replies_count: number;
 }
 
 export interface IUserUpdate {
@@ -37,6 +38,8 @@ export interface IUserPublic {
   // TODO: Use enum later
   role: string;
   is_verified_business: boolean;
+  stats: IUserStats;
+  created_at: string;
 }
 
 export interface IUserCreate {
@@ -46,6 +49,8 @@ export interface IUserCreate {
 
   // TODO: Use enum later
   signup_type: string;
+  business_verification?: boolean;
+  business_description?: string;
 }
 
 export interface IUserReviewResponse {
@@ -79,4 +84,15 @@ export interface IUserPhotoResponse {
     // TODO: Use enum later
     source_type: string; 
     source_id: string; 
+}
+
+// -------------------------------------------- Deprecated --------------------------------------------
+// This interface is replaced by IUserPublic/IUserDetail
+export interface IUserProfile {
+  id: string;
+  username: string;
+  full_name: string;
+  email: string;
+  role: string;
+  avatar_url: string;
 }

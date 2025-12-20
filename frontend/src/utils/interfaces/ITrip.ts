@@ -42,11 +42,11 @@ export interface ITripListSchema {
   end_date: string;
   stop_count: number;
 }
-export interface ITripStopUpdate {
-  order_index?: number;
-  arrival_time?: string;
-  notes?: string;
-}
+// export interface ITripStopUpdate {
+//   order_index?: number;
+//   arrival_time?: string;
+//   notes?: string;
+// }
 
 export interface ITripStopSchema {
   id: string

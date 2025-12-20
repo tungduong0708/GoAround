@@ -2,16 +2,17 @@
 import { authInstance } from "@/config";
 import type {
   ITripListSchema,
-  ITripStopSchema,
-  ITripSearchQuery,
+  // ITripStopSchema,
   ITripUpdate,
-  IGenerateTripInput,
-  ITripStopCreate,
-  ITripStopUpdate,
+  // IGenerateTripInput,
+  // ITripStopCreate,
+  // ITripStopUpdate,
   IApiResponse,
   IPaginatedResponse,
   ITripSchema,
   ITripCreate,
+  IPagingQuery,
+  IMessage,
 } from "@/utils/interfaces";
 
 class TripService {
@@ -28,7 +29,7 @@ class TripService {
   }
 
   async getTrips(
-    query?: ITripSearchQuery,
+    query?: IPagingQuery,
   ): Promise<IPaginatedResponse<ITripListSchema[]>> {
     const response = await authInstance.get("/trips", { params: query });
     return response.data as IPaginatedResponse<ITripListSchema[]>;
@@ -78,51 +79,10 @@ class TripService {
     }
   }
 
-  async addTripStop(
-    tripId: string,
-    input: ITripStopCreate,
-  ): Promise<ITripStopSchema> {
+  async deleteTrip(id: string): Promise<IMessage> {
     try {
-      const response = await authInstance.post(
-        `/trips/${tripId}/places`,
-        input,
-      );
-      return (response.data as IApiResponse<ITripStopSchema>).data;
-    } catch (error: any) {
-      if (error.response && error.response.status === 403) {
-        console.error("Access Forbidden: ", error.response.data.detail);
-        // Handle specific logic here (e.g., redirect to home, show a toast)
-      } else if (error.response && error.response.status === 404) {
-        console.error("Not Found: ", error.response.data.detail);
-        // Handle specific logic here (e.g., redirect to home, show a toast)
-      }
-      throw error; // Re-throw so the calling component knows the request failed
-    }
-  }
-  async updateTripStop(tripId: string, stopId: string, input: ITripStopUpdate) {
-    try {
-      const response = await authInstance.put(
-        `/trips/${tripId}/places/${stopId}`,
-        input,
-      );
-      return (response.data as IApiResponse<ITripStopSchema>).data;
-    } catch (error: any) {
-      if (error.response && error.response.status === 403) {
-        console.error("Access Forbidden: ", error.response.data.detail);
-        // Handle specific logic here (e.g., redirect to home, show a toast)
-      } else if (error.response && error.response.status === 404) {
-        console.error("Not Found: ", error.response.data.detail);
-        // Handle specific logic here (e.g., redirect to home, show a toast)
-      }
-      throw error; // Re-throw so the calling component knows the request failed
-    }
-  }
-  async removeTripStop(tripId: string, stopId: string) {
-    try {
-      const response = await authInstance.delete(
-        `/trips/${tripId}/places/${stopId}`,
-      );
-      return (response.data as IApiResponse<{ message: string }>).data;
+      const response = await authInstance.delete(`/trips/${id}`);
+      return response.data;
     } catch (error: any) {
       if (error.response && error.response.status === 403) {
         console.error("Access Forbidden: ", error.response.data.detail);
@@ -131,6 +91,70 @@ class TripService {
       throw error; // Re-throw so the calling component knows the request failed
     }
   }
+
+  async generateTrip(): Promise<any> {
+    try {
+      const response = await authInstance.post("/trips/generate");
+      return response.data;
+    } catch (error: any) {
+      console.error("Error generating trip: ", error);
+      throw error; // Re-throw so the calling component knows the request failed
+    }
+  }
+  // Commented out trip stop APIs since they are handled by updateTrip now.
+  // async addTripStop(
+  //   tripId: string,
+  //   input: ITripStopCreate,
+  // ): Promise<ITripStopSchema> {
+  //   try {
+  //     const response = await authInstance.post(
+  //       `/trips/${tripId}/places`,
+  //       input,
+  //     );
+  //     return (response.data as IApiResponse<ITripStopSchema>).data;
+  //   } catch (error: any) {
+  //     if (error.response && error.response.status === 403) {
+  //       console.error("Access Forbidden: ", error.response.data.detail);
+  //       // Handle specific logic here (e.g., redirect to home, show a toast)
+  //     } else if (error.response && error.response.status === 404) {
+  //       console.error("Not Found: ", error.response.data.detail);
+  //       // Handle specific logic here (e.g., redirect to home, show a toast)
+  //     }
+  //     throw error; // Re-throw so the calling component knows the request failed
+  //   }
+  // }
+  // async updateTripStop(tripId: string, stopId: string, input: ITripStopUpdate) {
+  //   try {
+  //     const response = await authInstance.put(
+  //       `/trips/${tripId}/places/${stopId}`,
+  //       input,
+  //     );
+  //     return (response.data as IApiResponse<ITripStopSchema>).data;
+  //   } catch (error: any) {
+  //     if (error.response && error.response.status === 403) {
+  //       console.error("Access Forbidden: ", error.response.data.detail);
+  //       // Handle specific logic here (e.g., redirect to home, show a toast)
+  //     } else if (error.response && error.response.status === 404) {
+  //       console.error("Not Found: ", error.response.data.detail);
+  //       // Handle specific logic here (e.g., redirect to home, show a toast)
+  //     }
+  //     throw error; // Re-throw so the calling component knows the request failed
+  //   }
+  // }
+  // async removeTripStop(tripId: string, stopId: string) {
+  //   try {
+  //     const response = await authInstance.delete(
+  //       `/trips/${tripId}/places/${stopId}`,
+  //     );
+  //     return (response.data as IApiResponse<{ message: string }>).data;
+  //   } catch (error: any) {
+  //     if (error.response && error.response.status === 403) {
+  //       console.error("Access Forbidden: ", error.response.data.detail);
+  //       // Handle specific logic here (e.g., redirect to home, show a toast)
+  //     }
+  //     throw error; // Re-throw so the calling component knows the request failed
+  //   }
+  // }
 
   // Temporarily commented out APIs for refactoring based on new interfaces.
   // async generateTrip(input: IGenerateTripInput): Promise<ITrip> {

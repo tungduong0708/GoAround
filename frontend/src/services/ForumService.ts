@@ -1,6 +1,4 @@
-// Temporarily done for refactoring api calls and error handling
 import type {
-  IForumSearchQuery,
   IApiResponse,
   IPaginatedResponse,
   IMessage,
@@ -8,11 +6,15 @@ import type {
 } from "@/utils/interfaces";
 
 import { authInstance, commonInstance } from "@/config";
-import {
+import type {
+  IForumSearchQuery,
   IForumPostCreate,
   IForumPostDetail,
   IForumPostListItem,
-} from "@/utils/interfaces/IForum ";
+  IForumPostUpdate,
+  IForumReplyCreate,
+  IForumCommentSchema,
+} from "@/utils/interfaces";
 
 class ForumService {
   private static instance: ForumService;
@@ -61,7 +63,7 @@ class ForumService {
   }
   async updatePost(
     id: string,
-    input: IFormPostUpdate,
+    input: IForumPostUpdate,
   ): Promise<IForumPostDetail> {
     try {
       const response = await authInstance.put(`/forum/posts/${id}`, input);
@@ -91,7 +93,7 @@ class ForumService {
         `/forum/posts/${id}/replies`,
         input,
       );
-      return (response.data as IApiResponse<IForumReply>).data;
+      return (response.data as IApiResponse<IForumCommentSchema>).data;
     } catch (error: any) {
       console.error(error);
       throw error;
@@ -109,11 +111,11 @@ class ForumService {
       throw error;
     }
   }
-  async reportReply(post_id: string, reply_id: string): Promise<IMessage> {
+  async reportReply(post_id: string, reply_id: string, input: IContentReportCreate): Promise<IMessage> {
     try {
       const response = await authInstance.post(
         `/forum/posts/${post_id}/replies/${reply_id}/report`,
-        {},
+        input,
       );
       return (response.data as IApiResponse<IMessage>).data;
     } catch (error: any) {

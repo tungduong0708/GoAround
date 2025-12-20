@@ -15,6 +15,7 @@ export interface IResolveReportRequest {
   // TODO: Use enum later
   action: string;
   notes?: string;
+  ban_duration_days?: number;
 }
 
 // Deprecated
@@ -22,9 +23,7 @@ export interface IResolveReportInput {
   action: "delete" | "dismiss" | "ban";
 }
 
-export interface IReportSearchQuery {
-  status?: string;
-}
+
 
 export interface IReporter {
   id: string;
@@ -39,4 +38,12 @@ export interface IReport {
   status: string;
   created_at: string;
   reporter: IReporter;
+}
+
+// Deprecated
+export interface ICreateReportInput {
+  target_type: "post" | "comment" | "review";
+  target_id: string;
+  reason: string;
+  details?: string;
 }

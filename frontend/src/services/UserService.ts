@@ -1,8 +1,8 @@
 // Temporarily done
 import { authInstance, commonInstance } from "@/config";
 import type {
-  IBanUserInput,
-  IBanUserResponse,
+  // IBanUserInput,
+  // IBanUserResponse,
   IUserDetail,
   IUserUpdate,
   IApiResponse,
@@ -13,6 +13,7 @@ import type {
   IUserPostResponse,
   IUserTripResponse,
   IUserPhotoResponse,
+  IPagingQuery,
 } from "@/utils/interfaces";
 
 class UserService {
@@ -74,27 +75,31 @@ class UserService {
 
   async getUserReviews(
     userId: string,
+    query: IPagingQuery
   ): Promise<IPaginatedResponse<IUserReviewResponse[]>> {
-    const response = await commonInstance.get(`/users/${userId}/reviews`);
+    const response = await commonInstance.get(`/users/${userId}/reviews`, { params: query });
     return response.data as IPaginatedResponse<IUserReviewResponse[]>;
   }
   async getUserPosts(
     userId: string,
+    query: IPagingQuery
   ): Promise<IPaginatedResponse<IUserPostResponse[]>> {
-    const response = await commonInstance.get(`/users/${userId}/posts`);
+    const response = await commonInstance.get(`/users/${userId}/posts`, { params: query });
     return response.data as IPaginatedResponse<IUserPostResponse[]>;
   }
 
   async getUserTrips(
     userId: string,
+    query: IPagingQuery
   ): Promise<IPaginatedResponse<IUserTripResponse[]>> {
-    const response = await commonInstance.get(`/users/${userId}/trips`);
+    const response = await commonInstance.get(`/users/${userId}/trips`, { params: query });
     return response.data as IPaginatedResponse<IUserTripResponse[]>;
   }
   async getUserPhotos(
     userId: string,
+    query: IPagingQuery
   ): Promise<IPaginatedResponse<IUserPhotoResponse[]>> {
-    const response = await commonInstance.get(`/users/${userId}/photos`);
+    const response = await commonInstance.get(`/users/${userId}/photos`, { params: query });
     return response.data as IPaginatedResponse<IUserPhotoResponse[]>;
   }
   // Temporarily commented out based on the new interface changes

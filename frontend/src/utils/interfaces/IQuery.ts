@@ -18,15 +18,16 @@ export interface IPlaceSearchQuery {
   place_type: string;
 }
 
-export interface ITripSearchQuery {
-  page: number;
-  limit: number;
-}
 
 export interface IReportQuery {
   page: number;
   limit: number;
   status_filter?: string;
+}
+
+export interface IPagingQuery {
+  page?: number;
+  limit?: number;
 }
 
 export interface IForumSearchQuery {
@@ -35,8 +36,7 @@ export interface IForumSearchQuery {
   sort?: string;
   page?: number;
   limit?: number;
-}
-// --- Decaprated, use IReportQuery instead ---
+} 
 export interface IReportSearchQuery {
   status?: string;
 }

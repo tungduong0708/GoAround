@@ -21,6 +21,10 @@ export interface ISavedListDetailedSchema {
 export interface ISavedListCreate {
   name: string;
 }
+export interface ISavedListUpdate {
+  name?: string;
+  place_ids?: string[];
+}
 export interface IAddPlaceToListRequest {
   place_id: string;
 }

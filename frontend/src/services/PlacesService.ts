@@ -11,6 +11,7 @@ import type {
   IMessage,
   ITransferOwnershipRequest,
   IReviewSchema,
+  IPagingQuery,
 } from "@/utils/interfaces";
 
 class PlacesService {
@@ -117,13 +118,12 @@ class PlacesService {
 
   async getReviewsForPlace(
     placeId: string,
-    page: number = 1,
-    limit: number = 20,
+    query: IPagingQuery 
   ): Promise<IPaginatedResponse<IReviewSchema[]>> { 
     // TODO: Check the query params later 
     try {
       const response = await commonInstance.get(`/places/${placeId}/reviews`, {
-        params: { page, limit },
+        params: query,
       });
       return response.data as IPaginatedResponse<IReviewSchema[]>;
     }

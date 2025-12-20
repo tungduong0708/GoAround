@@ -1,4 +1,4 @@
-// TODO: WIP
+// May be deprecated since ModerationService is being refactored to AdminService
 import { authInstance } from "@/config";
 import type {
   IReport,
@@ -28,7 +28,7 @@ class ModerationService {
   }
 
   async getReports(
-    query?: IReportSearchQuery
+    query?: IReportSearchQuery,
   ): Promise<IPaginatedResponse<IReport[]>> {
     const response = await authInstance.get("/admin/reports", {
       params: query,
@@ -38,11 +38,11 @@ class ModerationService {
 
   async resolveReport(
     id: string,
-    input: IResolveReportInput
+    input: IResolveReportInput,
   ): Promise<{ message: string }> {
     const response = await authInstance.post(
       `/admin/reports/${id}/resolve`,
-      input
+      input,
     );
     return (response.data as IApiResponse<{ message: string }>).data;
   }

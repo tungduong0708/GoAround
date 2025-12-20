@@ -19,16 +19,23 @@ export interface IPlaceSearchQuery {
 }
 
 export interface ITripSearchQuery {
-    page: number;
-    limit: number;
+  page: number;
+  limit: number;
 }
 
 export interface IReportQuery {
-  page: number; 
-  limit : number;
+  page: number;
+  limit: number;
   status_filter?: string;
 }
 
+export interface IForumSearchQuery {
+  q?: string;
+  tag?: string;
+  sort?: string;
+  page?: number;
+  limit?: number;
+}
 // --- Decaprated, use IReportQuery instead ---
 export interface IReportSearchQuery {
   status?: string;

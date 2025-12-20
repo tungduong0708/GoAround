@@ -1,4 +1,4 @@
-// TODO: WIP
+// Temporarily done
 import { authInstance, commonInstance } from "@/config";
 import type {
   IBanUserInput,
@@ -9,9 +9,9 @@ import type {
   IPaginatedResponse,
   IUserPublic,
   IUserCreate,
-  IUserReviewResponse, 
+  IUserReviewResponse,
   IUserPostResponse,
-  IUserTripResponse, 
+  IUserTripResponse,
   IUserPhotoResponse,
 } from "@/utils/interfaces";
 
@@ -40,19 +40,16 @@ class UserService {
       throw error; // Re-throw so the calling component knows the request failed
     }
   }
- 
 
-  async updateProfile(
-    input: IUserUpdate
-  ): Promise<IUserDetail> {
+  async updateProfile(input: IUserUpdate): Promise<IUserDetail> {
     const response = await authInstance.put("/users/me", input);
     return (response.data as IApiResponse<IUserDetail>).data;
   }
 
   async createUser(input: IUserCreate): Promise<IUserDetail> {
-    try{
-    const response = await commonInstance.post("/users", input);
-    return (response.data as IApiResponse<IUserDetail>).data;
+    try {
+      const response = await commonInstance.post("/users", input);
+      return (response.data as IApiResponse<IUserDetail>).data;
     } catch (error: any) {
       if (error.response && error.response.status === 409) {
         console.error("Conflict: ", error.response.data.detail);
@@ -64,8 +61,8 @@ class UserService {
 
   async publicProfile(userId: string): Promise<IUserPublic> {
     try {
-    const response = await commonInstance.get(`/users/${userId}`);
-    return (response.data as IApiResponse<IUserPublic>).data;
+      const response = await commonInstance.get(`/users/${userId}`);
+      return (response.data as IApiResponse<IUserPublic>).data;
     } catch (error: any) {
       if (error.response && error.response.status === 404) {
         console.error("Not Found: ", error.response.data.detail);
@@ -76,31 +73,31 @@ class UserService {
   }
 
   async getUserReviews(
-    userId: string
+    userId: string,
   ): Promise<IPaginatedResponse<IUserReviewResponse[]>> {
     const response = await commonInstance.get(`/users/${userId}/reviews`);
-    return (response.data as IPaginatedResponse<IUserReviewResponse[]>);
+    return response.data as IPaginatedResponse<IUserReviewResponse[]>;
   }
   async getUserPosts(
-    userId: string
+    userId: string,
   ): Promise<IPaginatedResponse<IUserPostResponse[]>> {
     const response = await commonInstance.get(`/users/${userId}/posts`);
-    return (response.data as IPaginatedResponse<IUserPostResponse[]>);
+    return response.data as IPaginatedResponse<IUserPostResponse[]>;
   }
-  
+
   async getUserTrips(
-    userId: string
+    userId: string,
   ): Promise<IPaginatedResponse<IUserTripResponse[]>> {
     const response = await commonInstance.get(`/users/${userId}/trips`);
-    return (response.data as IPaginatedResponse<IUserTripResponse[]>);
+    return response.data as IPaginatedResponse<IUserTripResponse[]>;
   }
   async getUserPhotos(
-    userId: string
+    userId: string,
   ): Promise<IPaginatedResponse<IUserPhotoResponse[]>> {
     const response = await commonInstance.get(`/users/${userId}/photos`);
-    return (response.data as IPaginatedResponse<IUserPhotoResponse[]>);
+    return response.data as IPaginatedResponse<IUserPhotoResponse[]>;
   }
-  // Temporarily commented out based on the new interface changes 
+  // Temporarily commented out based on the new interface changes
   // async banUser(
   //   userId: string,
   //   input: IBanUserInput

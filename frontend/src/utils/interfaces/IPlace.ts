@@ -17,14 +17,14 @@ export interface IPlacePublic {
   average_rating: number;
   review_count: number;
 
-  opening_hours: string; 
+  opening_hours: string;
   tags: string[];
 
   // TODO: Use enum later
-  verification_status: string; 
+  verification_status: string;
 
   // TODO: Use datetime type later
-  created_at: string; 
+  created_at: string;
 
   // Temporary commented out fields
   // owner_id?: string | null;
@@ -48,7 +48,6 @@ export interface IPlacePublic {
 }
 // TODO: This is not payloaded interface, need to do later
 
-
 export interface IPlaceCreate {
   name: string;
   address: string;
@@ -58,20 +57,19 @@ export interface IPlaceCreate {
   opening_hours: string;
   place_type: string;
   main_image_url: string;
-  images: string[]
+  images: string[];
   tags: string[];
-  
+
   // Optional fields
-  hotel_class: string; 
-  price_per_night: string; 
+  hotel_class: string;
+  price_per_night: string;
   amenities: string;
-  
-  cuisine_type: string; 
+
+  cuisine_type: string;
   price_range: string;
 
   ticket_price: string;
-  coffee_specialities: string
-
+  coffee_specialities: string;
 
   location: ILocation;
 
@@ -95,7 +93,7 @@ export interface IPlaceCreate {
 }
 
 export interface IPlaceDetail {
-  id: string; 
+  id: string;
   name: string;
   // TODO: Use enum later
   place_type: string;
@@ -127,13 +125,12 @@ export interface IPlaceDetail {
   amenities: string;
 
   images: string[];
-  owner: string; 
-  
-  my_review: string; 
-  
+  owner: string;
+
+  my_review: string;
 }
 export interface IPlaceUpdate {
-  name: string; 
+  name: string;
   address: string;
 
   location: ILocation;
@@ -147,16 +144,16 @@ export interface IPlaceUpdate {
   images: string[];
   tags: string[];
 
-  hotel_class: string; 
+  hotel_class: string;
   price_per_night: string;
   amenities: string;
-  
-  cuisine_type: string; 
+
+  cuisine_type: string;
   price_range: string;
 
   ticket_price: string;
   coffee_specialities: string;
-  
+
   // Commented out fields to be check later
   // name: string;
   // place_type: PlaceType;
@@ -191,15 +188,8 @@ export interface IPlaceMinimal {
 
 // ------------------------ Decaprated Interfaces -----------------------
 
-
 export interface IImage {
   id: string;
   image_url: string;
   caption?: string;
 }
-
-export interface ITag {
-  id: string;
-  name: string;
-}
-

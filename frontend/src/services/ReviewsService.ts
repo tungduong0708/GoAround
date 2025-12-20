@@ -1,4 +1,4 @@
-// TODO: WIP
+// Temporarily done for refactoring API call
 import { authInstance, commonInstance } from "@/config";
 import type {
   IReviewSchema,
@@ -48,8 +48,6 @@ class ReviewsService {
     }
   }
 
-  
-
   async updateReview(id: string, input: IReviewUpdate): Promise<IReviewSchema> {
     try {
       const response = await authInstance.put(`/reviews/${id}`, input);
@@ -58,8 +56,7 @@ class ReviewsService {
       if (error.response && error.response.status === 403) {
         console.error("Access Forbidden: ", error.response.data.detail);
         // Handle specific logic here (e.g., redirect to home, show a toast)
-      }
-      else if (error.response && error.response.status === 404) {
+      } else if (error.response && error.response.status === 404) {
         console.error("Not Found: ", error.response.data.detail);
         // Handle specific logic here (e.g., redirect to home, show a toast)
       }
@@ -75,8 +72,7 @@ class ReviewsService {
       if (error.response && error.response.status === 403) {
         console.error("Access Forbidden: ", error.response.data.detail);
         // Handle specific logic here (e.g., redirect to home, show a toast)
-      }
-      else if (error.response && error.response.status === 404) {
+      } else if (error.response && error.response.status === 404) {
         console.error("Not Found: ", error.response.data.detail);
         // Handle specific logic here (e.g., redirect to home, show a toast)
       }

@@ -1,5 +1,5 @@
 export interface IMessage {
-    message: string;
+  message: string;
 }
 
 export interface ILocation {
@@ -10,4 +10,8 @@ export interface ILocation {
 export interface ITokenPayload {
   access_token: string;
   refresh_token: string;
+}
+export interface ITag {
+  id: string;
+  name: string;
 }

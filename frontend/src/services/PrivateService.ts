@@ -1,5 +1,4 @@
-
-
+// Temporarily done for refactoring API call
 import { authInstance, commonInstance } from "@/config";
 import type { ITokenPayload, IApiResponse } from "@/utils/interfaces";
 
@@ -15,8 +14,8 @@ class PrivateService {
     }
     return PrivateService.instance;
   }
-  
-  async getDecodedToken():  Promise<ITokenPayload>{
+
+  async getDecodedToken(): Promise<ITokenPayload> {
     const response = await authInstance.get("/private/me");
     return (response.data as IApiResponse<ITokenPayload>).data;
   }

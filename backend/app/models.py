@@ -468,3 +468,24 @@ class ModerationTarget(Base):
         TIMESTAMP(timezone=True), server_default=func.now()
     )
     resolved_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
+
+
+class BusinessVerificationRequest(Base):
+    __tablename__ = "business_verification_requests"
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    profile_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("profiles.id", ondelete="CASCADE")
+    )
+    business_image_url: Mapped[str] = mapped_column(String(255))
+    business_description: Mapped[str] = mapped_column(Text)
+    status: Mapped[Literal["pending", "approved", "rejected"]] = mapped_column(
+        String(20), default="pending"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now()
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
+
+    profile: Mapped["Profile"] = relationship("Profile")

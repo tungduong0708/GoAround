@@ -8,11 +8,14 @@ from fastapi import APIRouter, HTTPException, status
 from app.api.deps import SessionDep, CurrentUserDep
 from app.schemas import (
     APIResponse,
+    BusinessVerificationDetail,
     ContentReportResponse,
     HTTPError,
     Message,
     MetaData,
     ResolveReportRequest,
+    UserPublic,
+    VerifyBusinessRequest,
 )
 
 router = APIRouter(tags=["admin"], prefix="/admin")
@@ -73,4 +76,51 @@ async def resolve_report(
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
         detail="Resolve report endpoint not yet implemented",
+    )
+
+
+@router.get(
+    "/businesses/unverified",
+    response_model=APIResponse[List[BusinessVerificationDetail]],
+    status_code=status.HTTP_501_NOT_IMPLEMENTED,
+    responses={
+        403: {"model": HTTPError},
+    },
+)
+async def get_unverified_businesses(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    page: int = 1,
+    limit: int = 20,
+):
+    """
+    Get all unverified business accounts with verification details.
+    """
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Get unverified businesses endpoint not yet implemented",
+    )
+
+
+@router.post(
+    "/businesses/{user_id}/verify",
+    response_model=APIResponse[Message],
+    status_code=status.HTTP_501_NOT_IMPLEMENTED,
+    responses={
+        403: {"model": HTTPError},
+        404: {"model": HTTPError},
+    },
+)
+async def verify_business(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    user_id: uuid.UUID,
+    data: VerifyBusinessRequest,
+):
+    """
+    Approve or reject a business verification request.
+    """
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Verify business endpoint not yet implemented",
     )

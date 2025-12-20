@@ -132,7 +132,7 @@ async def get_user(
     """
     Get public profile of another user with activity statistics.
     """
-    user_public = await user_service.get_user_public_with_stats(session, user_id)
+    user_public = await user_service.get_user_public(session, user_id)
     if not user_public:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

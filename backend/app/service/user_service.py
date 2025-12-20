@@ -8,7 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import (
+    BusinessVerificationRequest,
     ForumPost,
+    PostReply,
     Profile,
     Review,
     ReviewImage,
@@ -78,11 +80,17 @@ async def get_user_public(
         select(func.count(Trip.id)).where(Trip.user_id == user_id)
     )
 
+    # Replies count
+    replies_count = await session.scalar(
+        select(func.count(PostReply.id)).where(PostReply.user_id == user_id)
+    )
+
     stats = UserStats(
         reviews_count=reviews_count or 0,
         posts_count=posts_count or 0,
         photos_count=photos_count,
         public_trips_count=public_trips_count or 0,
+        replies_count=replies_count or 0,
     )
 
     return UserPublic(
@@ -143,6 +151,20 @@ async def create_user(
 
     session.add(profile)
 
+    # If business account, create verification request
+    if (
+        role == "business"
+        and user_create.business_image_url
+        and user_create.business_description
+    ):
+        verification_request = BusinessVerificationRequest(
+            profile_id=user_id,
+            business_image_url=user_create.business_image_url,
+            business_description=user_create.business_description,
+            status="pending",
+        )
+        session.add(verification_request)
+
     try:
         await session.commit()
     except IntegrityError:
@@ -157,6 +179,7 @@ async def create_user(
         posts_count=0,
         photos_count=0,
         public_trips_count=0,
+        replies_count=0,
     )
 
     return UserDetail(
@@ -218,11 +241,17 @@ async def update_user(
         select(func.count(Trip.id)).where(Trip.user_id == user_id)
     )
 
+    # Replies count
+    replies_count = await session.scalar(
+        select(func.count(PostReply.id)).where(PostReply.user_id == user_id)
+    )
+
     stats = UserStats(
         reviews_count=reviews_count or 0,
         posts_count=posts_count or 0,
         photos_count=photos_count,
         public_trips_count=public_trips_count or 0,
+        replies_count=replies_count or 0,
     )
 
     return UserDetail(
@@ -235,57 +264,6 @@ async def update_user(
         stats=stats,
         created_at=profile.updated_at,
         email=email,
-    )
-
-
-async def get_user_public_with_stats(
-    session: AsyncSession,
-    user_id: uuid.UUID,
-) -> UserPublic | None:
-    """
-    Get public user profile with activity statistics.
-    """
-    profile = await _get_profile(session, user_id)
-
-    if not profile:
-        return None
-
-    # Get statistics
-    reviews_count = await session.scalar(
-        select(func.count(Review.id)).where(Review.user_id == user_id)
-    )
-    posts_count = await session.scalar(
-        select(func.count(ForumPost.id)).where(ForumPost.author_id == user_id)
-    )
-
-    # Photos count from reviews
-    photos_from_reviews = await session.scalar(
-        select(func.count(ReviewImage.id)).join(Review).where(Review.user_id == user_id)
-    )
-
-    photos_count = photos_from_reviews or 0
-
-    # Public trips count
-    public_trips_count = await session.scalar(
-        select(func.count(Trip.id)).where(Trip.user_id == user_id)
-    )
-
-    stats = UserStats(
-        reviews_count=reviews_count or 0,
-        posts_count=posts_count or 0,
-        photos_count=photos_count,
-        public_trips_count=public_trips_count or 0,
-    )
-
-    return UserPublic(
-        username=profile.username or "",
-        full_name=profile.full_name or "",
-        avatar_url=profile.avatar_url,
-        id=profile.id,
-        role=profile.role,
-        is_verified_business=profile.is_verified_business,
-        stats=stats,
-        created_at=profile.updated_at,
     )
 
 

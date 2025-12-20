@@ -155,6 +155,8 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     signup_type: Literal["traveler", "business"]
+    business_image_url: str | None = None
+    business_description: str | None = None
 
 
 class UserUpdate(BaseModel):
@@ -168,6 +170,7 @@ class UserStats(BaseModel):
     posts_count: int
     photos_count: int
     public_trips_count: int
+    replies_count: int
 
 
 class UserPublic(UserBase):
@@ -614,6 +617,23 @@ class ContentReportResponse(BaseModel):
 
 class ResolveReportRequest(BaseModel):
     action: Literal["dismiss", "remove_content", "ban_user"]
+    notes: str | None = None
+
+
+class BusinessVerificationDetail(BaseModel):
+    user: UserPublic
+    verification_id: uuid.UUID
+    business_image_url: str
+    business_description: str
+    status: Literal["pending", "approved", "rejected"]
+    created_at: datetime
+    reviewed_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class VerifyBusinessRequest(BaseModel):
+    action: Literal["approve", "reject"]
     notes: str | None = None
 
 

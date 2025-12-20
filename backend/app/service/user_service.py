@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 from typing import Sequence
 
 from sqlalchemy import func, select
@@ -29,6 +29,7 @@ from app.schemas import (
     UserStats,
     UserUpdate,
 )
+from app.service.utils import is_user_banned
 
 
 async def _get_profile(
@@ -59,6 +60,25 @@ async def get_user_public(
 
     if not profile:
         return None
+
+    # Check if user is banned
+    if is_user_banned(profile):
+        return UserPublic(
+            username="Banned User",
+            full_name="Banned User",
+            avatar_url=None,
+            id=profile.id,
+            role=profile.role,
+            is_verified_business=False,
+            stats=UserStats(
+                reviews_count=0,
+                posts_count=0,
+                photos_count=0,
+                public_trips_count=0,
+                replies_count=0,
+            ),
+            created_at=profile.updated_at,
+        )
 
     # Get statistics
     reviews_count = await session.scalar(

@@ -69,6 +69,8 @@ async def resolve_report(
     Request Body:
     - action: Action to take (dismiss, remove_content, ban_user)
     - notes: Optional notes about the resolution
+    - ban_duration_days: Required when action is "ban_user". Specifies how many days the user will be banned.
+                         The ban_until timestamp will be calculated as current_time + ban_duration_days.
 
     Returns:
     - Success message

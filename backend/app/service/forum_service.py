@@ -1,12 +1,13 @@
 """Forum CRUD operations."""
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import ForumPost, PostReply, PostImage, Tag, post_tags
+from app.models import ForumPost, PostReply, PostImage, Tag, post_tags, Profile
 from app.schemas import (
     ForumAuthorSchema,
     ForumCommentSchema,
@@ -19,6 +20,25 @@ from app.schemas import (
     ForumSearchFilter,
     ForumTagSchema,
 )
+from app.service.utils import is_user_banned
+
+
+def _sanitize_author(author: Profile) -> ForumAuthorSchema:
+    """Return sanitized author data, hiding info if banned."""
+    if is_user_banned(author):
+        return ForumAuthorSchema(id=author.id, username="Banned User")
+    return ForumAuthorSchema(id=author.id, username=author.username)
+
+
+def _sanitize_comment_user(user: Profile) -> ForumCommentUserSchema:
+    """Return sanitized comment user data, hiding info if banned."""
+    if is_user_banned(user):
+        return ForumCommentUserSchema(
+            id=user.id, username="Banned User", avatar_url=None
+        )
+    return ForumCommentUserSchema(
+        id=user.id, username=user.username, avatar_url=user.avatar_url
+    )
 
 
 async def list_forum_posts(
@@ -98,10 +118,7 @@ async def list_forum_posts(
                 id=post.id,
                 title=post.title,
                 content_snippet=content_snippet,
-                author=ForumAuthorSchema(
-                    id=post.author.id,
-                    username=post.author.username,
-                ),
+                author=_sanitize_author(post.author),
                 tags=[ForumTagSchema(id=tag.id, name=tag.name) for tag in post.tags],
                 reply_count=post.reply_count,
                 created_at=post.created_at,
@@ -133,10 +150,7 @@ async def get_forum_post(
         id=post.id,
         title=post.title,
         content=post.content,
-        author=ForumAuthorSchema(
-            id=post.author.id,
-            username=post.author.username,
-        ),
+        author=_sanitize_author(post.author),
         images=[
             ForumPostImageSchema(id=img.id, image_url=img.image_url)
             for img in post.images
@@ -146,11 +160,7 @@ async def get_forum_post(
             ForumCommentSchema(
                 id=comment.id,
                 content=comment.content,
-                user=ForumCommentUserSchema(
-                    id=comment.user.id,
-                    username=comment.user.username,
-                    avatar_url=comment.user.avatar_url,
-                ),
+                user=_sanitize_comment_user(comment.user),
                 created_at=comment.created_at,
                 parent_id=comment.parent_id,
             )
@@ -251,15 +261,11 @@ async def create_forum_reply(
 
     if not comment:
         raise RuntimeError("Failed to retrieve created reply")
-    
+
     return ForumCommentSchema(
         id=comment.id,
         content=comment.content,
-        user=ForumCommentUserSchema(
-            id=comment.user.id,
-            username=comment.user.username,
-            avatar_url=comment.user.avatar_url,
-        ),
+        user=_sanitize_comment_user(comment.user),
         created_at=comment.created_at,
         parent_id=comment.parent_id,
     )

@@ -618,6 +618,11 @@ class ContentReportResponse(BaseModel):
 class ResolveReportRequest(BaseModel):
     action: Literal["dismiss", "remove_content", "ban_user"]
     notes: str | None = None
+    ban_duration_days: int | None = Field(
+        None,
+        ge=1,
+        description="Ban duration in days (required when action is ban_user)",
+    )
 
 
 class BusinessVerificationDetail(BaseModel):

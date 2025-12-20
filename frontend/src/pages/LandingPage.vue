@@ -12,7 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSavedTrip } from "@/composables/useSavedTrip";
 import { Input } from "@/components/ui/input";
-import type { IPlace } from "@/utils/interfaces/IPlace";
+import type { IPlacePublic } from "@/utils/interfaces/IPlace";
 
 // Modal state
 const {
@@ -33,7 +33,7 @@ const formatRating = (rating?: number) => {
   return rating ? rating.toFixed(1) : "N/A";
 };
 
-const getPlaceImage = (place: IPlace) => {
+const getPlaceImage = (place: IPlacePublic) => {
   return place.main_image_url || "/placeholder-image.jpg"; // You might want a better placeholder
 };
 </script>

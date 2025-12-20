@@ -6,18 +6,19 @@ export interface IPlacePublic {
   // TODO: Use enum later
   place_type: string;
 
-  address: string;
-  city: string;
-  country: string;
+  address?: string;
+  city?: string;
+  country?: string;
 
-  location: ILocation;
+  location?: ILocation;
 
-  main_image_url: string;
+  main_image_url?: string;
 
   average_rating: number;
   review_count: number;
 
-  opening_hours: string;
+  price_range?: string;
+  opening_hours?: string;
   tags: string[];
 
   // TODO: Use enum later

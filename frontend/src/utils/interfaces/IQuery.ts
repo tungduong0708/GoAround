@@ -1,21 +1,21 @@
 import type { ILocation } from "./IHelper";
 export interface IPlaceSearchQuery {
-  q: string;
-  category: string;
-  location: ILocation;
+  q?: string;
+  category?: string;
+  location?: ILocation;
 
-  radius: number;
-  tags: string;
+  radius?: number;
+  tags?: string;
 
-  amenities: string;
-  price_range: string;
-  rating: number;
-  sort_by: string;
-  page: number;
-  limit: number;
+  amenities?: string;
+  price_range?: string;
+  rating?: number;
+  sort_by?: string;
+  page?: number;
+  limit?: number;
 
   // TODO: Use enum later
-  place_type: string;
+  place_type?: string;
 }
 
 

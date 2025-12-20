@@ -2,13 +2,17 @@
 import SearchBar from "@/components/search/SearchBar.vue";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSearchCategories } from "@/composables";
+import { useSearchCategories, useSearchResults } from "@/composables";
 
-const props = defineProps<{
-  modelValue: string;
-  loading?: boolean;
+defineProps<{
   placeholder?: string;
 }>();
+
+const { searchTerm, loading, performSearch } = useSearchResults({ autoLoad: false });
+
+const handleSearchSubmit = () => {
+  performSearch();
+};
 
 const emit = defineEmits<{
   "update:modelValue": [value: string];
@@ -75,13 +79,12 @@ const {
           class="flex w-full justify-center"
         >
           <SearchBar
-            :model-value="props.modelValue"
-            :loading="props.loading"
+            v-model="searchTerm"
+            :loading="loading"
             :placeholder="
-              props.placeholder ?? 'Search destinations, guides, or experiences'
+              placeholder ?? 'Search destinations, guides, or experiences'
             "
-            @update:modelValue="updateValue"
-            @submit="handleSubmit"
+            @submit="handleSearchSubmit"
           />
         </div>
       </CardContent>

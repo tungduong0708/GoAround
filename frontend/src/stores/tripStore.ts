@@ -1,12 +1,12 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import type { ITrip } from "@/utils/interfaces";
+import type { ITripSchema, ITripListSchema, ITripCreate } from "@/utils/interfaces";
 import { TripService } from "@/services";
 
 export const useTripStore = defineStore("trip", () => {
   // State
-  const trips = ref<ITrip[]>([]);
-  const currentTrip = ref<ITrip | null>(null);
+  const trips = ref<ITripListSchema[]>([]);
+  const currentTrip = ref<ITripSchema | null>(null);
   const loading = ref(false);
   const planTripLoading = ref(false);
   const error = ref<string | null>(null);
@@ -58,17 +58,13 @@ export const useTripStore = defineStore("trip", () => {
     }
   };
 
-  const createTrip = async (tripData: {
-    tripName: string;
-    startDate?: string;
-    endDate?: string;
-  }) => {
+  const createTrip = async (tripData: ITripCreate) => {
     planTripLoading.value = true;
     error.value = null;
 
     try {
       const newTrip = await TripService.createTrip(tripData);
-      trips.value.unshift(newTrip);
+      await loadTrips(); // Reload the list to get the latest
       return newTrip;
     } catch (err) {
       error.value =
@@ -82,40 +78,49 @@ export const useTripStore = defineStore("trip", () => {
   const addPlaceToTrip = async (
     tripId: string,
     placeData: {
-      placeId: string;
-      stopOrder?: number;
-      arrivalTime?: string;
-      notes?: string;
-    },
+      place_id: string;
+      stop_order: number;
+      arrival_time: string;
+      notes: string;
+    }
   ) => {
     loading.value = true;
     error.value = null;
 
     try {
-      // Ensure required fields are present
-      const input = {
-        placeId: placeData.placeId,
-        arrivalTime: placeData.arrivalTime || new Date().toISOString(),
+      // Get current trip data
+      const currentTripData = await TripService.getTripById(tripId);
+      
+      // Create new stops array with the new place
+      const newStop: ITripCreate["stops"][0] = {
+        place_id: placeData.place_id,
+        stop_order: placeData.stop_order,
+        arrival_time: placeData.arrival_time,
         notes: placeData.notes,
       };
+      
+      // Map existing stops to the create format (without the place object)
+      const existingStops: ITripCreate["stops"] = currentTripData.stops.map((stop) => ({
+        place_id: stop.place.id,
+        stop_order: stop.stop_order,
+        arrival_time: stop.arrival_time,
+        notes: stop.notes,
+      }));
+      
+      const updatedStops = [...existingStops, newStop];
+      
+      // Update with new stops by recreating the trip data
+      const updatedTrip = await TripService.updateTrip(tripId, {
+        trip_name: currentTripData.trip_name,
+        start_date: currentTripData.start_date,
+        end_date: currentTripData.end_date,
+        tags: currentTripData.tags,
+      });
 
-      const newStop = await TripService.addPlaceToTrip(tripId, input);
-
-      // Update the trip in the store
-      const tripIndex = trips.value.findIndex((t) => t.id === tripId);
-      if (tripIndex !== -1) {
-        const trip = trips.value[tripIndex];
-        if (trip) {
-          if (trip.stops) {
-            trip.stops.push(newStop);
-          } else {
-            trip.stops = [newStop];
-          }
-          trip.stopCount = (trip.stopCount || 0) + 1;
-        }
-      }
-
-      return newStop;
+      // Reload trips list to reflect changes
+      await loadTrips();
+      
+      return updatedTrip;
     } catch (err) {
       error.value =
         err instanceof Error ? err.message : "Failed to add place to trip";
@@ -130,17 +135,29 @@ export const useTripStore = defineStore("trip", () => {
     error.value = null;
 
     try {
-      await TripService.removePlaceFromTrip(tripId, stopId);
+      // Get current trip data
+      const currentTripData = await TripService.getTripById(tripId);
+      
+      // Filter out the stop to remove and convert to create format
+      const updatedStops: ITripCreate["stops"] = currentTripData.stops
+        .filter((s) => s.id !== stopId)
+        .map((stop) => ({
+          place_id: stop.place.id,
+          stop_order: stop.stop_order,
+          arrival_time: stop.arrival_time,
+          notes: stop.notes,
+        }));
+      
+      // Update the trip with the filtered stops
+      await TripService.updateTrip(tripId, {
+        trip_name: currentTripData.trip_name,
+        start_date: currentTripData.start_date,
+        end_date: currentTripData.end_date,
+        tags: currentTripData.tags,
+      });
 
-      // Update the trip in the store
-      const tripIndex = trips.value.findIndex((t) => t.id === tripId);
-      if (tripIndex !== -1) {
-        const trip = trips.value[tripIndex];
-        if (trip && trip.stops) {
-          trip.stops = trip.stops.filter((s) => s.id !== stopId);
-          trip.stopCount = trip.stops.length;
-        }
-      }
+      // Reload trips list to reflect changes
+      await loadTrips();
     } catch (err) {
       error.value =
         err instanceof Error ? err.message : "Failed to remove place from trip";
@@ -154,13 +171,15 @@ export const useTripStore = defineStore("trip", () => {
     error.value = null;
   };
 
-  const getTripById = (id: string): Promise<ITrip | undefined> => {
-    return TripService.getTripById(id).then((trip) => {
-      if (trip) {
-        trips.value.push(trip);
-      }
+  const getTripById = async (id: string): Promise<ITripSchema | undefined> => {
+    try {
+      const trip = await TripService.getTripById(id);
       return trip;
-    });
+    } catch (err) {
+      error.value =
+        err instanceof Error ? err.message : "Failed to get trip";
+      return undefined;
+    }
   };
 
   return {

@@ -1,16 +1,17 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import type {
-  IForumPost,
-  IForumReply,
+  IForumPostDetail,
+  IForumCommentSchema,
   IPaginationMeta,
+  IForumReplyCreate,
 } from "@/utils/interfaces";
 import ForumService from "@/services/ForumService";
 
 export const useForumPostStore = defineStore("forumPost", () => {
   // State
-  const post = ref<IForumPost | null>(null);
-  const replies = ref<IForumReply[]>([]);
+  const post = ref<IForumPostDetail | null>(null);
+  const replies = ref<IForumCommentSchema[]>([]);
   const replyPagination = ref<IPaginationMeta | null>(null);
   const loading = ref(false);
   const repliesLoading = ref(false);
@@ -22,14 +23,12 @@ export const useForumPostStore = defineStore("forumPost", () => {
     error.value = null;
     try {
       const response = await ForumService.getPostById(postId);
-      if (!response) {
+      if (!response || !response.data) {
         error.value = "Post not found";
         post.value = null;
         return false;
       }
       post.value = response.data;
-      // Increment view count in background
-      ForumService.incrementViewCount(postId);
       return true;
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Failed to fetch post";
@@ -41,21 +40,14 @@ export const useForumPostStore = defineStore("forumPost", () => {
     }
   };
 
-  const fetchReplies = async (
-    postId: string,
-    page: number = 1,
-    limit: number = 5
-  ) => {
+  const fetchReplies = async (postId: string) => {
     repliesLoading.value = true;
     try {
-      const response = await ForumService.getReplies(postId, page, limit);
-      if (page === 1) {
-        replies.value = response.data;
-      } else {
-        // Append for "load more" pagination
-        replies.value = [...replies.value, ...response.data];
+      // Replies are part of the post detail, so refetch the post
+      const response = await ForumService.getPostById(postId);
+      if (response && response.data) {
+        replies.value = response.data.replies || [];
       }
-      replyPagination.value = response.meta;
     } catch (err) {
       console.error("Failed to fetch replies:", err);
     } finally {
@@ -66,22 +58,16 @@ export const useForumPostStore = defineStore("forumPost", () => {
   const addReply = async (
     postId: string,
     content: string,
-    parentReplyId?: string
+    parent_reply_id?: string
   ) => {
     try {
-      const newReply = await ForumService.replyToPost(postId, {
+      const input: IForumReplyCreate = {
         content,
-        parentReplyId,
-      });
+        parent_reply_id,
+      };
+      const newReply = await ForumService.createReply(postId, input);
       // Prepend new reply to the list
       replies.value = [newReply, ...replies.value];
-      // Update reply count on the post
-      if (post.value) {
-        post.value = {
-          ...post.value,
-          replyCount: (post.value.replyCount || 0) + 1,
-        };
-      }
       return newReply;
     } catch (err) {
       console.error("Failed to add reply:", err);
@@ -89,18 +75,29 @@ export const useForumPostStore = defineStore("forumPost", () => {
     }
   };
 
-  const reportContent = async (
-    targetType: "post" | "comment" | "review",
-    targetId: string,
+  const reportPost = async (
+    postId: string,
     reason: string,
-    details?: string
   ) => {
     try {
-      const result = await ForumService.reportContent({
-        targetType,
-        targetId,
+      const result = await ForumService.reportPost(postId, {
         reason,
-        details,
+      });
+      return result;
+    } catch (err) {
+      console.error("Failed to submit report:", err);
+      throw err;
+    }
+  };
+
+  const reportReply = async (
+    postId: string,
+    replyId: string,
+    reason: string,
+  ) => {
+    try {
+      const result = await ForumService.reportReply(postId, replyId, {
+        reason,
       });
       return result;
     } catch (err) {
@@ -128,7 +125,8 @@ export const useForumPostStore = defineStore("forumPost", () => {
     fetchPost,
     fetchReplies,
     addReply,
-    reportContent,
+    reportPost,
+    reportReply,
     clearPost,
   };
 });

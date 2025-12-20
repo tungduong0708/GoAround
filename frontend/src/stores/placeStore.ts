@@ -1,10 +1,10 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import type { IPlace } from "@/utils/interfaces";
+import type { IPlaceDetail } from "@/utils/interfaces";
 import { PlacesService } from "@/services";
 
 export const usePlaceStore = defineStore("place", () => {
-  const place = ref<IPlace | null>(null);
+  const place = ref<IPlaceDetail | null>(null);
   const loading = ref(false);
   const error = ref<string | null>(null);
 

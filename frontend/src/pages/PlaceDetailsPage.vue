@@ -121,11 +121,9 @@ onMounted(() => {
             <div class="flex items-center gap-4 text-muted-foreground">
               <div class="flex items-center gap-1 text-yellow-500">
                 <StarIcon class="size-5 fill-current" />
-                <span class="font-semibold text-foreground">{{
-                  place.average_rating
-                }}</span>
+                <span class="font-semibold text-foreground">N/A</span>
                 <span class="text-muted-foreground"
-                  >({{ place.review_count }} reviews)</span
+                  >(0 reviews)</span
                 >
               </div>
               <div class="flex items-center gap-1">

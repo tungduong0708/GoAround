@@ -7,11 +7,9 @@ export * from "./IUser";
 export * from "./IPlace";
 export * from "./IReview";
 export * from "./ITrip";
-export * from "./IGenerateTripInput";
 export * from "./IContentReport"; 
 export * from "./ISavedList";
 export * from "./IForum"
-export * from "./ICreateReportInput";
 export * from "./IReportSearchQuery";
 export * from "./IHelper"
 export * from "./IQuery"

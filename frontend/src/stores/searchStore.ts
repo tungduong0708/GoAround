@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { PlacesService } from "@/services";
 import type {
-  IPlace,
+  IPlacePublic,
   IPlaceSearchQuery,
   IPaginatedResponse,
 } from "@/utils/interfaces";
@@ -18,7 +18,7 @@ export type SearchCategoryValue = (typeof SEARCH_CATEGORY_VALUES)[number];
 export const useSearchStore = defineStore("search", () => {
   const query = ref("");
   const filters = ref<Partial<Omit<IPlaceSearchQuery, "q">>>({});
-  const results = ref<IPaginatedResponse<IPlace[]>>();
+  const results = ref<IPaginatedResponse<IPlacePublic[]>>();
   const loading = ref(false);
   const error = ref<string | null>(null);
   const hasSearched = ref(false);
@@ -26,16 +26,20 @@ export const useSearchStore = defineStore("search", () => {
 
   const hasResults = computed(
     () =>
-      results.value?.status === "success" &&
-      (results.value.data.length ?? 0) > 0,
+      !error.value &&
+      results.value?.data &&
+      Array.isArray(results.value.data) &&
+      results.value.data.length > 0,
   );
 
   const buildFilters = (): Partial<Omit<IPlaceSearchQuery, "q">> => {
     const base: Partial<Omit<IPlaceSearchQuery, "q">> = { ...filters.value };
     if (category.value === "all") {
       delete base.category;
+      delete base.place_type;
     } else {
-      base.category = category.value;
+      base.place_type = (category.value as string);
+      delete base.category;
     }
     return base;
   };

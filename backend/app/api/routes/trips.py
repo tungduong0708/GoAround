@@ -28,8 +28,11 @@ async def list_trips(
     current_user: CurrentUserDep,
     page: int = 1,
     limit: int = 20,
+    public_only: bool = False,
 ):
-    trips, total = await crud.list_trips(session, current_user.id, page, limit)
+    trips, total = await crud.list_trips(
+        session, current_user.id, page, limit, public_only
+    )
     return APIResponse(
         data=trips,
         meta=MetaData(page=page, limit=limit, total_items=total),
@@ -98,3 +101,29 @@ async def update_trip(
     except PermissionError:
         raise HTTPException(status_code=403, detail="Not allowed")
     return APIResponse(data=trip)
+
+
+@router.delete(
+    "/{trip_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[Message],
+    responses={
+        403: {"model": HTTPError},
+        404: {"model": HTTPError},
+    },
+)
+async def delete_trip(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    trip_id: uuid.UUID,
+):
+    """
+    Delete a trip.
+    """
+    try:
+        await crud.delete_trip(session, current_user.id, trip_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Not allowed")
+    return APIResponse(data=Message(message="Trip deleted successfully"))

@@ -357,6 +357,14 @@ class PlaceDetail(PlacePublic):
         return parse_db_geometry(v)
 
 
+class PlaceSearchResponse(BaseModel):
+    """Search response with places, related posts, and trips."""
+
+    places: list[PlacePublic] = Field(default_factory=list)
+    posts: list["ForumPostListItem"] = Field(default_factory=list)
+    trips: list["TripListSchema"] = Field(default_factory=list)
+
+
 # --- Trip / Itinerary Schemas ---
 
 
@@ -371,6 +379,7 @@ class TripCreate(BaseModel):
     trip_name: str = Field(..., min_length=1, max_length=100)
     start_date: date | None = None
     end_date: date | None = None
+    public: bool = False
     tags: list[str] = Field(default_factory=list)
     stops: list[TripStopCreate] = Field(default_factory=list)
 
@@ -379,6 +388,7 @@ class TripUpdate(BaseModel):
     trip_name: str | None = None
     start_date: date | None = None
     end_date: date | None = None
+    public: bool | None = None
     tags: list[str] | None = None
     stops: list[TripStopCreate] | None = None
 
@@ -416,6 +426,7 @@ class TripSchema(BaseModel):
     trip_name: str
     start_date: date | None = None
     end_date: date | None = None
+    public: bool = False
     tags: list[str] = Field(default_factory=list)
     stops: list[TripStopWithPlace] = Field(default_factory=list)
 
@@ -434,6 +445,7 @@ class TripListSchema(BaseModel):
     trip_name: str
     start_date: date
     end_date: date
+    public: bool = False
     stop_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
@@ -520,6 +532,7 @@ class ReviewSchema(BaseModel):
 class ForumAuthorSchema(BaseModel):
     id: uuid.UUID
     username: str | None = None
+    avatar_url: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

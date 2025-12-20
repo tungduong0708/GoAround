@@ -7,6 +7,7 @@ from app.api.deps import CurrentUserDep, SessionDep
 from app.schemas import (
     APIResponse,
     HTTPError,
+    Message,
     MetaData,
     SavedListCreate,
     SavedListDetailSchema,
@@ -91,3 +92,29 @@ async def update_list(
         status_code=501,
         detail="Update list endpoint not yet implemented",
     )
+
+
+@router.delete(
+    "/{list_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[Message],
+    responses={
+        403: {"model": HTTPError},
+        404: {"model": HTTPError},
+    },
+)
+async def delete_list(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    list_id: uuid.UUID,
+):
+    """
+    Delete a saved list.
+    """
+    try:
+        await crud.delete_saved_list(session, current_user.id, list_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Not allowed")
+    return APIResponse(data=Message(message="List deleted successfully"))

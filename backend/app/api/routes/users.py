@@ -198,7 +198,9 @@ async def get_user_trips(
     """
     Get list of public trips created by a specific user.
     """
-    trips, total = await trip_service.list_trips(session, user_id, page, limit)
+    trips, total = await trip_service.list_trips(
+        session, user_id, page, limit, public_only=True
+    )
     return APIResponse(
         data=trips,
         meta=MetaData(page=page, limit=limit, total_items=total),

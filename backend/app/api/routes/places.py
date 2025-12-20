@@ -15,6 +15,7 @@ from app.schemas import (
     PlaceDetail,
     PlacePublic,
     PlaceSearchFilter,
+    PlaceSearchResponse,
     PlaceUpdate,
     ReviewSchema,
     TransferOwnershipRequest,
@@ -28,7 +29,7 @@ router = APIRouter(tags=["places"], prefix="/places")
 @router.get(
     "",
     status_code=status.HTTP_200_OK,
-    response_model=APIResponse[List[PlacePublic]],
+    response_model=APIResponse[PlaceSearchResponse],
     responses={
         400: {"model": HTTPError},
     },
@@ -39,6 +40,7 @@ async def search_places(
 ) -> Any:
     """
     Search places by keyword, tags, price, or location (radius).
+    Returns places with related forum posts and public trips.
     Only approved places are shown unless the user is an Admin.
     """
     # Validation for distance sorting
@@ -48,10 +50,10 @@ async def search_places(
             detail="Location (lat,lng) is required for distance sorting.",
         )
 
-    results, total = await crud.search_places(session, filter_params)
+    response, total = await crud.search_places(session, filter_params)
 
     return APIResponse(
-        data=results,
+        data=response,
         meta=MetaData(
             page=filter_params.page, limit=filter_params.limit, total_items=total
         ),

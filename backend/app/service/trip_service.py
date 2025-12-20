@@ -56,16 +56,23 @@ async def _load_trip_detail(session: AsyncSession, trip: Trip) -> TripSchema:
         trip_name=trip_obj.trip_name,
         start_date=trip_obj.start_date,
         end_date=trip_obj.end_date,
+        public=trip_obj.public,
         tags=[t.name for t in trip_obj.tags] if trip_obj.tags else [],
         stops=stops,
     )
 
 
 async def list_trips(
-    session: AsyncSession, user_id: uuid.UUID, page: int, limit: int
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    page: int,
+    limit: int,
+    public_only: bool = False,
 ) -> tuple[list[TripListSchema], int]:
     """List all trips for a user with pagination."""
     base_query = select(Trip.id).where(Trip.user_id == user_id)
+    if public_only:
+        base_query = base_query.where(Trip.public)
     total_res = await session.execute(
         select(func.count()).select_from(base_query.subquery())
     )
@@ -80,6 +87,8 @@ async def list_trips(
         .offset((page - 1) * limit)
         .limit(limit)
     )
+    if public_only:
+        stmt = stmt.where(Trip.public)
     res = await session.execute(stmt)
     data = [
         TripListSchema(
@@ -87,6 +96,7 @@ async def list_trips(
             trip_name=trip.trip_name,
             start_date=trip.start_date,
             end_date=trip.end_date,
+            public=trip.public,
             stop_count=int(stop_count or 0),
         )
         for trip, stop_count in res.all()
@@ -107,6 +117,7 @@ async def create_trip(
         trip_name=data.trip_name,
         start_date=data.start_date,
         end_date=data.end_date,
+        public=data.public,
         tags=[],  # Initialize tags list to avoid lazy load
     )
     session.add(trip)
@@ -382,3 +393,21 @@ async def remove_trip_stop(
     for s in stops:
         s.stop_order -= 1
     await session.commit()
+
+
+async def delete_trip(
+    session: AsyncSession, user_id: uuid.UUID, trip_id: uuid.UUID
+) -> None:
+    """Delete a trip."""
+    trip = await session.get(Trip, trip_id)
+    if not trip:
+        raise ValueError("Trip not found")
+    if trip.user_id != user_id:
+        raise PermissionError("Not authorized to delete this trip")
+
+    try:
+        await session.delete(trip)
+        await session.commit()
+    except Exception as e:
+        await session.rollback()
+        raise ValueError(f"Failed to delete trip: {str(e)}")

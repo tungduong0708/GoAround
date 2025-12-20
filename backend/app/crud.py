@@ -30,6 +30,7 @@ from app.service.review_service import (
 from app.service.saved_list_service import (
     add_place_to_list,
     create_saved_list,
+    delete_saved_list,
     get_saved_list,
     list_saved_lists,
     remove_place_from_list,
@@ -38,6 +39,7 @@ from app.service.search_service import search_places
 from app.service.trip_service import (
     add_trip_stop,
     create_trip,
+    delete_trip,
     get_trip,
     list_trips,
     remove_trip_stop,
@@ -58,6 +60,7 @@ __all__ = [
     # Saved list operations
     "add_place_to_list",
     "create_saved_list",
+    "delete_saved_list",
     "get_saved_list",
     "list_saved_lists",
     "remove_place_from_list",
@@ -70,6 +73,7 @@ __all__ = [
     # Trip operations
     "add_trip_stop",
     "create_trip",
+    "delete_trip",
     "get_trip",
     "list_trips",
     "remove_trip_stop",

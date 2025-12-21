@@ -12,18 +12,15 @@ export interface IContentReportCreate {
 }
 
 export interface IResolveReportRequest {
-  // TODO: Use enum later
-  action: string;
-  notes?: string;
-  ban_duration_days?: number;
+  action: "dismiss" | "remove_content" | "ban_user";
+  notes?: string | null;
+  ban_duration_days?: number | null;
 }
 
 // Deprecated
 export interface IResolveReportInput {
   action: "delete" | "dismiss" | "ban";
 }
-
-
 
 export interface IReporter {
   id: string;

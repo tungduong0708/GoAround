@@ -12,6 +12,7 @@ import type {
   ITransferOwnershipRequest,
   IReviewSchema,
   IPagingQuery,
+  IPlaceSearchResponse,
 } from "@/utils/interfaces";
 
 class PlacesService {
@@ -29,10 +30,10 @@ class PlacesService {
 
   async getPlaces(
     query?: IPlaceSearchQuery,
-  ): Promise<IPaginatedResponse<IPlacePublic[]>> {
+  ): Promise<IPaginatedResponse<IPlaceSearchResponse>> {
     try {
       const response = await commonInstance.get("/places", { params: query });
-      return response.data as IPaginatedResponse<IPlacePublic[]>;
+      return response.data as IPaginatedResponse<IPlaceSearchResponse>;
     } catch (error: any) {
       if (error.response && error.response.status === 400) {
         console.error("Access Forbidden: ", error.response.data.detail);
@@ -57,7 +58,7 @@ class PlacesService {
 
 
   async getOwnedPlaces(): Promise<IPaginatedResponse<IPlacePublic[]>> {
-    const response = await authInstance.post("/places/mine/all");
+    const response = await authInstance.get("/places/me");
     return (response.data as IPaginatedResponse<IPlacePublic[]>); 
   }
 

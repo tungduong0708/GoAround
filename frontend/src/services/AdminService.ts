@@ -1,4 +1,4 @@
-import { authInstance, commonInstance } from "@/config";
+import { authInstance } from "@/config";
 import type {
   IApiResponse,
   IMessage,
@@ -7,8 +7,6 @@ import type {
 } from "@/utils/interfaces";
 import type {
   IContentReportResponse,
-  IContentReportCreate,
-
   IResolveReportRequest,
 } from "@/utils/interfaces";
 import type { 

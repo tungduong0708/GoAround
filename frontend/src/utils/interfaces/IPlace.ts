@@ -1,31 +1,35 @@
-import type { ILocation } from "./IHelper";
+import type { IForumPostListItem } from "./IForum";
+import type { ILocation, IOwnerSchema } from "./IHelper";
+import type { ITripListSchema } from "./ITrip";
 
 export interface IPlacePublic {
   id: string;
   name: string;
-  // TODO: Use enum later
-  place_type: string;
 
-  address?: string;
-  city?: string;
-  country?: string;
+  place_type: "hotel" | "restaurant" | "landmark" | "cafe";
 
-  location?: ILocation;
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
 
-  main_image_url?: string;
+  location?: ILocation | null;
+
+  main_image_url?: string | null;
 
   average_rating: number;
   review_count: number;
 
-  price_range?: string;
-  opening_hours?: string;
-  tags: string[];
+  opening_hours?: Record<string, unknown> | null;
+  price_range?: string | null;
+  tags?: string[];
 
-  // TODO: Use enum later
-  verification_status: string;
-
-  // TODO: Use datetime type later
   created_at: string;
+}
+
+export interface IPlaceSearchResponse {
+  places: IPlacePublic[];
+  posts: IForumPostListItem[];
+  trips: ITripListSchema[];
 
   // Temporary commented out fields
   // owner_id?: string | null;
@@ -51,28 +55,28 @@ export interface IPlacePublic {
 
 export interface IPlaceCreate {
   name: string;
-  address: string;
-  city: string;
-  country: string;
-  description: string;
-  opening_hours: string;
-  place_type: string;
-  main_image_url: string;
-  images: string[];
-  tags: string[];
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
+  location?: ILocation | null;
+
+  description?: string | null;
+  opening_hours?: string | null;
+  place_type: "hotel" | "restaurant" | "landmark" | "cafe";
+  main_image_url?: string | null;
+  images?: string[] | null;
+  tags?: string[] | null;
 
   // Optional fields
-  hotel_class: string;
-  price_per_night: string;
-  amenities: string;
+  hotel_class?: number | null;
+  price_per_night?: number | null;
+  amenities?: string[] | null;
 
-  cuisine_type: string;
-  price_range: string;
+  cuisine_type?: string | null;
+  price_range?: string | null;
 
-  ticket_price: string;
-  coffee_specialities: string;
-
-  location: ILocation;
+  ticket_price?: number | null;
+  coffee_specialities?: string | null;
 
   // Temporary commented out older fields
   // place_type: PlaceType;
@@ -96,64 +100,67 @@ export interface IPlaceCreate {
 export interface IPlaceDetail {
   id: string;
   name: string;
-  // TODO: Use enum later
-  place_type: string;
+  place_type: "hotel" | "restaurant" | "landmark" | "cafe";
 
-  address: string;
-  city: string;
-  country: string;
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
 
-  location: ILocation;
+  location?: ILocation | null;
 
-  main_image_url: string;
+  main_image_url?: string | null;
+  average_rating?: number;
+  review_count?: number;
 
-  opening_hours: string;
-  price_range: string;
-  tags: string[];
+  opening_hours?: Record<string, unknown> | null;
+  price_range?: string | null;
+  tags?: string[];
 
-  verification_status: string;
+  // verification_status: string;
   created_at: string;
 
-  description: string;
+  description?: string | null;
 
-  hotel_class: string;
-  price_per_night: string;
+  hotel_class?: number | null;
+  price_per_night?: number | null;
 
-  cuisine_type: string;
-  ticket_price: string;
+  cuisine_type?: string | null;
+  ticket_price?: number | null;
 
-  coffee_specialities: string;
-  amenities: string;
+  coffee_specialities?: string | null;
+  amenities?: string[] | null;
 
-  images: string[];
-  owner: string;
+  images?: IPlaceImageSchema[] | null;
+  owner?: IOwnerSchema | null;
 
-  my_review: string;
+  my_review?: Record<string, unknown> | null;
 }
+
 export interface IPlaceUpdate {
-  name: string;
-  address: string;
+  name?: string | null;
+  address?: string | null;
 
-  location: ILocation;
+  location?: ILocation | null;
 
-  description: string;
-  opening_hours: string;
-  city: string;
-  country: string;
+  description?: string | null;
+  opening_hours?: Record<string, unknown> | null;
+  city?: string | null;
+  country?: string | null;
 
-  main_image_url: string;
-  images: string[];
-  tags: string[];
+  main_image_url?: string | null;
+  // Why images are string?
+  images?: string[] | null;
+  tags?: string[] | null;
 
-  hotel_class: string;
-  price_per_night: string;
-  amenities: string;
+  hotel_class?: number | null;
+  price_per_night?: number | null;
+  amenities?: string[] | null;
 
-  cuisine_type: string;
-  price_range: string;
+  cuisine_type?: string | null;
+  price_range?: string | null;
 
-  ticket_price: string;
-  coffee_specialities: string;
+  ticket_price?: number | null;
+  coffee_specialities?: string | null;
 
   // Commented out fields to be check later
   // name: string;
@@ -184,12 +191,10 @@ export interface ITransferOwnershipRequest {
 export interface IPlaceMinimal {
   id: string;
   name: string;
-  main_image_url: string;
+  main_image_url?: string | null;
 }
 
-// ------------------------ Decaprated Interfaces -----------------------
-
-export interface IImage {
+export interface IPlaceImageSchema {
   id: string;
   image_url: string;
   caption?: string;

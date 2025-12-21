@@ -82,7 +82,7 @@ class TripService {
   async deleteTrip(id: string): Promise<IMessage> {
     try {
       const response = await authInstance.delete(`/trips/${id}`);
-      return response.data;
+      return (response.data as IApiResponse<IMessage>).data;
     } catch (error: any) {
       if (error.response && error.response.status === 403) {
         console.error("Access Forbidden: ", error.response.data.detail);
@@ -92,10 +92,10 @@ class TripService {
     }
   }
 
-  async generateTrip(): Promise<any> {
+  async generateTrip(): Promise<IMessage> {
     try {
       const response = await authInstance.post("/trips/generate");
-      return response.data;
+      return (response.data as IApiResponse<IMessage>).data;
     } catch (error: any) {
       console.error("Error generating trip: ", error);
       throw error; // Re-throw so the calling component knows the request failed

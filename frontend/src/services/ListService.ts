@@ -1,10 +1,9 @@
 // Temporarily done for refactoring api calls and error handling
 import { authInstance } from "@/config";
 import type {
-  ISavedListDetailedSchema,
+  ISavedListDetailSchema,
   ISavedListSchema,
   ISavedListCreate,
-  IAddPlaceToListRequest,
   IApiResponse,
   IPaginatedResponse,
   IMessage,
@@ -37,10 +36,10 @@ class ListService {
     return (response.data as IApiResponse<ISavedListSchema>).data;
   }
 
-  async getListById(id: string): Promise<IPaginatedResponse<ISavedListDetailedSchema>> {
+  async getListById(id: string): Promise<IPaginatedResponse<ISavedListDetailSchema>> {
     try {
       const response = await authInstance.get(`/lists/${id}`);
-      return response.data as IPaginatedResponse<ISavedListDetailedSchema>;
+      return response.data as IPaginatedResponse<ISavedListDetailSchema>;
     } catch (error: any) {
       if (error.response && error.response.status === 403) {
         console.error("Access Forbidden: ", error.response.data.detail);
@@ -49,13 +48,14 @@ class ListService {
       throw error; // Re-throw so the calling component knows the request failed
     }
   }
+
   async updateList(
     listId: string,
     input: ISavedListUpdate
-  ): Promise<ISavedListSchema> {
+  ): Promise<ISavedListDetailSchema> {
     try {
       const response = await authInstance.put(`/lists/${listId}`, input);
-      return (response.data as IApiResponse<ISavedListSchema>).data;
+      return (response.data as IApiResponse<ISavedListDetailSchema>).data;
     } catch (error: any) {
       if (error.response && error.response.status === 404) {
         console.error("Access Forbidden: ", error.response.data.detail);

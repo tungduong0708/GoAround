@@ -77,7 +77,7 @@ class ForumService {
   async deletePost(id: string): Promise<IMessage> {
     try {
       const response = await authInstance.delete(`/forum/posts/${id}`);
-      return response.data;
+      return (response.data as IApiResponse<IMessage>).data;
     } catch (error: any) {
       console.error(error);
       throw error;

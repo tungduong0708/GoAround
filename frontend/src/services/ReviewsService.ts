@@ -5,7 +5,6 @@ import type {
   IReviewCreate,
   IReviewUpdate,
   IApiResponse,
-  IPaginatedResponse,
   IMessage,
 } from "@/utils/interfaces";
 
@@ -33,12 +32,12 @@ class ReviewsService {
       throw error; // Re-throw so the calling component knows the request failed
     }
   }
-  async getReviews(
-    placeId: string,
-  ): Promise<IPaginatedResponse<IReviewSchema>> {
+  async readReview(
+    id: string,
+  ): Promise<IReviewSchema> {
     try {
-      const response = await commonInstance.get(`/places/${placeId}/reviews`);
-      return response.data as IPaginatedResponse<IReviewSchema>;
+      const response = await commonInstance.get(`/reviews/${id}`);
+      return (response.data as IApiResponse<IReviewSchema>).data;
     } catch (error: any) {
       if (error.response && error.response.status === 404) {
         console.error("Access Forbidden: ", error.response.data.detail);

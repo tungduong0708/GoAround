@@ -1,6 +1,7 @@
 export interface IForumAuthorSchema {
   id: string;
-  username: string;
+  username?: string | null;
+  avatar_url?: string | null;
 }
 export interface IForumTagSchema {
   id: string;
@@ -8,20 +9,20 @@ export interface IForumTagSchema {
 }
 export interface IForumCommentUserSchema {
   id: string;
-  content: string;
-  avatar_url: string;
+  username?: string | null;
+  avatar_url?: string | null;
 }
 export interface IForumCommentSchema {
   id: string;
   content: string;
   user: IForumCommentUserSchema;
   created_at: string;
-  parent_id: string;
+  parent_id?: string | null;
 }
 
 export interface IForumReplyCreate {
   content: string;
-  parent_reply_id?: string;
+  parent_reply_id?: string | null;
 }
 // Deprecated, using IForumCommentSchema
 // export interface IForumReply {
@@ -41,7 +42,7 @@ export interface IForumPostImageSchema {
 export interface IForumPostListItem {
   id: string;
   title: string;
-  content_snippet?: string; // For list view
+  content_snippet: string; // For list view
   author: IForumAuthorSchema;
   tags: IForumTagSchema[];
   reply_count?: number;
@@ -53,9 +54,9 @@ export interface IForumPostDetail {
   title: string;
   content: string;
   author: IForumAuthorSchema;
-  images: IForumPostImageSchema[];
-  tags: IForumTagSchema[];
-  replies: IForumCommentSchema[];
+  images?: IForumPostImageSchema[];
+  tags?: IForumTagSchema[];
+  replies?: IForumCommentSchema[];
   created_at: string;
 }
 
@@ -67,8 +68,8 @@ export interface IForumPostCreate {
 }
 
 export interface IForumPostUpdate {
-  title?: string;
-  content?: string;
-  tags?: string[];
-  images?: string[];
+  title?: string | null;
+  content?: string | null;
+  tags?: string[] | null;
+  images?: string[] | null;
 }

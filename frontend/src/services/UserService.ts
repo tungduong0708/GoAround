@@ -11,9 +11,10 @@ import type {
   IUserCreate,
   IUserReviewResponse,
   IUserPostResponse,
-  IUserTripResponse,
   IUserPhotoResponse,
   IPagingQuery,
+  ITripListSchema,
+  IUserReplyResponse,
 } from "@/utils/interfaces";
 
 class UserService {
@@ -91,9 +92,9 @@ class UserService {
   async getUserTrips(
     userId: string,
     query: IPagingQuery
-  ): Promise<IPaginatedResponse<IUserTripResponse[]>> {
+  ): Promise<IPaginatedResponse<ITripListSchema[]>> {
     const response = await commonInstance.get(`/users/${userId}/trips`, { params: query });
-    return response.data as IPaginatedResponse<IUserTripResponse[]>;
+    return response.data as IPaginatedResponse<ITripListSchema[]>;
   }
   async getUserPhotos(
     userId: string,
@@ -101,6 +102,14 @@ class UserService {
   ): Promise<IPaginatedResponse<IUserPhotoResponse[]>> {
     const response = await commonInstance.get(`/users/${userId}/photos`, { params: query });
     return response.data as IPaginatedResponse<IUserPhotoResponse[]>;
+  }
+
+  async getUserReplies(
+    userId: string,
+    query: IPagingQuery
+  ): Promise<IPaginatedResponse<IUserReplyResponse[]>> {
+    const response = await commonInstance.get(`/users/${userId}/replies`, { params: query });
+    return response.data as IPaginatedResponse<IUserReplyResponse[]>;
   }
   // Temporarily commented out based on the new interface changes
   // async banUser(

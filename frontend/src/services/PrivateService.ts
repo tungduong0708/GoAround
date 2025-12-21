@@ -1,5 +1,5 @@
 // Temporarily done for refactoring API call
-import { authInstance, commonInstance } from "@/config";
+import { authInstance } from "@/config";
 import type { ITokenPayload, IApiResponse } from "@/utils/interfaces";
 
 class PrivateService {

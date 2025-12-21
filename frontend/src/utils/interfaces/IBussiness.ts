@@ -6,16 +6,14 @@ export interface IBussinessVerificationDetail {
   business_image_url: string;
   business_description: string;
 
-  // TODO: using Enum
-  status: string;
+  status: "pending" | "approved" | "rejected";
 
   created_at: string;
-  reviewed_at: string;
+  reviewed_at?: string | null;
 }
 
 
 export interface IVerifyBusinessRequest {
-  // TODO: Use enum later
-  action: string;
-  notes: string; 
+  action: "approve" | "reject";
+  notes?: string | null;
 } 

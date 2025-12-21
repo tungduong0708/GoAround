@@ -118,7 +118,6 @@ async def create_reply(
     status_code=501,
     responses={
         404: {"model": HTTPError},
-        501: {"model": HTTPError},
     },
 )
 async def update_post(
@@ -142,7 +141,6 @@ async def update_post(
     status_code=501,
     responses={
         404: {"model": HTTPError},
-        501: {"model": HTTPError},
     },
 )
 async def delete_post(
@@ -165,7 +163,6 @@ async def delete_post(
     status_code=501,
     responses={
         404: {"model": HTTPError},
-        501: {"model": HTTPError},
     },
 )
 async def report_post(
@@ -189,7 +186,6 @@ async def report_post(
     status_code=501,
     responses={
         404: {"model": HTTPError},
-        501: {"model": HTTPError},
     },
 )
 async def report_reply(

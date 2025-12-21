@@ -7,7 +7,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import ForumPost, PostReply, PostImage, Tag, post_tags, Profile
+from app.models import ForumPost, PostImage, PostReply, Profile, Tag, post_tags
 from app.schemas import (
     ForumAuthorSchema,
     ForumCommentSchema,
@@ -59,9 +59,9 @@ async def list_forum_posts(
         )
 
     # Apply tag filter
-    if filter_params.tag:
+    if filter_params.tags:
         base_query = (
-            base_query.join(post_tags).join(Tag).where(Tag.name == filter_params.tag)
+            base_query.join(post_tags).join(Tag).where(Tag.name.in_(filter_params.tags))
         )
 
     # Count total
@@ -87,9 +87,9 @@ async def list_forum_posts(
         )
 
     # Apply tag filter to main query
-    if filter_params.tag:
+    if filter_params.tags:
         main_query = (
-            main_query.join(post_tags).join(Tag).where(Tag.name == filter_params.tag)
+            main_query.join(post_tags).join(Tag).where(Tag.name.in_(filter_params.tags))
         )
 
     # Apply sorting

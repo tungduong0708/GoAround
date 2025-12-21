@@ -76,7 +76,6 @@ async def create_list(
     status_code=501,
     responses={
         404: {"model": HTTPError},
-        501: {"model": HTTPError},
     },
 )
 async def update_list(

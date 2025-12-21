@@ -139,7 +139,7 @@ async def create_place(
     Only verified business accounts can create places.
     """
     # Check if user is a verified business account
-    if current_user.role != "Business":
+    if current_user.role != "business":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only business accounts can create places",
@@ -256,7 +256,7 @@ async def transfer_ownership(
         raise HTTPException(status_code=404, detail="Target user not found")
 
     # Validate target user is a verified business account
-    if target_user.role != "Business":
+    if target_user.role != "business":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Can only transfer ownership to business accounts",

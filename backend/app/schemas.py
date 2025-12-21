@@ -252,9 +252,6 @@ class PlaceUpdate(BaseModel):
 
 class PlaceSearchFilter(BaseModel):
     q: str | None = None
-    category: Literal["hotel", "restaurant", "landmark", "cafe"] | None = Field(
-        None, description="Filter by place type"
-    )
     location: str | None = None
     radius: float = 5.0
     tags: str | None = None
@@ -267,7 +264,6 @@ class PlaceSearchFilter(BaseModel):
     page: int = 1
     limit: int = 20
 
-    # Legacy field for backwards compatibility
     place_type: str | None = None
 
     @field_validator("location")
@@ -657,7 +653,7 @@ class VerifyBusinessRequest(BaseModel):
 
 class ForumSearchFilter(BaseModel):
     q: str | None = None
-    tag: str | None = None
+    tags: list[str] | None = None
     sort: Literal["newest", "oldest", "popular"] = "newest"
     page: int = 1
     limit: int = 20

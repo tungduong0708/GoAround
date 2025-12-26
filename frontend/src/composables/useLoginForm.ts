@@ -4,11 +4,12 @@ import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { useForm, useField } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod'
-import { useAuthStore } from '@/stores'
+import { useAuthStore, useUserProfileStore } from '@/stores'
 
 export function useLoginForm() { // 2. No arguments needed now
   const router = useRouter()     //    Get router instance internally
   const authStore = useAuthStore()
+  const userProfileStore = useUserProfileStore()
 
   // --- Validation Schema ---
   const loginSchema = toTypedSchema(
@@ -36,7 +37,6 @@ export function useLoginForm() { // 2. No arguments needed now
   const { value: email } = useField<string>('email')
   const { value: password } = useField<string>('password')
   const { value: rememberMe } = useField<boolean>('rememberMe')
-  const { value: apiError } = useField<string>('apiError')
 
   // --- State ---
   const isLoading = ref(true)
@@ -52,7 +52,27 @@ export function useLoginForm() { // 2. No arguments needed now
   const isFormValid = computed(() => meta.value.valid)
 
   // --- Auth Flow Logic ---
-  const redirectHome = () => router.replace('/')
+  const redirectHome = async () => {
+    // Check if profile exists before redirecting
+    try {
+      console.log('[useLoginForm] Checking profile existence...')
+      const profileExists = await userProfileStore.fetchProfile()
+      console.log('[useLoginForm] Profile exists:', profileExists)
+      if (!profileExists) {
+        // Profile not found, redirect to profile creation
+        console.log('[useLoginForm] Redirecting to profile creation')
+        router.replace({ name: 'profile-create' })
+      } else {
+        // Profile exists, go to home
+        console.log('[useLoginForm] Redirecting to home')
+        router.replace('/')
+      }
+    } catch (error) {
+      // On other non-404 errors, still go home (e.g., network issues)
+      console.error('Error checking profile:', error)
+      router.replace('/')
+    }
+  }
 
   const initializeSession = async () => {
     const session = await authStore.initSession()
@@ -102,9 +122,8 @@ export function useLoginForm() { // 2. No arguments needed now
     try {
       const { error } = await authStore.signInWithPassword(values.email, values.password)
       if (error) throw error
-      // Note: redirection happens in handleAuthChange listener, 
-      // but you can also force it here to be safe:
-      router.push('/') 
+      // Check profile and redirect accordingly
+      await redirectHome()
     } catch (error: any) {
       // 4. KEY FIX: Feed the error back to the UI
       // Assuming 'error.message' contains "Invalid login credentials"

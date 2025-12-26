@@ -8,17 +8,23 @@ import {
   StarIcon,
   BookmarkIcon,
 } from "lucide-vue-next";
-import type { IPlace } from "@/utils/interfaces";
+import type { IPlacePublic } from "@/utils/interfaces";
+import { useRecommendations } from "@/composables";
 
-const props = defineProps<{
-  items: IPlace[];
+defineProps<{
   title?: string;
-  loading?: boolean;
 }>();
 
-const emit = defineEmits<{
-  select: [IPlace];
-}>();
+const {
+  items,
+  loading,
+  error,
+  handleRecommendationSelect,
+} = useRecommendations();
+
+const handleSelect = (item: IPlacePublic) => {
+  handleRecommendationSelect(item);
+};
 
 const scrollerRef = ref<HTMLDivElement | null>(null);
 
@@ -38,13 +44,9 @@ const scrollByCards = (direction: "prev" | "next") => {
   container.scrollBy({ left: distance, behavior: "smooth" });
 };
 
-const formatRating = (place: IPlace) => (place.average_rating ?? 0).toFixed(1);
-const formatLocation = (place: IPlace) =>
+const formatRating = (place: IPlacePublic) => (place.average_rating ?? 0).toFixed(1);
+const formatLocation = (place: IPlacePublic) =>
   [place.address, place.city, place.country].filter(Boolean).join(", ");
-
-const handleSelect = (item: IPlace) => {
-  emit("select", item);
-};
 </script>
 
 <template>
@@ -83,6 +85,7 @@ const handleSelect = (item: IPlace) => {
     </header>
 
     <div
+      v-if="!loading && items.length"
       ref="scrollerRef"
       class="grid snap-x snap-mandatory auto-cols-[minmax(220px,280px)] grid-flow-col gap-4 overflow-x-auto pb-2"
       aria-live="polite"
@@ -103,7 +106,9 @@ const handleSelect = (item: IPlace) => {
           <div
             class="relative h-48 w-full overflow-hidden rounded-3xl rounded-b-none"
           >
+            <!-- TODO: Replace with better url handling -->
             <img
+              v-if="item.main_image_url != null"
               :src="item.main_image_url"
               :alt="item.name"
               class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
@@ -146,19 +151,27 @@ const handleSelect = (item: IPlace) => {
           </div>
         </button>
       </article>
-
-      <div
-        v-if="!items.length && !loading"
-        class="flex h-48 items-center justify-center text-sm text-muted-foreground"
-      >
-        Nothing to show yet.
-      </div>
-      <div
-        v-if="loading"
-        class="flex h-48 items-center justify-center text-sm text-muted-foreground"
-      >
-        Loading recommendations…
-      </div>
     </div>
+
+    <div
+      v-if="!loading && !items.length && !error"
+      class="flex h-48 items-center justify-center text-sm text-muted-foreground"
+    >
+      Nothing to show yet.
+    </div>
+
+    <div
+      v-if="loading"
+      class="flex h-48 items-center justify-center text-sm text-muted-foreground"
+    >
+      Loading recommendations…
+    </div>
+
+    <p
+      v-if="error"
+      class="flex h-48 items-center justify-center text-sm text-destructive"
+    >
+      {{ error }}
+    </p>
   </section>
 </template>

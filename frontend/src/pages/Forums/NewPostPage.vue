@@ -31,7 +31,7 @@ import {
 import { toast } from "vue-sonner";
 import TagInput from "@/components/forum/TagInput.vue";
 import ImageUpload from "@/components/forum/ImageUpload.vue";
-import type { ICreatePostInput } from "@/utils/interfaces";
+import type { IForumPostCreate } from "@/utils/interfaces";
 
 const route = useRoute();
 const router = useRouter();
@@ -90,19 +90,14 @@ onMounted(async () => {
   }
 
   if (isEditMode.value && postId.value) {
-    // In a real app we would call store.getPostById, but currently it returns IApiResponse
-    // and we need to populate the form.
-    // Let's assume store has an action or we call service directly if store doesn't cache detail
-    // For now using the service directly via store reference if available or just mocking the fetch logic here if needed
-    // But better to use the store if possible.
     try {
-      const result = await store.getPostById(postId.value);
-      if (result && result.data) {
+      const post = await store.getPostById(postId.value);
+      if (post) {
         setValues({
-          title: result.data.title,
-          content: result.data.content,
-          tags: result.data.tags.map((t) => t.name),
-          // images: result.data.images // Handling existing images for edit is complex with file input (can't preset files)
+          title: post.title,
+          content: post.content,
+          tags: post.tags?.map((t) => t.name),
+          // images: post.images // Handling existing images for edit is complex with file input (can't preset files)
           // We would typically show existing images separately and allow adding new ones.
           // For this MVP mock, we might skip existing image editing or just clearer
         });
@@ -118,7 +113,7 @@ onMounted(async () => {
 
 const onSubmit = handleSubmit(async (values) => {
   try {
-    const input: ICreatePostInput = {
+    const input: IForumPostCreate = {
       title: values.title,
       content: values.content,
       tags: values.tags,
@@ -176,7 +171,7 @@ const confirmCancel = () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background pb-20">
+  <div class="bg-background pb-20">
     <div class="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
       <!-- Header -->
       <div class="flex items-center gap-4 mb-4">

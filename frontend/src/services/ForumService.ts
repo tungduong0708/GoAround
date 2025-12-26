@@ -1,16 +1,20 @@
-// Imports removed
 import type {
-  IForumPost,
-  IForumReply,
-  ICreatePostInput,
-  ICreateReplyInput,
-  ICreateReportInput,
-  IForumSearchQuery,
   IApiResponse,
   IPaginatedResponse,
+  IMessage,
+  IContentReportCreate,
 } from "@/utils/interfaces";
 
 import { authInstance, commonInstance } from "@/config";
+import type {
+  IForumSearchQuery,
+  IForumPostCreate,
+  IForumPostDetail,
+  IForumPostListItem,
+  IForumPostUpdate,
+  IForumReplyCreate,
+  IForumCommentSchema,
+} from "@/utils/interfaces";
 
 class ForumService {
   private static instance: ForumService;
@@ -27,62 +31,97 @@ class ForumService {
 
   async getPosts(
     query?: IForumSearchQuery,
-  ): Promise<IPaginatedResponse<IForumPost[]>> {
-    const response = await commonInstance.get("/forum/posts", {
-      params: query,
-    });
-    return response.data as IPaginatedResponse<IForumPost[]>;
+  ): Promise<IPaginatedResponse<IForumPostListItem[]>> {
+    try {
+      const response = await commonInstance.get("/forum/posts", {
+        params: query,
+      });
+      return response.data as IPaginatedResponse<IForumPostListItem[]>;
+    } catch (error: any) {
+      console.error(error);
+      throw error;
+    }
   }
 
-  async createPost(input: ICreatePostInput): Promise<IForumPost> {
-    const response = await authInstance.post("/forum/posts", input);
-    return (response.data as IApiResponse<IForumPost>).data;
+  async getPostById(id: string): Promise<IApiResponse<IForumPostDetail>> {
+    try {
+      const response = await commonInstance.get(`/forum/posts/${id}`);
+      return response.data as IApiResponse<IForumPostDetail>;
+    } catch (error: any) {
+      console.error(error);
+      throw error;
+    }
+  }
+  async createPost(input: IForumPostCreate): Promise<IForumPostDetail> {
+    try {
+      const response = await authInstance.post("/forum/posts", input);
+      return (response.data as IApiResponse<IForumPostDetail>).data;
+    } catch (error: any) {
+      console.error(error);
+      throw error;
+    }
+  }
+  async updatePost(
+    id: string,
+    input: IForumPostUpdate,
+  ): Promise<IForumPostDetail> {
+    try {
+      const response = await authInstance.put(`/forum/posts/${id}`, input);
+      return (response.data as IApiResponse<IForumPostDetail>).data;
+    } catch (error: any) {
+      console.error(error);
+      throw error;
+    }
   }
 
-  async getPostById(id: string): Promise<IApiResponse<IForumPost> | null> {
-    const response = await commonInstance.get(`/forum/posts/${id}`);
-    return response.data as IApiResponse<IForumPost>;
+  async deletePost(id: string): Promise<IMessage> {
+    try {
+      const response = await authInstance.delete(`/forum/posts/${id}`);
+      return (response.data as IApiResponse<IMessage>).data;
+    } catch (error: any) {
+      console.error(error);
+      throw error;
+    }
   }
 
-  async updatePost(id: string, input: ICreatePostInput): Promise<IForumPost> {
-    const response = await authInstance.put(`/forum/posts/${id}`, input);
-    return (response.data as IApiResponse<IForumPost>).data;
+  async createReply(
+    id: string,
+    input: IForumReplyCreate,
+  ): Promise<IForumCommentSchema> {
+    try {
+      const response = await authInstance.post(
+        `/forum/posts/${id}/replies`,
+        input,
+      );
+      return (response.data as IApiResponse<IForumCommentSchema>).data;
+    } catch (error: any) {
+      console.error(error);
+      throw error;
+    }
   }
-
-  async getReplies(
-    postId: string,
-    page: number = 1,
-    limit: number = 5,
-  ): Promise<IPaginatedResponse<IForumReply[]>> {
-    const response = await commonInstance.get(
-      `/forum/posts/${postId}/replies`,
-      {
-        params: { page, limit },
-      },
-    );
-    return response.data as IPaginatedResponse<IForumReply[]>;
+  async reportPost(id: string, input: IContentReportCreate): Promise<IMessage> {
+    try {
+      const response = await authInstance.post(
+        `/forum/posts/${id}/report`,
+        input,
+      );
+      return (response.data as IApiResponse<IMessage>).data;
+    } catch (error: any) {
+      console.error(error);
+      throw error;
+    }
   }
-
-  async replyToPost(
-    postId: string,
-    input: ICreateReplyInput,
-  ): Promise<IForumReply> {
-    const response = await authInstance.post(
-      `/forum/posts/${postId}/replies`,
-      input,
-    );
-    return (response.data as IApiResponse<IForumReply>).data;
-  }
-
-  async reportContent(
-    input: ICreateReportInput,
-  ): Promise<{ success: boolean; message: string }> {
-    const response = await authInstance.post("/reports", input);
-    return response.data;
-  }
-
-  async incrementViewCount(postId: string): Promise<void> {
-    await commonInstance.post(`/forum/posts/${postId}/view`);
+  async reportReply(post_id: string, reply_id: string, input: IContentReportCreate): Promise<IMessage> {
+    try {
+      const response = await authInstance.post(
+        `/forum/posts/${post_id}/replies/${reply_id}/report`,
+        input,
+      );
+      return (response.data as IApiResponse<IMessage>).data;
+    } catch (error: any) {
+      console.error(error);
+      throw error;
+    }
   }
 }
 

@@ -3,29 +3,32 @@ from typing import List
 
 from fastapi import APIRouter, HTTPException, status
 
-from app.api.deps import CurrentUserDep, CurrentUserIdDep, SessionDep
+from app.api.deps import CurrentUserIdDep, SessionDep
 from app.schemas import (
     APIResponse,
     HTTPError,
+    MetaData,
+    TripListSchema,
     UserCreate,
     UserDetail,
     UserPhotoResponse,
     UserPostResponse,
     UserPublic,
+    UserReplyResponse,
     UserReviewResponse,
-    UserTripResponse,
     UserUpdate,
 )
-from app.service import user_service
+from app.service import user_service, trip_service
 
 router = APIRouter(tags=["users"], prefix="/users")
 
 
 @router.get(
     "/me",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[UserDetail],
     responses={
-        404: {"model": HTTPError, "description": "User profile not found"},
+        404: {"model": HTTPError},
     },
 )
 async def get_current_user(
@@ -50,6 +53,7 @@ async def get_current_user(
 
 @router.post(
     "",
+    status_code=status.HTTP_201_CREATED,
     response_model=APIResponse[UserDetail],
     responses={
         409: {"model": HTTPError},
@@ -78,6 +82,7 @@ async def create_user(
 
 @router.put(
     "/me",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[UserDetail],
     responses={
         404: {"model": HTTPError},
@@ -114,6 +119,7 @@ async def update_current_user(
 
 @router.get(
     "/{user_id}",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[UserPublic],
     responses={
         404: {"model": HTTPError},
@@ -126,7 +132,7 @@ async def get_user(
     """
     Get public profile of another user with activity statistics.
     """
-    user_public = await user_service.get_user_public_with_stats(session, user_id)
+    user_public = await user_service.get_user_public(session, user_id)
     if not user_public:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -136,49 +142,107 @@ async def get_user(
     return APIResponse(data=user_public, meta=None)
 
 
-@router.get("/{user_id}/reviews", response_model=APIResponse[List[UserReviewResponse]])
+@router.get(
+    "/{user_id}/reviews",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[List[UserReviewResponse]],
+)
 async def get_user_reviews(
     session: SessionDep,
     user_id: uuid.UUID,
+    page: int = 1,
+    limit: int = 20,
 ):
     """
     Get list of reviews written by a specific user.
     """
-    reviews = await user_service.get_user_reviews(session, user_id)
-    return APIResponse(data=reviews, meta=None)
+    reviews, total = await user_service.get_user_reviews(session, user_id, page, limit)
+    return APIResponse(
+        data=reviews,
+        meta=MetaData(page=page, limit=limit, total_items=total),
+    )
 
 
-@router.get("/{user_id}/posts", response_model=APIResponse[List[UserPostResponse]])
+@router.get(
+    "/{user_id}/posts",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[List[UserPostResponse]],
+)
 async def get_user_posts(
     session: SessionDep,
     user_id: uuid.UUID,
+    page: int = 1,
+    limit: int = 20,
 ):
     """
     Get list of forum threads created by a specific user.
     """
-    posts = await user_service.get_user_posts(session, user_id)
-    return APIResponse(data=posts, meta=None)
+    posts, total = await user_service.get_user_posts(session, user_id, page, limit)
+    return APIResponse(
+        data=posts,
+        meta=MetaData(page=page, limit=limit, total_items=total),
+    )
 
 
-@router.get("/{user_id}/trips", response_model=APIResponse[List[UserTripResponse]])
+@router.get(
+    "/{user_id}/trips",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[List[TripListSchema]],
+)
 async def get_user_trips(
     session: SessionDep,
     user_id: uuid.UUID,
+    page: int = 1,
+    limit: int = 20,
 ):
     """
     Get list of public trips created by a specific user.
     """
-    trips = await user_service.get_user_trips(session, user_id)
-    return APIResponse(data=trips, meta=None)
+    trips, total = await trip_service.list_trips(
+        session, user_id, page, limit, public_only=True
+    )
+    return APIResponse(
+        data=trips,
+        meta=MetaData(page=page, limit=limit, total_items=total),
+    )
 
 
-@router.get("/{user_id}/photos", response_model=APIResponse[List[UserPhotoResponse]])
+@router.get(
+    "/{user_id}/photos",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[List[UserPhotoResponse]],
+)
 async def get_user_photos(
     session: SessionDep,
     user_id: uuid.UUID,
+    page: int = 1,
+    limit: int = 20,
 ):
     """
     Get gallery of photos uploaded by the user (aggregated from reviews and posts).
     """
-    photos = await user_service.get_user_photos(session, user_id)
-    return APIResponse(data=photos, meta=None)
+    photos, total = await user_service.get_user_photos(session, user_id, page, limit)
+    return APIResponse(
+        data=photos,
+        meta=MetaData(page=page, limit=limit, total_items=total),
+    )
+
+
+@router.get(
+    "/{user_id}/replies",
+    response_model=APIResponse[List[UserReplyResponse]],
+    status_code=501,
+)
+async def get_user_replies(
+    session: SessionDep,
+    user_id: uuid.UUID,
+    page: int = 1,
+    limit: int = 20,
+):
+    """
+    Get list of forum replies created by a specific user.
+    """
+    raise HTTPException(
+        status_code=501,
+        detail="User replies endpoint not yet implemented",
+    )

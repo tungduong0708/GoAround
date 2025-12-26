@@ -1,4 +1,5 @@
 import uuid
+from datetime import date, datetime
 from typing import Sequence
 
 from sqlalchemy import func, select
@@ -7,7 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import (
+    BusinessVerificationRequest,
     ForumPost,
+    PostReply,
     Profile,
     Review,
     ReviewImage,
@@ -24,9 +27,9 @@ from app.schemas import (
     UserPublic,
     UserReviewResponse,
     UserStats,
-    UserTripResponse,
     UserUpdate,
 )
+from app.service.utils import is_user_banned
 
 
 async def _get_profile(
@@ -58,13 +61,67 @@ async def get_user_public(
     if not profile:
         return None
 
+    # Check if user is banned
+    if is_user_banned(profile):
+        return UserPublic(
+            username="Banned User",
+            full_name="Banned User",
+            avatar_url=None,
+            id=profile.id,
+            role=profile.role,
+            is_verified_business=False,
+            stats=UserStats(
+                reviews_count=0,
+                posts_count=0,
+                photos_count=0,
+                public_trips_count=0,
+                replies_count=0,
+            ),
+            created_at=profile.updated_at,
+        )
+
+    # Get statistics
+    reviews_count = await session.scalar(
+        select(func.count(Review.id)).where(Review.user_id == user_id)
+    )
+    posts_count = await session.scalar(
+        select(func.count(ForumPost.id)).where(ForumPost.author_id == user_id)
+    )
+
+    # Photos count from reviews
+    photos_from_reviews = await session.scalar(
+        select(func.count(ReviewImage.id)).join(Review).where(Review.user_id == user_id)
+    )
+
+    photos_count = photos_from_reviews or 0
+
+    # Public trips count
+    public_trips_count = await session.scalar(
+        select(func.count(Trip.id)).where(Trip.user_id == user_id)
+    )
+
+    # Replies count
+    replies_count = await session.scalar(
+        select(func.count(PostReply.id)).where(PostReply.user_id == user_id)
+    )
+
+    stats = UserStats(
+        reviews_count=reviews_count or 0,
+        posts_count=posts_count or 0,
+        photos_count=photos_count,
+        public_trips_count=public_trips_count or 0,
+        replies_count=replies_count or 0,
+    )
+
     return UserPublic(
-        username=profile.username,
-        full_name=profile.full_name,
+        username=profile.username or "",
+        full_name=profile.full_name or "",
         avatar_url=profile.avatar_url,
         id=profile.id,
         role=profile.role,
         is_verified_business=profile.is_verified_business,
+        stats=stats,
+        created_at=profile.updated_at,
     )
 
 
@@ -89,6 +146,8 @@ async def get_user_detail(
         id=user_public.id,
         role=user_public.role,
         is_verified_business=user_public.is_verified_business,
+        stats=user_public.stats,
+        created_at=user_public.created_at,
         email=email,
     )
 
@@ -101,7 +160,7 @@ async def create_user(
     """
     Create a user profile, after `auth.users` table has been updated.
     """
-    role = "Traveler" if user_create.signup_type == "Traveler" else "Business"
+    role = "traveler" if user_create.signup_type == "traveler" else "business"
     profile = Profile(
         id=user_id,
         username=user_create.username,
@@ -112,6 +171,20 @@ async def create_user(
 
     session.add(profile)
 
+    # If business account, create verification request
+    if (
+        role == "business"
+        and user_create.business_image_url
+        and user_create.business_description
+    ):
+        verification_request = BusinessVerificationRequest(
+            profile_id=user_id,
+            business_image_url=user_create.business_image_url,
+            business_description=user_create.business_description,
+            status="pending",
+        )
+        session.add(verification_request)
+
     try:
         await session.commit()
     except IntegrityError:
@@ -120,13 +193,24 @@ async def create_user(
 
     email = await _get_email(session, user_id)
 
+    # Get statistics for new user
+    stats = UserStats(
+        reviews_count=0,
+        posts_count=0,
+        photos_count=0,
+        public_trips_count=0,
+        replies_count=0,
+    )
+
     return UserDetail(
         id=profile.id,
-        username=profile.username,
-        full_name=profile.full_name,
+        username=profile.username or "",
+        full_name=profile.full_name or "",
         avatar_url=profile.avatar_url,
         role=profile.role,
         is_verified_business=profile.is_verified_business,
+        stats=stats,
+        created_at=profile.updated_at,
         email=email,
     )
 
@@ -157,29 +241,6 @@ async def update_user(
 
     email = await _get_email(session, user_id)
 
-    return UserDetail(
-        id=profile.id,
-        username=profile.username,
-        full_name=profile.full_name,
-        avatar_url=profile.avatar_url,
-        role=profile.role,
-        is_verified_business=profile.is_verified_business,
-        email=email,
-    )
-
-
-async def get_user_public_with_stats(
-    session: AsyncSession,
-    user_id: uuid.UUID,
-) -> UserPublic | None:
-    """
-    Get public user profile with activity statistics.
-    """
-    profile = await _get_profile(session, user_id)
-
-    if not profile:
-        return None
-
     # Get statistics
     reviews_count = await session.scalar(
         select(func.count(Review.id)).where(Review.user_id == user_id)
@@ -200,34 +261,47 @@ async def get_user_public_with_stats(
         select(func.count(Trip.id)).where(Trip.user_id == user_id)
     )
 
+    # Replies count
+    replies_count = await session.scalar(
+        select(func.count(PostReply.id)).where(PostReply.user_id == user_id)
+    )
+
     stats = UserStats(
         reviews_count=reviews_count or 0,
         posts_count=posts_count or 0,
         photos_count=photos_count,
         public_trips_count=public_trips_count or 0,
+        replies_count=replies_count or 0,
     )
 
-    joined_at = profile.updated_at
-
-    return UserPublic(
-        username=profile.username,
-        full_name=profile.full_name,
-        avatar_url=profile.avatar_url,
+    return UserDetail(
         id=profile.id,
+        username=profile.username or "",
+        full_name=profile.full_name or "",
+        avatar_url=profile.avatar_url,
         role=profile.role,
         is_verified_business=profile.is_verified_business,
         stats=stats,
-        joined_at=joined_at,
+        created_at=profile.updated_at,
+        email=email,
     )
 
 
 async def get_user_reviews(
     session: AsyncSession,
     user_id: uuid.UUID,
-) -> Sequence[UserReviewResponse]:
+    page: int = 1,
+    limit: int = 20,
+) -> tuple[Sequence[UserReviewResponse], int]:
     """
     Get list of reviews written by a specific user.
     """
+    # Get total count
+    count_stmt = select(func.count(Review.id)).where(Review.user_id == user_id)
+    total = await session.scalar(count_stmt) or 0
+
+    # Get paginated results
+    offset = (page - 1) * limit
     stmt = (
         select(Review)
         .options(
@@ -236,102 +310,104 @@ async def get_user_reviews(
         )
         .where(Review.user_id == user_id)
         .order_by(Review.created_at.desc())
+        .offset(offset)
+        .limit(limit)
     )
     result = await session.execute(stmt)
     reviews = result.scalars().all()
 
-    return [
-        UserReviewResponse(
-            id=review.id,
-            place=PlaceMinimal(
-                id=review.place.id,
-                name=review.place.name,
-                main_image_url=review.place.main_image_url,
-            ),
-            rating=review.rating,
-            review_text=review.review_text,
-            created_at=review.created_at,
-            images=[
-                ReviewImageSchema(
-                    id=img.id, image_url=img.image_url, created_at=img.created_at
-                )
-                for img in review.images
-            ],
-        )
-        for review in reviews
-    ]
+    return (
+        [
+            UserReviewResponse(
+                id=review.id,
+                place=PlaceMinimal(
+                    id=review.place.id,
+                    name=review.place.name,
+                    main_image_url=review.place.main_image_url,
+                ),
+                rating=review.rating,
+                review_text=review.review_text,
+                created_at=review.created_at,
+                images=[
+                    ReviewImageSchema(
+                        id=img.id, image_url=img.image_url, created_at=img.created_at
+                    )
+                    for img in review.images
+                ],
+            )
+            for review in reviews
+        ],
+        total,
+    )
 
 
 async def get_user_posts(
     session: AsyncSession,
     user_id: uuid.UUID,
-) -> Sequence[UserPostResponse]:
+    page: int = 1,
+    limit: int = 20,
+) -> tuple[Sequence[UserPostResponse], int]:
     """
     Get list of forum threads created by a specific user.
     """
+    # Get total count
+    count_stmt = select(func.count(ForumPost.id)).where(ForumPost.author_id == user_id)
+    total = await session.scalar(count_stmt) or 0
+
+    # Get paginated results
+    offset = (page - 1) * limit
     stmt = (
         select(ForumPost)
-        .options(selectinload(ForumPost.comments))
+        .options(selectinload(ForumPost.replies))
         .where(ForumPost.author_id == user_id)
         .order_by(ForumPost.created_at.desc())
+        .offset(offset)
+        .limit(limit)
     )
     result = await session.execute(stmt)
     posts = result.scalars().all()
 
-    return [
-        UserPostResponse(
-            id=post.id,
-            title=post.title,
-            content_snippet=post.content[:150] + "..."
-            if len(post.content) > 150
-            else post.content,
-            reply_count=len(post.comments),
-            created_at=post.created_at,
-        )
-        for post in posts
-    ]
-
-
-async def get_user_trips(
-    session: AsyncSession,
-    user_id: uuid.UUID,
-) -> Sequence[UserTripResponse]:
-    """
-    Get list of public trips created by a specific user.
-    """
-    stmt = (
-        select(Trip)
-        .options(selectinload(Trip.stops))
-        .where(Trip.user_id == user_id)
-        .order_by(Trip.start_date.desc().nullsfirst())
+    return (
+        [
+            UserPostResponse(
+                id=post.id,
+                title=post.title,
+                content_snippet=post.content[:150] + "..."
+                if len(post.content) > 150
+                else post.content,
+                reply_count=len(post.replies),
+                created_at=post.created_at,
+            )
+            for post in posts
+        ],
+        total,
     )
-    result = await session.execute(stmt)
-    trips = result.scalars().all()
-
-    return [
-        UserTripResponse(
-            id=trip.id,
-            trip_name=trip.trip_name,
-            start_date=trip.start_date,
-            end_date=trip.end_date,
-            stop_count=len(trip.stops),
-        )
-        for trip in trips
-    ]
 
 
 async def get_user_photos(
     session: AsyncSession,
     user_id: uuid.UUID,
-) -> Sequence[UserPhotoResponse]:
+    page: int = 1,
+    limit: int = 20,
+) -> tuple[Sequence[UserPhotoResponse], int]:
     """
     Get gallery of photos uploaded by the user.
     """
+    # Get total count
+    count_stmt = (
+        select(func.count(ReviewImage.id)).join(Review).where(Review.user_id == user_id)
+    )
+    total = await session.scalar(count_stmt) or 0
+
+    # Get paginated results
+    offset = (page - 1) * limit
     stmt = (
         select(ReviewImage)
         .join(Review)
         .where(Review.user_id == user_id)
         .order_by(ReviewImage.created_at.desc())
+        .offset(offset)
+        .limit(limit)
     )
     result = await session.execute(stmt)
     review_images = result.scalars().all()
@@ -346,4 +422,4 @@ async def get_user_photos(
         for img in review_images
     ]
 
-    return photos
+    return photos, total

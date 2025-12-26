@@ -1,12 +1,13 @@
 """Review CRUD operations."""
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Place, Review, ReviewImage
+from app.models import Place, Review, ReviewImage, Profile
 from app.schemas import (
     ReviewCreate,
     ReviewImageSchema,
@@ -14,13 +15,23 @@ from app.schemas import (
     ReviewUpdate,
     ReviewerSchema,
 )
+from app.service.utils import is_user_banned
 
 
-async def _recalculate_place_rating(
-    session: AsyncSession, place_id: uuid.UUID
-) -> None:
+def _sanitize_reviewer(user: Profile | None) -> ReviewerSchema | None:
+    """Return sanitized reviewer data, hiding info if banned."""
+    if user is None:
+        return None
+    if is_user_banned(user):
+        return ReviewerSchema(id=user.id, username="Banned User", avatar_url=None)
+    return ReviewerSchema(
+        id=user.id, username=user.username, avatar_url=user.avatar_url
+    )
+
+
+async def _recalculate_place_rating(session: AsyncSession, place_id: uuid.UUID) -> None:
     """Recalculate average rating and review count for a place.
-    
+
     Note: This should be called within a transaction to ensure consistency.
     """
     result = await session.execute(
@@ -70,7 +81,9 @@ async def create_review(
     return review_detail
 
 
-async def get_review(session: AsyncSession, review_id: uuid.UUID) -> ReviewSchema | None:
+async def get_review(
+    session: AsyncSession, review_id: uuid.UUID
+) -> ReviewSchema | None:
     """Get a review by ID."""
     res = await session.execute(
         select(Review)
@@ -88,7 +101,7 @@ async def get_review(session: AsyncSession, review_id: uuid.UUID) -> ReviewSchem
         review_text=review.review_text,
         created_at=review.created_at,
         images=[ReviewImageSchema.model_validate(img) for img in review.images],
-        user=ReviewerSchema.model_validate(review.user) if review.user else None,
+        user=_sanitize_reviewer(review.user),
     )
 
 
@@ -120,7 +133,7 @@ async def list_reviews_for_place(
             review_text=r.review_text,
             created_at=r.created_at,
             images=[ReviewImageSchema.model_validate(img) for img in r.images],
-            user=ReviewerSchema.model_validate(r.user) if r.user else None,
+            user=_sanitize_reviewer(r.user),
         )
         for r in reviews
     ]

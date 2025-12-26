@@ -2,15 +2,15 @@
 import { computed } from "vue";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { IPlace } from "@/utils/interfaces";
+import type { IPlacePublic } from "@/utils/interfaces";
 import { BookmarkIcon, MapPinIcon, StarIcon } from "lucide-vue-next";
 
 const props = defineProps<{
-    result: IPlace;
+    result: IPlacePublic;
 }>();
 
 const emit = defineEmits<{
-    select: [IPlace];
+    select: [IPlacePublic];
 }>();
 
 const locationLabel = computed(() => {
@@ -45,6 +45,7 @@ const handleClick = () => {
     >
         <div class="relative h-40 w-full overflow-hidden">
             <img
+                v-if="result.main_image_url != null"
                 :src="result.main_image_url"
                 :alt="result.name"
                 class="h-full w-full object-cover transition duration-500 hover:scale-105"

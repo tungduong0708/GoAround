@@ -38,7 +38,7 @@ export function useForumPost() {
   const hasMoreReplies = computed(() => {
     if (!replyPagination.value) return false;
     const totalPages = Math.ceil(
-      replyPagination.value.totalItems / replyPagination.value.limit
+      replyPagination.value.total_items / replyPagination.value.limit
     );
     return currentReplyPage.value < totalPages;
   });
@@ -118,18 +118,14 @@ export function useForumPost() {
     const success = await postStore.fetchPost(postId.value);
     if (success) {
       currentReplyPage.value = 1;
-      await postStore.fetchReplies(postId.value, 1, repliesPerPage);
+      await postStore.fetchReplies(postId.value);
     }
   };
 
   const loadMoreReplies = async () => {
     if (!hasMoreReplies.value || repliesLoading.value) return;
     currentReplyPage.value++;
-    await postStore.fetchReplies(
-      postId.value,
-      currentReplyPage.value,
-      repliesPerPage
-    );
+    await postStore.fetchReplies(postId.value);
   };
 
   const openReplyEditor = () => {
@@ -192,12 +188,18 @@ export function useForumPost() {
     if (!reportTarget.value) return;
 
     try {
-      await postStore.reportContent(
-        reportTarget.value.type,
-        reportTarget.value.id,
-        values.reason,
-        values.details
-      );
+      if (reportTarget.value.type === "comment") {
+        await postStore.reportReply(
+          postId.value,
+          reportTarget.value.id,
+          values.reason
+        );
+      } else {
+        await postStore.reportPost(
+          reportTarget.value.id,
+          values.reason
+        );
+      }
       closeReportDialog();
       alert("Thank you for your report. Our team will review it shortly.");
     } catch (err) {
@@ -211,7 +213,9 @@ export function useForumPost() {
   };
 
   const formatDate = (dateStr: string) => {
+    if (!dateStr) return "Unknown";
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return "Invalid date";
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));

@@ -170,3 +170,21 @@ async def remove_place_from_list(
     except Exception as e:
         await session.rollback()
         raise ValueError(f"Failed to remove place from list: {str(e)}")
+
+
+async def delete_saved_list(
+    session: AsyncSession, user_id: uuid.UUID, list_id: uuid.UUID
+) -> None:
+    """Delete a saved list."""
+    saved_list = await session.get(SavedList, list_id)
+    if not saved_list:
+        raise ValueError("Saved list not found")
+    if saved_list.user_id != user_id:
+        raise PermissionError("Not authorized to delete this list")
+    
+    try:
+        await session.delete(saved_list)
+        await session.commit()
+    except Exception as e:
+        await session.rollback()
+        raise ValueError(f"Failed to delete saved list: {str(e)}")

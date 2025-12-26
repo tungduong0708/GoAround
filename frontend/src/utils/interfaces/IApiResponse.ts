@@ -2,15 +2,19 @@
  * Standard API response wrapper for all backend responses.
  * The backend wraps all responses in this format.
  */
-export interface IApiResponse<T> {
-  status: "success" | "error";
-  data: T;
-}
+// TODO: This wrapper may be deprecated in favor of using IApiResponse with IPaginatedResponse directly.
+
 
 /**
  * Pagination metadata returned by list endpoints.
- * Available for: GET /places, GET /places/{id}/reviews, GET /trips,
- * GET /lists, GET /lists/{id}, GET /forum/posts, GET /forum/posts/{id},
+ * Available for: 
+ * GET /places, 
+ * GET /places/{id}/reviews, 
+ * GET /trips,
+ * GET /lists, 
+ * GET /lists/{id}, 
+ * GET /forum/posts, 
+ * GET /forum/posts/{id},
  * GET /admin/reports
  */
 export interface IPaginationMeta {
@@ -21,12 +25,23 @@ export interface IPaginationMeta {
 
 /**
  * Paginated API response with meta information.
+ * The results are always wrapped in this format. 
  */
+
+// Current fix: Both paginated and non-paginated responses use the wrapper with the same format.
+
+// In the future, we may deprecate IPaginatedResponse and use IApiResponse with T being an array or single object directly.
 export interface IPaginatedResponse<T> {
-  status: "success" | "error";
   data: T;
   meta: IPaginationMeta;
 }
+
+export interface IApiResponse<T> {
+  data: T;
+  meta: IPaginationMeta;
+}
+
+// TODO: This wrapper may be deprecated in favor of using other IPaginationMeta directly.
 
 /**
  * Field-level validation error
@@ -42,5 +57,6 @@ export interface IFieldError {
 export interface IErrorResponse {
   status: "error";
   message: string;
+  statusCode?: number;
   errors?: IFieldError[];
 }

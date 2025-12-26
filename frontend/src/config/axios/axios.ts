@@ -11,12 +11,16 @@ export function extractApiError(error: unknown): IErrorResponse {
   const axiosError = error as AxiosError<IErrorResponse>;
 
   if (axiosError.response?.data) {
-    return axiosError.response.data;
+    return {
+      ...axiosError.response.data,
+      statusCode: axiosError.response.status,
+    };
   }
 
   return {
     status: "error",
     message: axiosError.message || "An unexpected error occurred",
+    statusCode: axiosError.response?.status,
   };
 }
 

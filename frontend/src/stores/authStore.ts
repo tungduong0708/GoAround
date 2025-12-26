@@ -4,6 +4,7 @@ import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/config/supabase/supabase'
 import { AuthenticationService } from '@/services'
 import { UserRole } from '@/utils/types/UserRole'
+import { useUserProfileStore } from './userProfileStore'
 
 export const useAuthStore = defineStore('auth', () => {
   const session = ref<Session | null>(null)
@@ -115,6 +116,9 @@ export const useAuthStore = defineStore('auth', () => {
       error.value = err?.message ?? 'Sign out failed'
     } finally {
       setAuthState(null)
+      // Clear profile store on logout
+      const userProfileStore = useUserProfileStore()
+      userProfileStore.clearProfile()
       isLoading.value = false
     }
   }

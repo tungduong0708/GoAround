@@ -1,3 +1,4 @@
+// TODO: WIP
 import { supabase } from "@/config/supabase/supabase";
 import type {
   ISignInInput,
@@ -30,7 +31,7 @@ class AuthenticationService {
       password: input.password,
       options: {
         data: {
-          full_name: input.fullName,
+          full_name: input.full_name,
           phone: input.phone,
           username: input.username,
           role: input.role,

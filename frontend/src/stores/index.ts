@@ -7,3 +7,4 @@ export { useTripStore } from "./tripStore";
 export { useForumStore } from "./forumStore";
 export { useForumPostStore } from "./forumPostStore";
 export { useListPlaceStore } from "./listPlaceStore";
+export { useUserProfileStore } from "./userProfileStore";

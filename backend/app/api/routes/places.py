@@ -15,6 +15,7 @@ from app.schemas import (
     PlaceDetail,
     PlacePublic,
     PlaceSearchFilter,
+    PlaceSearchResponse,
     PlaceUpdate,
     ReviewSchema,
     TransferOwnershipRequest,
@@ -27,7 +28,8 @@ router = APIRouter(tags=["places"], prefix="/places")
 
 @router.get(
     "",
-    response_model=APIResponse[List[PlacePublic]],
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[PlaceSearchResponse],
     responses={
         400: {"model": HTTPError},
     },
@@ -38,6 +40,7 @@ async def search_places(
 ) -> Any:
     """
     Search places by keyword, tags, price, or location (radius).
+    Returns places with related forum posts and public trips.
     Only approved places are shown unless the user is an Admin.
     """
     # Validation for distance sorting
@@ -47,17 +50,21 @@ async def search_places(
             detail="Location (lat,lng) is required for distance sorting.",
         )
 
-    results, total = await crud.search_places(session, filter_params)
+    response, total = await crud.search_places(session, filter_params)
 
     return APIResponse(
-        data=results,
+        data=response,
         meta=MetaData(
             page=filter_params.page, limit=filter_params.limit, total_items=total
         ),
     )
 
 
-@router.get("/mine/all", response_model=APIResponse[List[PlacePublic]])
+@router.get(
+    "/me",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[List[PlacePublic]],
+)
 async def read_my_places(
     session: SessionDep,
     current_user: CurrentUserDep,
@@ -71,6 +78,7 @@ async def read_my_places(
 
 @router.get(
     "/{id}",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[PlaceDetail],
     responses={
         404: {"model": HTTPError},
@@ -89,6 +97,7 @@ async def get_place(session: SessionDep, id: uuid.UUID) -> Any:
 
 @router.get(
     "/{id}/reviews",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[list[ReviewSchema]],
     responses={
         404: {"model": HTTPError},
@@ -114,8 +123,8 @@ async def list_reviews_for_place(
 
 @router.post(
     "",
+    status_code=status.HTTP_201_CREATED,
     response_model=APIResponse[PlaceDetail],
-    status_code=201,
     responses={
         403: {"model": HTTPError},
     },
@@ -130,7 +139,7 @@ async def create_place(
     Only verified business accounts can create places.
     """
     # Check if user is a verified business account
-    if current_user.role != "Business":
+    if current_user.role != "business":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only business accounts can create places",
@@ -150,6 +159,7 @@ async def create_place(
 
 @router.put(
     "/{id}",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[PlaceDetail],
     responses={
         403: {"model": HTTPError},
@@ -182,6 +192,7 @@ async def update_place(
 
 @router.delete(
     "/{id}",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[Message],
     responses={
         403: {"model": HTTPError},
@@ -245,7 +256,7 @@ async def transfer_ownership(
         raise HTTPException(status_code=404, detail="Target user not found")
 
     # Validate target user is a verified business account
-    if target_user.role != "Business":
+    if target_user.role != "business":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Can only transfer ownership to business accounts",

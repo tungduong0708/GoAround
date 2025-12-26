@@ -31,11 +31,11 @@ const {
   openingHours,
 } = usePlaceDetails();
 
-const showAllHours = ref(false);
-
 onMounted(() => {
-  console.log(coordinates.value);
+  console.log(place.value?.opening_hours)
 });
+
+const showAllHours = ref(false);
 </script>
 
 <template>
@@ -77,8 +77,10 @@ onMounted(() => {
           class="relative col-span-1 md:col-span-4 md:row-span-2 overflow-hidden rounded-3xl"
         >
           <img
-            :src="heroImage || place.main_image_url"
-            :alt="place.name"
+
+            v-if ="place?.main_image_url || heroImage" 
+            :src="place?.main_image_url || heroImage"
+            :alt="place?.name"
             class="h-full w-full object-cover"
           />
           <Button
@@ -104,7 +106,7 @@ onMounted(() => {
         >
           <img
             :src="img"
-            :alt="place.name"
+            :alt="place?.name"
             class="h-full w-full object-cover"
           />
         </div>
@@ -121,11 +123,9 @@ onMounted(() => {
             <div class="flex items-center gap-4 text-muted-foreground">
               <div class="flex items-center gap-1 text-yellow-500">
                 <StarIcon class="size-5 fill-current" />
-                <span class="font-semibold text-foreground">{{
-                  place.average_rating
-                }}</span>
+                <span class="font-semibold text-foreground">N/A</span>
                 <span class="text-muted-foreground"
-                  >({{ place.review_count }} reviews)</span
+                  >(0 reviews)</span
                 >
               </div>
               <div class="flex items-center gap-1">

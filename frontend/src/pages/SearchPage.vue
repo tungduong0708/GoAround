@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchResults, useSearchCategories } from "@/composables";
 import { SlidersHorizontalIcon } from "lucide-vue-next";
+import { onMounted } from "vue";
 
 const {
   searchTerm,
@@ -41,13 +42,13 @@ const { categories, selectedCategory } = useSearchCategories();
             :default-value="categories[0]?.value"
           >
             <TabsList
-              class="flex flex-wrap gap-2 rounded-full border border-border/60 bg-secondary/30 p-2"
+              class="flex flex-wrap gap-2 rounded-full bg-transparent"
             >
               <TabsTrigger
                 v-for="category in categories"
                 :key="category.value"
                 :value="category.value"
-                class="rounded-full border border-transparent px-4 py-1.5 text-sm font-medium text-muted-foreground transition data-[state=active]:border-ring data-[state=active]:bg-background data-[state=active]:text-foreground"
+                class="rounded-full border border-transparent px-4 py-5 text-sm font-medium text-muted-foreground transition data-[state=active]:border-ring data-[state=active]:bg-background data-[state=active]:text-foreground"
               >
                 {{ category.label }}
               </TabsTrigger>
@@ -78,7 +79,7 @@ const { categories, selectedCategory } = useSearchCategories();
           Search Results
         </h2>
         <p class="text-sm text-muted-foreground">
-          {{ results?.data.length ?? 0 }} places found
+          {{ results?.data.places.length ?? 0 }} places found
         </p>
       </div>
 
@@ -119,7 +120,7 @@ const { categories, selectedCategory } = useSearchCategories();
           class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
         >
           <SearchResultCard
-            v-for="(result, index) in results?.data"
+            v-for="(result, index) in results?.data.places"
             :key="result.id"
             :result="result"
             v-motion

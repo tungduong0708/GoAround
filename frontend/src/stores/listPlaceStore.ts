@@ -1,17 +1,16 @@
 import { defineStore } from "pinia";
 import { ListService } from "@/services";
-import type { ISavedList } from "@/utils/interfaces";
-import { ArrowUpWideNarrow } from "lucide-vue-next";
+import type { ISavedListSchema, ISavedListDetailSchema, ISavedListCreate, IPagingQuery } from "@/utils/interfaces";
 
 export const useListPlaceStore = defineStore("listPlace", {
   state: () => ({
-    listLists: [] as ISavedList[],
-    listCurrentSelection: null as ISavedList | null,
+    listLists: [] as ISavedListSchema[],
+    listCurrentSelection: null as ISavedListDetailSchema | null,
   }),
   actions: {
-    async fetchListPlaces() {
+    async fetchListPlaces(query?: IPagingQuery) {
       try {
-        const response = await ListService.getLists();
+        const response = await ListService.getLists(query || { page: 1, limit: 10 });
         console.log(response.data);
         this.listLists = response.data;
       } catch (error) {
@@ -28,7 +27,8 @@ export const useListPlaceStore = defineStore("listPlace", {
     },
     async createListPlace(name: string) {
       try {
-        await ListService.createList({ name });
+        const input: ISavedListCreate = { name };
+        await ListService.createList(input);
         await this.fetchListPlaces();
       } catch (error) {
         console.error(error);

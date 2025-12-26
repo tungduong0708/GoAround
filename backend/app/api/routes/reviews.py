@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 
 from app import crud
 from app.api.deps import CurrentUserDep, SessionDep
@@ -18,8 +18,8 @@ router = APIRouter(tags=["reviews"], prefix="/reviews")
 
 @router.post(
     "",
+    status_code=status.HTTP_201_CREATED,
     response_model=APIResponse[ReviewSchema],
-    status_code=201,
     responses={
         404: {"model": HTTPError},
     },
@@ -36,6 +36,7 @@ async def create_review(
 
 @router.get(
     "/{review_id}",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[ReviewSchema],
     responses={
         404: {"model": HTTPError},
@@ -50,6 +51,7 @@ async def read_review(session: SessionDep, review_id: uuid.UUID):
 
 @router.put(
     "/{review_id}",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[ReviewSchema],
     responses={
         403: {"model": HTTPError},
@@ -73,6 +75,7 @@ async def update_review(
 
 @router.delete(
     "/{review_id}",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[Message],
     responses={
         403: {"model": HTTPError},

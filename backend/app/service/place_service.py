@@ -120,10 +120,12 @@ async def create_place(
     """
     # 1. Location WKT - using proper WKT format with validation
     loc = place_create.location
+    location_wkt = None
     # Validate coordinates
-    if not (-180 <= loc.lng <= 180) or not (-90 <= loc.lat <= 90):
-        raise ValueError(f"Invalid coordinates: lng={loc.lng}, lat={loc.lat}")
-    location_wkt = f"POINT({loc.lng} {loc.lat})"
+    if loc is not None:
+        if not (-180 <= loc.lng <= 180) or not (-90 <= loc.lat <= 90):
+            raise ValueError(f"Invalid coordinates: lng={loc.lng}, lat={loc.lat}")
+        location_wkt = f"POINT({loc.lng} {loc.lat})"
 
     # 2. Determine Model Class & Common Data
     common_data = {

@@ -1,6 +1,6 @@
 import { ref } from "vue";
 import { useTripStore } from "@/stores";
-import type { IPlace } from "@/utils/interfaces";
+import type { IPlacePublic } from "@/utils/interfaces";
 import { useRouter } from "vue-router";
 
 export interface PlanTripFormData {
@@ -8,7 +8,7 @@ export interface PlanTripFormData {
   destination: string;
   startDate: string;
   endDate: string;
-  places: IPlace[];
+  places: IPlacePublic[];
 }
 
 export function usePlanTrip() {
@@ -19,7 +19,7 @@ export function usePlanTrip() {
   const showPlanTripModal = ref(false);
 
   // Form state for temporary places before trip creation
-  const selectedPlaces = ref<IPlace[]>([]);
+  const selectedPlaces = ref<IPlacePublic[]>([]);
 
   // Get loading and error state from store
   const { planTripLoading, error } = tripStore;
@@ -38,26 +38,21 @@ export function usePlanTrip() {
   // Handle trip submission
   const handleTripSubmit = async (formData: PlanTripFormData) => {
     try {
-      // Create the trip first
+      // Prepare stops array from places
+      const stops = formData.places.map((place, index) => ({
+        place_id: place.id,
+        stop_order: index + 1,
+        arrival_time: formData.startDate || new Date().toISOString(),
+        notes: `Visit ${place.name} in ${place.city || 'unknown location'}`,
+      }));
+
+      // Create the trip with stops
       const newTrip = await tripStore.createTrip({
-        tripName: formData.tripName,
-        startDate: formData.startDate || undefined,
-        endDate: formData.endDate || undefined,
+        trip_name: formData.tripName,
+        start_date: formData.startDate || null,
+        end_date: formData.endDate || null,
+        stops: stops.length > 0 ? stops : undefined,
       });
-
-      // Add places to the trip if any
-      if (formData.places.length > 0) {
-        const addPlacePromises = formData.places.map((place, index) =>
-          tripStore.addPlaceToTrip(newTrip.id, {
-            placeId: place.id,
-            stopOrder: index + 1,
-            arrivalTime: formData.startDate || new Date().toISOString(),
-            notes: `Visit ${place.name} in ${place.city}`,
-          }),
-        );
-
-        await Promise.all(addPlacePromises);
-      }
 
       // Close modal
       closePlanTripModal();
@@ -73,7 +68,7 @@ export function usePlanTrip() {
   };
 
   // Add a place to the temporary selection
-  const addPlaceToSelection = (place: IPlace) => {
+  const addPlaceToSelection = (place: IPlacePublic) => {
     if (!selectedPlaces.value.find((p) => p.id === place.id)) {
       selectedPlaces.value.push(place);
     }

@@ -1,15 +1,15 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import type {
-  IForumPost,
+  IForumPostListItem,
   IForumSearchQuery,
   IPaginationMeta,
-  ICreatePostInput,
+  IForumPostCreate,
 } from "@/utils/interfaces";
 import ForumService from "@/services/ForumService";
 
 export const useForumStore = defineStore("forum", () => {
-  const posts = ref<IForumPost[]>([]);
+  const posts = ref<IForumPostListItem[]>([]);
   const pagination = ref<IPaginationMeta | null>(null);
   const loading = ref(false);
   const error = ref<string | null>(null);
@@ -30,36 +30,59 @@ export const useForumStore = defineStore("forum", () => {
     }
   };
 
+  const createPost = async (payload: IForumPostCreate) => {
+    loading.value = true;
+    try {
+      const newPost = await ForumService.createPost(payload);
+      await fetchPosts(); // Reload to get updated list
+      return newPost;
+    } catch (err) {
+      error.value =
+        err instanceof Error ? err.message : "Failed to create post";
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const updatePost = async (id: string, payload: IForumPostCreate) => {
+    loading.value = true;
+    try {
+      const updatedPost = await ForumService.updatePost(id, payload);
+      await fetchPosts(); // Reload to get updated list
+      return updatedPost;
+    } catch (err) {
+      error.value =
+        err instanceof Error ? err.message : "Failed to update post";
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const getPostById = async (id: string) => {
+    loading.value = true;
+    error.value = null;
+    try {
+      const response = await ForumService.getPostById(id);
+      return response.data;
+    } catch (err) {
+      error.value =
+        err instanceof Error ? err.message : "Failed to fetch post";
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     posts,
     pagination,
     loading,
     error,
     fetchPosts,
-    createPost: async (payload: ICreatePostInput) => {
-      loading.value = true;
-      try {
-        await ForumService.createPost(payload);
-      } catch (err) {
-        error.value =
-          err instanceof Error ? err.message : "Failed to create post";
-        throw err;
-      } finally {
-        loading.value = false;
-      }
-    },
-    updatePost: async (id: string, payload: ICreatePostInput) => {
-      loading.value = true;
-      try {
-        await ForumService.updatePost(id, payload);
-      } catch (err) {
-        error.value =
-          err instanceof Error ? err.message : "Failed to update post";
-        throw err;
-      } finally {
-        loading.value = false;
-      }
-    },
-    getPostById: ForumService.getPostById, // Expose service method or wrap it if needed for state
+    createPost,
+    updatePost,
+    getPostById,
   };
 });

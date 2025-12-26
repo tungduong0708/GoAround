@@ -1,18 +1,63 @@
-import type { IPlace } from "./IPlace";
+import type { IPlacePublic } from "./IPlace";
 
-export interface ITripStop {
-  id: string;
-  place: IPlace;
-  stop_order: number;
+export interface ITripStopCreate {
+  place_id: string; 
+  stop_order?: number | null;
   arrival_time: string;
-  notes?: string;
+  notes?: string | null; 
 }
-
-export interface ITrip {
+export interface ITripCreate {
+  trip_name: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  public?: boolean;
+  tags?: string[];
+  stops?: ITripStopCreate[]
+}
+export interface ITripUpdate{
+  trip_name?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  public?: boolean | null;
+  tags?: string[] | null;
+  stops?: ITripStopCreate[] | null;
+}
+export interface ITripStopWithPlace {
+  id: string;
+  trip_id: string;
+  stop_order: number; 
+  arrival_time?: string | null;
+  notes?: string | null;
+  place?: IPlacePublic | null;
+}
+export interface ITripSchema {
   id: string;
   trip_name: string;
-  start_date?: string;
-  end_date?: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  public?: boolean;
+  tags?: string[];
+  stops?: ITripStopWithPlace[]; 
+}
+export interface ITripListSchema {
+  id: string;
+  trip_name: string;
+  start_date: string;
+  end_date: string;
+  public?: boolean;
   stop_count?: number;
-  stops?: ITripStop[];
+}
+// export interface ITripStopUpdate {
+//   order_index?: number;
+//   arrival_time?: string;
+//   notes?: string;
+// }
+
+export interface ITripStopSchema {
+  id: string
+  trip_id: string;
+  place_id: string;
+  stop_order: number;
+  arrival_time: string;
+  notes: string;
 }

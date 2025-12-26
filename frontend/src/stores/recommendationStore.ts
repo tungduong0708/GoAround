@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { PlacesService } from '@/services'
-import type { IPlace } from '@/utils/interfaces'
+import type { IPlacePublic } from '@/utils/interfaces'
 
 export const useRecommendationStore = defineStore('recommendations', () => {
-  const items = ref<IPlace[]>([])
+  const items = ref<IPlacePublic[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
   const hasLoaded = ref(false)

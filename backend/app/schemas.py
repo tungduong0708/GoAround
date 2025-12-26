@@ -43,10 +43,8 @@ class LocationSchema(BaseModel):
 
 class PlaceImageSchema(BaseModel):
     id: uuid.UUID
-    # Map 'image_url' (DB) -> 'url' (API)
-    url: str = Field(validation_alias="image_url")
+    image_url: str
     caption: str | None = None
-    # No is_primary in model.
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -127,16 +125,6 @@ class UserPostResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class UserTripResponse(BaseModel):
-    id: uuid.UUID
-    trip_name: str
-    start_date: date | None = None
-    end_date: date | None = None
-    stop_count: int = 0
-
-    model_config = ConfigDict(from_attributes=True)
-
-
 class UserPhotoResponse(BaseModel):
     id: uuid.UUID
     image_url: str
@@ -146,37 +134,51 @@ class UserPhotoResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserReplyResponse(BaseModel):
+    id: uuid.UUID
+    post_id: uuid.UUID
+    post_title: str
+    content: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 # --- User Data Schemas ---
 
 
 class UserBase(BaseModel):
-    username: str | None = None
-    full_name: str | None = None
-    avatar_url: str | None = None
+    username: str
+    full_name: str
+    avatar_url: str | None
 
 
 class UserCreate(UserBase):
-    signup_type: Literal["Traveler", "Business"]
+    signup_type: Literal["traveler", "business"]
+    business_image_url: str | None = None
+    business_description: str | None = None
 
 
-class UserUpdate(UserBase):
-    pass
+class UserUpdate(BaseModel):
+    username: str | None
+    full_name: str | None
+    avatar_url: str | None
 
 
 class UserStats(BaseModel):
-    reviews_count: int = 0
-    posts_count: int = 0
-    photos_count: int = 0
-    public_trips_count: int = 0
+    reviews_count: int
+    posts_count: int
+    photos_count: int
+    public_trips_count: int
+    replies_count: int
 
 
 class UserPublic(UserBase):
     id: uuid.UUID
-    role: Literal["Admin", "Traveler", "Business"]
+    role: Literal["admin", "traveler", "business"]
     is_verified_business: bool
-    stats: UserStats | None = None
-    joined_at: datetime | None = None
+    stats: UserStats
+    created_at: datetime
 
 
 class UserDetail(UserPublic):
@@ -191,7 +193,7 @@ class PlaceBase(BaseModel):
     address: str | None = None
     city: str | None = None
     country: str | None = None
-    location: LocationSchema
+    location: LocationSchema | None = None
 
     # Base fields available for all place types
     description: str | None = None
@@ -250,9 +252,6 @@ class PlaceUpdate(BaseModel):
 
 class PlaceSearchFilter(BaseModel):
     q: str | None = None
-    category: Literal["hotel", "restaurant", "landmark", "cafe"] | None = Field(
-        None, description="Filter by place type"
-    )
     location: str | None = None
     radius: float = 5.0
     tags: str | None = None
@@ -265,7 +264,6 @@ class PlaceSearchFilter(BaseModel):
     page: int = 1
     limit: int = 20
 
-    # Legacy field for backwards compatibility
     place_type: str | None = None
 
     @field_validator("location")
@@ -355,6 +353,14 @@ class PlaceDetail(PlacePublic):
         return parse_db_geometry(v)
 
 
+class PlaceSearchResponse(BaseModel):
+    """Search response with places, related posts, and trips."""
+
+    places: list[PlacePublic] = Field(default_factory=list)
+    posts: list["ForumPostListItem"] = Field(default_factory=list)
+    trips: list["TripListSchema"] = Field(default_factory=list)
+
+
 # --- Trip / Itinerary Schemas ---
 
 
@@ -369,6 +375,7 @@ class TripCreate(BaseModel):
     trip_name: str = Field(..., min_length=1, max_length=100)
     start_date: date | None = None
     end_date: date | None = None
+    public: bool = False
     tags: list[str] = Field(default_factory=list)
     stops: list[TripStopCreate] = Field(default_factory=list)
 
@@ -377,7 +384,9 @@ class TripUpdate(BaseModel):
     trip_name: str | None = None
     start_date: date | None = None
     end_date: date | None = None
+    public: bool | None = None
     tags: list[str] | None = None
+    stops: list[TripStopCreate] | None = None
 
 
 class TripStopUpdate(BaseModel):
@@ -413,6 +422,7 @@ class TripSchema(BaseModel):
     trip_name: str
     start_date: date | None = None
     end_date: date | None = None
+    public: bool = False
     tags: list[str] = Field(default_factory=list)
     stops: list[TripStopWithPlace] = Field(default_factory=list)
 
@@ -429,8 +439,9 @@ class TripSchema(BaseModel):
 class TripListSchema(BaseModel):
     id: uuid.UUID
     trip_name: str
-    start_date: date | None = None
-    end_date: date | None = None
+    start_date: date
+    end_date: date
+    public: bool = False
     stop_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
@@ -441,6 +452,11 @@ class TripListSchema(BaseModel):
 
 class SavedListCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
+
+
+class SavedListUpdate(BaseModel):
+    name: str | None = None
+    place_ids: list[uuid.UUID] | None = None
 
 
 class SavedListSchema(BaseModel):
@@ -512,6 +528,7 @@ class ReviewSchema(BaseModel):
 class ForumAuthorSchema(BaseModel):
     id: uuid.UUID
     username: str | None = None
+    avatar_url: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -580,14 +597,63 @@ class ForumPostCreate(BaseModel):
     images: list[str] = Field(default_factory=list)
 
 
+class ForumPostUpdate(BaseModel):
+    title: str | None = Field(None, min_length=1, max_length=150)
+    content: str | None = Field(None, min_length=1)
+    tags: list[str] | None = None
+    images: list[str] | None = None
+
+
 class ForumReplyCreate(BaseModel):
     content: str = Field(..., min_length=1)
     parent_reply_id: uuid.UUID | None = None
 
 
+class ContentReportCreate(BaseModel):
+    reason: str = Field(..., min_length=1)
+
+
+class ContentReportResponse(BaseModel):
+    id: uuid.UUID
+    reporter_id: uuid.UUID
+    target_type: str
+    target_id: uuid.UUID
+    reason: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ResolveReportRequest(BaseModel):
+    action: Literal["dismiss", "remove_content", "ban_user"]
+    notes: str | None = None
+    ban_duration_days: int | None = Field(
+        None,
+        ge=1,
+        description="Ban duration in days (required when action is ban_user)",
+    )
+
+
+class BusinessVerificationDetail(BaseModel):
+    user: UserPublic
+    verification_id: uuid.UUID
+    business_image_url: str
+    business_description: str
+    status: Literal["pending", "approved", "rejected"]
+    created_at: datetime
+    reviewed_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class VerifyBusinessRequest(BaseModel):
+    action: Literal["approve", "reject"]
+    notes: str | None = None
+
+
 class ForumSearchFilter(BaseModel):
     q: str | None = None
-    tag: str | None = None
+    tags: list[str] | None = None
     sort: Literal["newest", "oldest", "popular"] = "newest"
     page: int = 1
     limit: int = 20

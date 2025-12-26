@@ -1,20 +1,36 @@
 """Place search functionality."""
 
-from typing import Sequence
-
 from geoalchemy2 import Geography
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, with_polymorphic
 
-from app.models import Cafe, Hotel, Landmark, Place, Restaurant, Tag
-from app.schemas import PlacePublic, PlaceSearchFilter
+from app.models import (
+    Cafe,
+    ForumPost,
+    Hotel,
+    Landmark,
+    Place,
+    Restaurant,
+    Tag,
+    Trip,
+    TripStop,
+)
+from app.schemas import (
+    ForumPostListItem,
+    ForumAuthorSchema,
+    ForumTagSchema,
+    PlaceSearchFilter,
+    PlaceSearchResponse,
+    TripListSchema,
+)
 from app.service.place_service import _enrich_place_public
+from app.service.utils import is_user_banned
 
 
 async def search_places(
     session: AsyncSession, filter_params: PlaceSearchFilter
-) -> tuple[Sequence[PlacePublic], int]:
+) -> tuple[PlaceSearchResponse, int]:
     """
     Search places with various filters including keyword, type, tags, location, and radius.
     Returns paginated results and total count.
@@ -105,4 +121,94 @@ async def search_places(
 
     result = await session.execute(query)
     results = result.unique().scalars().all()
-    return [_enrich_place_public(p) for p in results], total
+
+    # Enrich places
+    places = [_enrich_place_public(p) for p in results]
+
+    # Fetch posts matching the search query (if provided)
+    posts = []
+    if filter_params.q:
+        search_term = f"%{filter_params.q}%"
+        posts_query = (
+            select(ForumPost)
+            .options(
+                selectinload(ForumPost.author),
+                selectinload(ForumPost.tags),
+            )
+            .where(
+                or_(
+                    ForumPost.title.ilike(search_term),
+                    ForumPost.content.ilike(search_term),
+                )
+            )
+            .order_by(ForumPost.created_at.desc())
+            .limit(10)
+        )
+        posts_result = await session.execute(posts_query)
+        forum_posts = posts_result.scalars().all()
+
+        for post in forum_posts:
+            author_data = ForumAuthorSchema(
+                id=post.author.id,
+                username=post.author.username or "Unknown",
+                avatar_url=post.author.avatar_url,
+            )
+
+            if is_user_banned(post.author):
+                author_data = ForumAuthorSchema(
+                    id=post.author.id,
+                    username="Banned User",
+                    avatar_url=None,
+                )
+
+            posts.append(
+                ForumPostListItem(
+                    id=post.id,
+                    title=post.title,
+                    content_snippet=post.content[:200] if post.content else "",
+                    author=author_data,
+                    tags=[ForumTagSchema(id=t.id, name=t.name) for t in post.tags],
+                    reply_count=post.reply_count,
+                    created_at=post.created_at,
+                )
+            )
+
+    # Fetch public trips that visit any of the returned places
+    trips = []
+    if results:
+        place_ids = [place.id for place in results]
+        trips_query = (
+            select(Trip, func.count(TripStop.id).label("stop_count"))
+            .join(TripStop, Trip.id == TripStop.trip_id)
+            .where(
+                and_(
+                    TripStop.place_id.in_(place_ids),
+                    Trip.public,
+                )
+            )
+            .group_by(Trip.id)
+            .order_by(Trip.created_at.desc())
+            .limit(10)
+        )
+        trips_result = await session.execute(trips_query)
+        trip_rows = trips_result.all()
+
+        trips = [
+            TripListSchema(
+                id=trip.id,
+                trip_name=trip.trip_name,
+                start_date=trip.start_date,
+                end_date=trip.end_date,
+                public=trip.public,
+                stop_count=int(stop_count or 0),
+            )
+            for trip, stop_count in trip_rows
+        ]
+
+    response = PlaceSearchResponse(
+        places=places,
+        posts=posts,
+        trips=trips,
+    )
+
+    return response, total

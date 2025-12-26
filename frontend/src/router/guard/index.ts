@@ -11,6 +11,15 @@ const guardRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: "/profile/create",
+    name: "profile-create",
+    component: () => import("@/pages/UserProfile/CreateProfilePage.vue"),
+    meta: {
+      title: "Create Profile",
+      authRequired: true,
+    },
+  },
+  {
     path: "/trip",
     name: "trip",
     component: () => import("@/pages/Trips/MainPage.vue"),

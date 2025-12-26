@@ -1,11 +1,10 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException, status
 
 from app import crud
 from app.api.deps import CurrentUserDep, SessionDep
 from app.schemas import (
-    AddPlaceToListRequest,
     APIResponse,
     HTTPError,
     Message,
@@ -13,12 +12,17 @@ from app.schemas import (
     SavedListCreate,
     SavedListDetailSchema,
     SavedListSchema,
+    SavedListUpdate,
 )
 
 router = APIRouter(tags=["lists"], prefix="/lists")
 
 
-@router.get("", response_model=APIResponse[list[SavedListSchema]])
+@router.get(
+    "",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[list[SavedListSchema]],
+)
 async def list_lists(
     session: SessionDep,
     current_user: CurrentUserDep,
@@ -34,6 +38,7 @@ async def list_lists(
 
 @router.get(
     "/{list_id}",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[SavedListDetailSchema],
     responses={
         404: {"model": HTTPError},
@@ -53,7 +58,11 @@ async def get_list(
     )
 
 
-@router.post("", response_model=APIResponse[SavedListSchema], status_code=201)
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    response_model=APIResponse[SavedListSchema],
+)
 async def create_list(
     session: SessionDep, current_user: CurrentUserDep, body: SavedListCreate
 ):
@@ -61,42 +70,50 @@ async def create_list(
     return APIResponse(data=sl)
 
 
-@router.post(
-    "/{list_id}/places",
-    response_model=APIResponse[Message],
-    status_code=201,
-    responses={
-        404: {"model": HTTPError, "description": "List or place not found"},
-    },
-)
-async def add_place(
-    session: SessionDep,
-    current_user: CurrentUserDep,
-    list_id: uuid.UUID,
-    body: AddPlaceToListRequest,
-):
-    try:
-        await crud.add_place_to_list(session, list_id, current_user.id, body)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    return APIResponse(data=Message(message="Place added to list."))
-
-
-@router.delete(
-    "/{list_id}/places/{place_id}",
-    response_model=APIResponse[Message],
+@router.put(
+    "/{list_id}",
+    response_model=APIResponse[SavedListDetailSchema],
+    status_code=501,
     responses={
         404: {"model": HTTPError},
     },
 )
-async def remove_place(
+async def update_list(
     session: SessionDep,
     current_user: CurrentUserDep,
     list_id: uuid.UUID,
-    place_id: uuid.UUID,
+    body: SavedListUpdate,
 ):
+    """
+    Update a saved list (name and/or places).
+    """
+    raise HTTPException(
+        status_code=501,
+        detail="Update list endpoint not yet implemented",
+    )
+
+
+@router.delete(
+    "/{list_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[Message],
+    responses={
+        403: {"model": HTTPError},
+        404: {"model": HTTPError},
+    },
+)
+async def delete_list(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    list_id: uuid.UUID,
+):
+    """
+    Delete a saved list.
+    """
     try:
-        await crud.remove_place_from_list(session, list_id, current_user.id, place_id)
+        await crud.delete_saved_list(session, current_user.id, list_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    return APIResponse(data=Message(message="Place removed from list."))
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Not allowed")
+    return APIResponse(data=Message(message="List deleted successfully"))

@@ -7,6 +7,7 @@ from app.api.deps import CurrentUserDep, SessionDep
 from app.schemas import (
     APIResponse,
     ContentReportCreate,
+    ContentReportResponse,
     ForumCommentSchema,
     ForumPostCreate,
     ForumPostDetail,
@@ -21,8 +22,12 @@ from app.schemas import (
 from app.service.forum_service import (
     create_forum_post,
     create_forum_reply,
+    delete_forum_post,
     get_forum_post,
     list_forum_posts,
+    report_forum_post,
+    report_forum_reply,
+    update_forum_post,
 )
 
 router = APIRouter(tags=["forum"], prefix="/forum")
@@ -115,9 +120,10 @@ async def create_reply(
 @router.put(
     "/posts/{id}",
     response_model=APIResponse[ForumPostDetail],
-    status_code=501,
+    status_code=status.HTTP_200_OK,
     responses={
         404: {"model": HTTPError},
+        403: {"model": HTTPError},
     },
 )
 async def update_post(
@@ -129,18 +135,23 @@ async def update_post(
     """
     Update a forum post.
     """
-    raise HTTPException(
-        status_code=501,
-        detail="Update forum post not yet implemented",
-    )
+    try:
+        post = await update_forum_post(session, id, current_user.id, data)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+    return APIResponse(data=post)
 
 
 @router.delete(
     "/posts/{id}",
     response_model=APIResponse[Message],
-    status_code=501,
+    status_code=status.HTTP_200_OK,
     responses={
         404: {"model": HTTPError},
+        403: {"model": HTTPError},
     },
 )
 async def delete_post(
@@ -151,16 +162,20 @@ async def delete_post(
     """
     Delete a forum post.
     """
-    raise HTTPException(
-        status_code=501,
-        detail="Delete forum post not yet implemented",
-    )
+    try:
+        await delete_forum_post(session, id, current_user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+    return APIResponse(data=Message(message="Post deleted successfully"))
 
 
 @router.post(
     "/posts/{id}/report",
     response_model=APIResponse[Message],
-    status_code=501,
+    status_code=status.HTTP_201_CREATED,
     responses={
         404: {"model": HTTPError},
     },
@@ -174,16 +189,18 @@ async def report_post(
     """
     Report a forum post for moderation.
     """
-    raise HTTPException(
-        status_code=501,
-        detail="Report forum post not yet implemented",
-    )
+    try:
+        await report_forum_post(session, id, current_user.id, data)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return APIResponse(data=Message(message="Post reported successfully"))
 
 
 @router.post(
     "/posts/{post_id}/replies/{reply_id}/report",
     response_model=APIResponse[Message],
-    status_code=501,
+    status_code=status.HTTP_201_CREATED,
     responses={
         404: {"model": HTTPError},
     },
@@ -198,7 +215,9 @@ async def report_reply(
     """
     Report a forum reply for moderation.
     """
-    raise HTTPException(
-        status_code=501,
-        detail="Report forum reply not yet implemented",
-    )
+    try:
+        await report_forum_reply(session, post_id, reply_id, current_user.id, data)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return APIResponse(data=Message(message="Reply reported successfully"))

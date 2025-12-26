@@ -1,14 +1,23 @@
 """Forum CRUD operations."""
 
 import uuid
-from datetime import datetime
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import ForumPost, PostImage, PostReply, Profile, Tag, post_tags
+from app.models import (
+    ContentReport,
+    ForumPost,
+    PostImage,
+    PostReply,
+    Profile,
+    Tag,
+    post_tags,
+)
 from app.schemas import (
+    ContentReportCreate,
+    ContentReportResponse,
     ForumAuthorSchema,
     ForumCommentSchema,
     ForumCommentUserSchema,
@@ -16,6 +25,7 @@ from app.schemas import (
     ForumPostDetail,
     ForumPostImageSchema,
     ForumPostListItem,
+    ForumPostUpdate,
     ForumReplyCreate,
     ForumSearchFilter,
     ForumTagSchema,
@@ -268,4 +278,171 @@ async def create_forum_reply(
         user=_sanitize_comment_user(comment.user),
         created_at=comment.created_at,
         parent_id=comment.parent_id,
+    )
+
+
+async def update_forum_post(
+    session: AsyncSession,
+    post_id: uuid.UUID,
+    user_id: uuid.UUID,
+    data: ForumPostUpdate,
+) -> ForumPostDetail:
+    """Update a forum post."""
+    # Get the post
+    res = await session.execute(
+        select(ForumPost)
+        .options(
+            selectinload(ForumPost.author),
+            selectinload(ForumPost.tags),
+            selectinload(ForumPost.images),
+        )
+        .where(ForumPost.id == post_id)
+    )
+    post = res.scalars().first()
+    if not post:
+        raise ValueError("Post not found")
+
+    # Check ownership
+    if post.author_id != user_id:
+        raise PermissionError("You can only edit your own posts")
+
+    # Update basic fields
+    if data.title is not None:
+        post.title = data.title
+    if data.content is not None:
+        post.content = data.content
+
+    # Update tags
+    if data.tags is not None:
+        # Clear existing tags
+        post.tags = []
+        await session.flush()
+
+        # Add new tags
+        tags_to_add = []
+        for tag_name in data.tags:
+            tag_res = await session.execute(select(Tag).where(Tag.name == tag_name))
+            tag = tag_res.scalars().first()
+            if not tag:
+                tag = Tag(name=tag_name)
+                session.add(tag)
+                await session.flush()
+            tags_to_add.append(tag)
+        post.tags = tags_to_add
+
+    # Update images
+    if data.images is not None:
+        # Delete existing images
+        await session.execute(select(PostImage).where(PostImage.post_id == post_id))
+        for img in post.images:
+            await session.delete(img)
+        await session.flush()
+
+        # Add new images
+        for image_url in data.images:
+            image = PostImage(post_id=post.id, image_url=image_url)
+            session.add(image)
+
+    await session.commit()
+
+    # Return the updated post
+    result = await get_forum_post(session, post.id)
+    if result is None:
+        raise RuntimeError("Failed to retrieve updated post")
+    return result
+
+
+async def delete_forum_post(
+    session: AsyncSession, post_id: uuid.UUID, user_id: uuid.UUID
+) -> None:
+    """Delete a forum post."""
+    # Get the post
+    res = await session.execute(
+        select(ForumPost)
+        .options(selectinload(ForumPost.author))
+        .where(ForumPost.id == post_id)
+    )
+    post = res.scalars().first()
+    if not post:
+        raise ValueError("Post not found")
+
+    # Check ownership
+    if post.author_id != user_id:
+        raise PermissionError("You can only delete your own posts")
+
+    # Delete the post (cascading deletes will handle images and replies)
+    await session.delete(post)
+    await session.commit()
+
+
+async def report_forum_post(
+    session: AsyncSession,
+    post_id: uuid.UUID,
+    user_id: uuid.UUID,
+    data: ContentReportCreate,
+) -> ContentReportResponse:
+    """Report a forum post."""
+    # Verify post exists
+    post = await session.get(ForumPost, post_id)
+    if not post:
+        raise ValueError("Post not found")
+
+    # Create the report
+    report = ContentReport(
+        reporter_id=user_id,
+        target_type="post",
+        target_id=post_id,
+        reason=data.reason,
+    )
+    session.add(report)
+    await session.commit()
+    await session.refresh(report)
+
+    return ContentReportResponse(
+        id=report.id,
+        reporter_id=report.reporter_id,
+        target_type=report.target_type,
+        target_id=report.target_id,
+        reason=report.reason,
+        created_at=report.created_at,
+    )
+
+
+async def report_forum_reply(
+    session: AsyncSession,
+    post_id: uuid.UUID,
+    reply_id: uuid.UUID,
+    user_id: uuid.UUID,
+    data: ContentReportCreate,
+) -> ContentReportResponse:
+    """Report a forum reply."""
+    # Verify reply exists and belongs to the post
+    res = await session.execute(
+        select(PostReply).where(
+            PostReply.id == reply_id,
+            PostReply.post_id == post_id,
+        )
+    )
+    reply = res.scalars().first()
+    if not reply:
+        raise ValueError("Reply not found")
+
+    # Create the report
+    report = ContentReport(
+        reporter_id=user_id,
+        target_type="reply",
+        target_id=reply_id,
+        reason=data.reason,
+    )
+    session.add(report)
+    await session.commit()
+    await session.refresh(report)
+
+    return ContentReportResponse(
+        id=report.id,
+        reporter_id=report.reporter_id,
+        target_type=report.target_type,
+        target_id=report.target_id,
+        reason=report.reason,
+        created_at=report.created_at,
     )

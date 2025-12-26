@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router";
-import type { IForumPost } from "@/utils/interfaces";
+import type { IForumPostDetail } from "@/utils/interfaces";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,7 +12,7 @@ import {
 } from "lucide-vue-next";
 
 const props = defineProps<{
-  post: IForumPost;
+  post: IForumPostDetail;
 }>();
 
 // Helper to format numbers (e.g. 13.1k)
@@ -76,7 +76,7 @@ const formatDate = (dateStr: string) => {
             <div class="space-y-2">
               <h3 class="text-lg font-bold leading-tight">{{ post.title }}</h3>
               <p class="text-muted-foreground leading-relaxed">
-                {{ post.content_snippet }}
+                {{ post.content }}
               </p>
               <div class="flex flex-wrap gap-1">
                 <span
@@ -100,7 +100,7 @@ const formatDate = (dateStr: string) => {
                 ]"
               >
                 <img
-                  :src="post.images[0]"
+                  :src="post?.images[0].image_url"
                   class="absolute inset-0 size-full object-cover hover:scale-105 transition-transform duration-500"
                   alt="Post Image"
                 />
@@ -111,7 +111,7 @@ const formatDate = (dateStr: string) => {
               >
                 <div class="relative w-full h-full overflow-hidden">
                   <img
-                    :src="post.images[1]"
+                    :src="post.images[1].image_url"
                     class="absolute inset-0 size-full object-cover hover:scale-105 transition-transform duration-500"
                     alt="Post Image"
                   />
@@ -121,7 +121,7 @@ const formatDate = (dateStr: string) => {
                   class="relative w-full h-full overflow-hidden"
                 >
                   <img
-                    :src="post.images[2]"
+                    :src="post.images[2].image_url"
                     class="absolute inset-0 size-full object-cover hover:scale-105 transition-transform duration-500"
                     alt="Post Image"
                   />
@@ -141,7 +141,7 @@ const formatDate = (dateStr: string) => {
                 </div>
                 <span
                   class="text-sm font-medium text-muted-foreground group-hover:text-blue-500"
-                  >{{ formatNumber(post.reply_count || 0) }}</span
+                  >{{ formatNumber(post.replies?.length || 0) }}</span
                 >
               </div>
               <div class="flex items-center gap-2 group cursor-pointer">
@@ -154,7 +154,7 @@ const formatDate = (dateStr: string) => {
                 </div>
                 <span
                   class="text-sm font-medium text-muted-foreground group-hover:text-red-500"
-                  >{{ formatNumber(post.like_count || 0) }}</span
+                  >{{ formatNumber(0) }}</span
                 >
               </div>
               <div class="flex items-center gap-2 group cursor-pointer">
@@ -167,7 +167,7 @@ const formatDate = (dateStr: string) => {
                 </div>
                 <span
                   class="text-sm font-medium text-muted-foreground group-hover:text-green-500"
-                  >{{ formatNumber(post.view_count || 0) }}</span
+                  >{{ formatNumber(0) }}</span
                 >
               </div>
 

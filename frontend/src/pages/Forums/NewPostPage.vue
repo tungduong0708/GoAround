@@ -96,7 +96,7 @@ onMounted(async () => {
         setValues({
           title: post.title,
           content: post.content,
-          tags: post.tags.map((t) => t.name),
+          tags: post.tags?.map((t) => t.name),
           // images: post.images // Handling existing images for edit is complex with file input (can't preset files)
           // We would typically show existing images separately and allow adding new ones.
           // For this MVP mock, we might skip existing image editing or just clearer

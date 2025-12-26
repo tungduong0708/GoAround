@@ -7,12 +7,12 @@ export function useForumMain() {
   const { posts, pagination, loading, error } = storeToRefs(store);
 
   const searchQuery = ref("");
-  const activeSort = ref("Relevance");
+  const activeSort = ref<("newest" | "popular" | "oldest")>("newest");
   const activeTags = ref<string[]>([]);
   const activeTimeFilter = ref("All Time");
   const currentPage = ref(1);
 
-  const sortOptions = ["Relevance", "Newest", "Popular", "Most Replies"];
+  const sortOptions = ["newest", "popular", "oldest"];
   const tagOptions = [
     "Paris",
     "Japan",
@@ -66,7 +66,7 @@ export function useForumMain() {
     activeTimeFilter.value = time;
   };
 
-  const setSort = (sort: string) => {
+  const setSort = (sort: "newest" | "popular" | "oldest") => {
     activeSort.value = sort;
   };
 
@@ -81,7 +81,7 @@ export function useForumMain() {
     if (
       pagination.value &&
       currentPage.value <
-        Math.ceil(pagination.value.totalItems / pagination.value.limit)
+        Math.ceil(pagination.value.total_items / pagination.value.limit)
     ) {
       setPage(currentPage.value + 1);
     }

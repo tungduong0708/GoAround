@@ -242,11 +242,12 @@ onMounted(async () => {
                                 v-for="stop in group.stops"
                                 :key="stop.id"
                                 class="cursor-pointer p-0 overflow-hidden transition-all duration-200 hover:shadow-lg hover:translate-x-1 hover:border-coral/50 group/card"
-                                @click="navigateToPlace(stop.place.id)"
+                                @click="stop?.place && navigateToPlace(stop.place.id)"
                             >
                                 <div class="flex items-center gap-4 p-3 sm:p-4">
                                     <!-- Place Image -->
                                     <img
+                                        v-if="stop.place?.main_image_url != null"
                                         :src="stop.place.main_image_url"
                                         :alt="stop.place.name"
                                         class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover shrink-0 bg-muted ring-1 ring-border/50 group-hover/card:ring-coral/30 transition-all duration-200"

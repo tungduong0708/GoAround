@@ -57,5 +57,6 @@ export interface IFieldError {
 export interface IErrorResponse {
   status: "error";
   message: string;
+  statusCode?: number;
   errors?: IFieldError[];
 }

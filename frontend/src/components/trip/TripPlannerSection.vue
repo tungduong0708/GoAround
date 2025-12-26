@@ -9,26 +9,25 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from "@/components/ui/carousel";
-import type { IPlace } from "@/utils/interfaces";
+import type { IPlacePublic } from "@/utils/interfaces";
 import { StarIcon, Compass, ArrowRight } from "lucide-vue-next";
 
 const props = defineProps<{
-  trips: IPlace[];
+  trips: IPlacePublic[];
 }>();
 
 const carouselApi = ref<CarouselApi | null>(null);
 let autoplayTimer: ReturnType<typeof setInterval> | null = null;
 const AUTOPLAY_DELAY = 5000;
 
-const roundedRating = (trip: IPlace) =>
+const roundedRating = (trip: IPlacePublic) =>
   Math.max(0, Math.min(5, Math.round(trip.average_rating ?? 0)));
-const priceLabel = (trip: IPlace) => {
-  if (typeof trip.price_per_night === "number")
-    return `€${trip.price_per_night}/Day`;
-  if (typeof trip.ticket_price === "number") return `€${trip.ticket_price}`;
+const priceLabel = (trip: IPlacePublic) => {
+  if (typeof trip.price_range === "number")
+    return `€${trip.price_range}/Day`;
   return "From €—";
 };
-const locationLabel = (trip: IPlace) =>
+const locationLabel = (trip: IPlacePublic) =>
   [trip.city, trip.country].filter(Boolean).join(", ");
 
 const stopAutoplay = () => {
@@ -162,6 +161,7 @@ onBeforeUnmount(stopAutoplay);
                   <!-- Image -->
                   <div class="relative h-[300px] sm:h-[360px] overflow-hidden">
                     <img
+                      v-if="trip.main_image_url!=null"  
                       :src="trip.main_image_url"
                       :alt="trip.name"
                       class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"

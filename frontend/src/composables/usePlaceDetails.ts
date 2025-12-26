@@ -32,13 +32,13 @@ export function usePlaceDetails() {
   const heroImage = computed(() => {
     if (!place.value) return "";
     return (
-      place.value.main_image_url || place.value.images?.[0] || ""
+      place.value.main_image_url || place.value.images?.[0]?.image_url || undefined 
     );
   });
 
   const galleryImages = computed(() => {
     if (!place.value?.images) return [] as string[];
-    return place.value.images.filter(Boolean);
+    return place.value.images.filter(Boolean).map((img) => img.image_url);
   });
 
   const locationLabel = computed(() => {
@@ -66,19 +66,17 @@ export function usePlaceDetails() {
   const priceLabel = computed(() => {
     const p = place.value;
     if (!p) return "N/A";
-    if (p.price_per_night) return `$${p.price_per_night}/night`;
-    if (p.ticket_price) return `$${p.ticket_price}`;
+    if (p.price_per_night !== null && p.price_per_night !== undefined) return `$${p.price_per_night}/night`;
+    if (p.ticket_price !== null && p.ticket_price !== undefined) return `$${p.ticket_price}`;
     if (p.price_range) return p.price_range;
     return "N/A";
   });
 
   const openingHours = computed(() => {
     const hours = place.value?.opening_hours;
-    if (!hours || typeof hours !== 'string') return null;
+    if (!hours || typeof hours !== 'object') return null;
 
     try {
-      // Try to parse as JSON if it's a stringified object
-      const parsedHours = JSON.parse(hours);
       const today = new Date().getDay();
       const dayNames = [
         "monday",
@@ -101,7 +99,7 @@ export function usePlaceDetails() {
         sun: "Sunday",
       };
 
-      const hoursArray = Object.entries(parsedHours)
+      const hoursArray = Object.entries(hours)
         .map(([day, time]) => ({
           day: capitalize(dayMap[day.toLowerCase()] || day),
           time: (time as string) || "Closed",
@@ -124,14 +122,24 @@ export function usePlaceDetails() {
   const openHoursLabel = computed(() => {
     const hours = place.value?.opening_hours;
     if (!hours) return "N/A";
-    if (typeof hours === 'string') {
+    if (typeof hours === 'object' && hours !== null) {
       try {
-        const parsedHours = JSON.parse(hours);
-        const entries = Object.entries(parsedHours);
+        const entries = Object.entries(hours);
         if (!entries.length) return "N/A";
-        return entries.map(([day, val]) => `${day}: ${val}`).join(" • ");
+        
+        // Check if all days have the same value
+        const values = entries.map(([_, val]) => val);
+        const allSame = values.every(val => val === values[0]);
+        
+        if (allSame) {
+          // If all days have the same hours, show just that value
+          return values[0] as string || "N/A";
+        }
+        
+        // Otherwise, show abbreviated format
+        return entries.map(([day, val]) => `${capitalize(day.substring(0, 3))}: ${val}`).join(" • ");
       } catch {
-        return hours;
+        return "N/A";
       }
     }
     return "N/A";

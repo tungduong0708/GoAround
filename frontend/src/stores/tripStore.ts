@@ -91,23 +91,6 @@ export const useTripStore = defineStore("trip", () => {
       // Get current trip data
       const currentTripData = await TripService.getTripById(tripId);
       
-      // Create new stops array with the new place
-      const newStop: ITripCreate["stops"][0] = {
-        place_id: placeData.place_id,
-        stop_order: placeData.stop_order,
-        arrival_time: placeData.arrival_time,
-        notes: placeData.notes,
-      };
-      
-      // Map existing stops to the create format (without the place object)
-      const existingStops: ITripCreate["stops"] = currentTripData.stops.map((stop) => ({
-        place_id: stop.place.id,
-        stop_order: stop.stop_order,
-        arrival_time: stop.arrival_time,
-        notes: stop.notes,
-      }));
-      
-      const updatedStops = [...existingStops, newStop];
       
       // Update with new stops by recreating the trip data
       const updatedTrip = await TripService.updateTrip(tripId, {
@@ -139,15 +122,6 @@ export const useTripStore = defineStore("trip", () => {
       const currentTripData = await TripService.getTripById(tripId);
       
       // Filter out the stop to remove and convert to create format
-      const updatedStops: ITripCreate["stops"] = currentTripData.stops
-        .filter((s) => s.id !== stopId)
-        .map((stop) => ({
-          place_id: stop.place.id,
-          stop_order: stop.stop_order,
-          arrival_time: stop.arrival_time,
-          notes: stop.notes,
-        }));
-      
       // Update the trip with the filtered stops
       await TripService.updateTrip(tripId, {
         trip_name: currentTripData.trip_name,

@@ -50,7 +50,7 @@ class UserService {
 
   async createUser(input: IUserCreate): Promise<IUserDetail> {
     try {
-      const response = await commonInstance.post("/users", input);
+      const response = await authInstance.post("/users", input);
       return (response.data as IApiResponse<IUserDetail>).data;
     } catch (error: any) {
       if (error.response && error.response.status === 409) {

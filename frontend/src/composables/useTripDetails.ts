@@ -1,7 +1,7 @@
 import { ref, computed, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useAuthStore, useTripStore } from "@/stores";
-import type { ITripStop } from "@/utils/interfaces";
+import type { ITripStopWithPlace } from "@/utils/interfaces";
 import { useRouter } from "vue-router";
 import {
   formatDate,
@@ -13,7 +13,7 @@ export interface StopGroup {
   id: string;
   title: string;
   date?: string;
-  stops: ITripStop[];
+  stops: ITripStopWithPlace[];
 }
 
 export interface UseTripDetailsOptions {
@@ -57,7 +57,7 @@ export function useTripDetails(options: UseTripDetailsOptions) {
     const groups: StopGroup[] = [];
 
     // Group stops by arrival date
-    const groupedByDate = new Map<string, ITripStop[]>();
+    const groupedByDate = new Map<string, ITripStopWithPlace[]>();
 
     stops.forEach((stop) => {
       const dateKey = stop.arrival_time
@@ -74,13 +74,13 @@ export function useTripDetails(options: UseTripDetailsOptions) {
     let groupIndex = 0;
     groupedByDate.forEach((groupStops, dateKey) => {
       const isUnscheduled = dateKey === "unscheduled";
-      const groupDate = isUnscheduled ? undefined : groupStops[0]?.arrival_time;
+      const groupDate = isUnscheduled ? undefined : groupStops[0]?.arrival_time || undefined;
 
       groups.push({
         id: `group-${groupIndex++}`,
         title: isUnscheduled
           ? "Unscheduled Places"
-          : formatDate(groupDate) || "Unknown Date",
+          : (groupDate ? formatDate(groupDate) : "Unknown Date"),
         date: groupDate,
         stops: groupStops,
       });
@@ -104,10 +104,10 @@ export function useTripDetails(options: UseTripDetailsOptions) {
     return {
       name: currentTrip.value.trip_name,
       dateRange: formatDateRange(
-        currentTrip.value.start_date,
-        currentTrip.value.end_date,
+        currentTrip.value.start_date || undefined,
+        currentTrip.value.end_date || undefined,
       ),
-      placeCount: getPlaceCountText(currentTrip.value.stop_count),
+      placeCount: getPlaceCountText(currentTrip.value.stops?.length || 0),
       hasDateRange: !!(
         currentTrip.value.start_date || currentTrip.value.end_date
       ),

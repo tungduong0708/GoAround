@@ -1,10 +1,9 @@
 import { onMounted } from "vue";
 import { storeToRefs } from "pinia";
 import { useAuthStore, useTripStore } from "@/stores";
-import type { ITrip } from "@/utils/interfaces";
+import type { ITripListSchema, ITripSchema, ITripCreate } from "@/utils/interfaces";
 import { useRouter } from "vue-router";
 import {
-  getLocationDisplay,
   formatDate,
   formatDateRange,
   getPlaceCountText,
@@ -46,21 +45,17 @@ export function useTrips(options: UseTripOptions = {}) {
     await store.loadTripById(id);
   };
 
-  const createTrip = async (tripData: {
-    tripName: string;
-    startDate?: string;
-    endDate?: string;
-  }) => {
+  const createTrip = async (tripData: ITripCreate) => {
     return await store.createTrip(tripData);
   };
 
   const addPlaceToTrip = async (
     tripId: string,
     placeData: {
-      placeId: string;
-      stopOrder?: number;
-      arrivalTime?: string;
-      notes?: string;
+      place_id: string;
+      stop_order: number;
+      arrival_time: string;
+      notes: string;
     },
   ) => {
     return await store.addPlaceToTrip(tripId, placeData);
@@ -70,12 +65,12 @@ export function useTrips(options: UseTripOptions = {}) {
     await store.removePlaceFromTrip(tripId, stopId);
   };
 
-  const getTripById = (id: string): Promise<ITrip | undefined> => {
+  const getTripById = (id: string): Promise<ITripSchema | undefined> => {
     return store.getTripById(id);
   };
 
-  const handleTripSelect = (trip: ITrip) => {
-    console.log("Trip {trip.id} was selected");
+  const handleTripSelect = (trip: ITripListSchema) => {
+    console.log(`Trip ${trip.id} was selected`);
     router.push({ name: "trip-details", params: { tripId: trip.id } });
   };
 
@@ -84,20 +79,16 @@ export function useTrips(options: UseTripOptions = {}) {
   };
 
   // Helper functions for display formatting
-  const formatTripLocation = (trip: ITrip): string => {
-    return getLocationDisplay(trip);
-  };
-
   const formatTripDate = (dateString?: string): string => {
     return formatDate(dateString);
   };
 
-  const formatTripDateRange = (trip: ITrip): string => {
+  const formatTripDateRange = (trip: ITripListSchema): string => {
     return formatDateRange(trip.start_date, trip.end_date);
   };
 
-  const formatTripPlaceCount = (trip: ITrip): string => {
-    return getPlaceCountText(trip.stop_count);
+  const formatTripPlaceCount = (trip: ITripListSchema): string => {
+    return getPlaceCountText(trip.stop_count || 0);
   };
 
   // Initialize
@@ -129,7 +120,6 @@ export function useTrips(options: UseTripOptions = {}) {
     clearError,
 
     // Formatters
-    formatTripLocation,
     formatTripDate,
     formatTripDateRange,
     formatTripPlaceCount,

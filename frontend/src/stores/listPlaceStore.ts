@@ -1,11 +1,11 @@
 import { defineStore } from "pinia";
 import { ListService } from "@/services";
-import type { ISavedListSchema, ISavedListDetailedSchema, ISavedListCreate, IPagingQuery } from "@/utils/interfaces";
+import type { ISavedListSchema, ISavedListDetailSchema, ISavedListCreate, IPagingQuery } from "@/utils/interfaces";
 
 export const useListPlaceStore = defineStore("listPlace", {
   state: () => ({
     listLists: [] as ISavedListSchema[],
-    listCurrentSelection: null as ISavedListDetailedSchema | null,
+    listCurrentSelection: null as ISavedListDetailSchema | null,
   }),
   actions: {
     async fetchListPlaces(query?: IPagingQuery) {

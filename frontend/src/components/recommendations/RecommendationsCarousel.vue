@@ -106,7 +106,9 @@ const formatLocation = (place: IPlacePublic) =>
           <div
             class="relative h-48 w-full overflow-hidden rounded-3xl rounded-b-none"
           >
+            <!-- TODO: Replace with better url handling -->
             <img
+              v-if="item.main_image_url != null"
               :src="item.main_image_url"
               :alt="item.name"
               class="h-full w-full object-cover transition duration-500 group-hover:scale-105"

@@ -11,7 +11,7 @@ import Button from "@/components/ui/button/Button.vue";
 import Input from "@/components/ui/input/Input.vue";
 import Label from "@/components/ui/label/Label.vue";
 import { MapPin, Calendar, Trash2, Star, Sparkles } from "lucide-vue-next";
-import type { IPlace } from "@/utils/interfaces";
+import type { IPlacePublic } from "@/utils/interfaces";
 
 interface PlanTripModalProps {
   open?: boolean;
@@ -27,7 +27,7 @@ interface TripFormData {
   destination: string;
   startDate: string;
   endDate: string;
-  places: IPlace[];
+  places: IPlacePublic[];
 }
 
 const props = withDefaults(defineProps<PlanTripModalProps>(), {
@@ -41,72 +41,7 @@ const tripName = ref("");
 const destination = ref("");
 const startDate = ref("");
 const endDate = ref("");
-// TODO: Fetch places from API
-const places = ref<IPlace[]>([
-  {
-    id: "1",
-    name: "Colosseum",
-    place_type: "landmark",
-    address: "Piazza del Colosseo, 1",
-    city: "Rome",
-    country: "Italy",
-    location: {
-      lat: 41.8902,
-      lng: 12.4924,
-    },
-    main_image_url: "684015-58379d421a52?w=400",
-    average_rating: 5,
-    review_count: 180,
-  },
-  {
-    id: "3",
-    name: "Pantheon",
-    place_type: "landmark",
-    address: "Piazza della Rotonda",
-    city: "Rome",
-    country: "Italy",
-    location: {
-      lat: 41.8986,
-      lng: 12.4768,
-    },
-    main_image_url:
-      "https://images.unsplash.com/photo-1529260830199-42c24126f198?w=400",
-    average_rating: 5,
-    review_count: 220,
-  },
-  {
-    id: "4",
-    name: "Vatican Museums",
-    place_type: "landmark",
-    address: "Viale Vaticano",
-    city: "Vatican City",
-    country: "Italy",
-    location: {
-      lat: 41.9065,
-      lng: 12.4534,
-    },
-    main_image_url:
-      "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=400",
-    average_rating: 5,
-    review_count: 300,
-  },
-  {
-    id: "5",
-    name: "Roman Forum",
-    place_type: "landmark",
-    address: "Via della Salara Vecchia",
-    city: "Rome",
-    country: "Italy",
-    location: {
-      lat: 41.8925,
-      lng: 12.4853,
-    },
-    main_image_url:
-      "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400",
-    average_rating: 4.8,
-    review_count: 150,
-  },
-]);
+const places = ref<IPlacePublic[]>([]);
 const newPlaceInput = ref("");
 
 const isFormValid = computed(() => {
@@ -279,6 +214,7 @@ const addPlaceFromInput = () => {
                 class="flex items-center gap-3 p-3 border border-border/80 rounded-xl bg-background hover:border-coral/50 hover:shadow-sm transition-all duration-200 group"
               >
                 <img
+                  v-if="place.main_image_url != null"
                   :src="place.main_image_url"
                   :alt="place.name"
                   class="w-14 h-14 rounded-lg object-cover shrink-0 bg-muted ring-1 ring-border/50 group-hover:ring-coral/30 transition-all"

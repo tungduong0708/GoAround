@@ -4,12 +4,13 @@ import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { useForm, useField } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod'
-import { useAuthStore } from '@/stores'
+import { useAuthStore, useUserProfileStore } from '@/stores'
 import { UserRole } from '@/utils/types/UserRole'
 
 export function useSignupForm() {
   const router = useRouter()
   const authStore = useAuthStore()
+  const userProfileStore = useUserProfileStore()
 
   // --- Validation Schema ---
   const signupSchema = toTypedSchema(
@@ -55,7 +56,23 @@ export function useSignupForm() {
   const isFormValid = computed(() => meta.value.valid)
 
   // --- Auth Flow Logic ---
-  const redirectHome = () => router.replace('/')
+  const redirectHome = async () => {
+    // Check if profile exists before redirecting
+    try {
+      const profileExists = await userProfileStore.fetchProfile()
+      if (!profileExists) {
+        // Profile not found, redirect to profile creation
+        router.replace({ name: 'profile-create' })
+      } else {
+        // Profile exists, go to home
+        router.replace('/')
+      }
+    } catch (error) {
+      // On other non-404 errors, still go home (e.g., network issues)
+      console.error('Error checking profile:', error)
+      router.replace('/')
+    }
+  }
 
   const initializeSession = async () => {
     const session = await authStore.initSession()
@@ -107,7 +124,8 @@ export function useSignupForm() {
         password: values.password,
         role: UserRole.TRAVELLER,
       })
-      router.push('/')
+      // Check profile and redirect accordingly
+      await redirectHome()
     } catch (error: any) {
       setFieldError('apiError', error.message || 'Registration failed. Please try again.')
     } finally {

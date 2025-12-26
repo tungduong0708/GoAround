@@ -1,6 +1,7 @@
 export { default as AuthenticationService } from "./AuthenticationService";
 export { default as ForumService } from "./ForumService";
 export { default as ListService } from "./ListService";
+export { default as MediaService } from "./MediaService";
 export { default as ModerationService } from "./ModerationService";
 export { default as PlacesService } from "./PlacesService";
 export { default as ReviewsService } from "./ReviewsService";

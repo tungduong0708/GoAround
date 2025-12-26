@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "vue-sonner";
 import TagInput from "@/components/forum/TagInput.vue";
-import ImageUpload from "@/components/forum/ImageUpload.vue";
+import ImageUpload from "@/components/common/ImageUpload.vue";
 import type { IForumPostCreate } from "@/utils/interfaces";
 
 const route = useRoute();
@@ -69,7 +69,7 @@ const formSchema = toTypedSchema(
         "Please avoid using inappropriate language." // Basic moderation filter
       ),
     tags: z.array(z.string()).min(1, "Please add at least one tag").max(5),
-    images: z.array(z.any()).optional(), // Handling files separately or as part of form
+    images: z.array(z.string()).optional(), // Array of image URLs from Supabase
   })
 );
 
@@ -117,10 +117,8 @@ const onSubmit = handleSubmit(async (values) => {
       title: values.title,
       content: values.content,
       tags: values.tags,
-      // In real app, we upload images first to get URLs, or send FormData
-      // For mock: just passing filenames or empty for now as our ICreatePostInput takes string[] unfortunately
-      // If we updated interface to take any we could store file objects, but let's just mock it
-      images: values.images?.map((f: File) => URL.createObjectURL(f)) || [],
+      // Images are already uploaded to Supabase and we have the URLs
+      images: values.images || [],
     };
 
     if (isEditMode.value) {
@@ -136,10 +134,7 @@ const onSubmit = handleSubmit(async (values) => {
     }
 
     // Redirect
-    router.push("/forums"); // Should go to new post but we don't know ID easily from void return of store action (unless we change it)
-    // Actually store.createPost calls service which returns the post.
-    // If we want to redirect to the new post, we should update store action to return the result.
-    // For now, list page is fine.
+    router.push("/forums");
   } catch (error) {
     toast.error("Error", {
       description: "Something went wrong. Please try again.",
@@ -164,10 +159,6 @@ const confirmCancel = () => {
   showCancelDialog.value = false;
   router.back();
 };
-
-// Drag and drop image handler will update form value 'images'
-// validation is handled in the component for size/type
-// Form just holds the array of files.
 </script>
 
 <template>
@@ -242,6 +233,10 @@ const confirmCancel = () => {
               <ImageUpload
                 :model-value="value"
                 @update:model-value="handleChange"
+                multiple
+                upload-type="post"
+                :max-files="5"
+                :max-size-in-m-b="10"
               />
             </FormControl>
             <FormMessage />

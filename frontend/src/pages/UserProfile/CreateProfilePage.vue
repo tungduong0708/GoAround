@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Textarea } from '@/components/ui/textarea'
 import { Spinner } from '@/components/ui/spinner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { User, Building2, Upload } from 'lucide-vue-next'
+import { User, Building2 } from 'lucide-vue-next'
+import ImageUpload from '@/components/common/ImageUpload.vue'
 import type { IUserCreate } from '@/utils/interfaces'
 
 const router = useRouter()
@@ -28,6 +29,7 @@ const businessDescription = ref('')
 // UI state
 const isLoading = ref(false)
 const errorMessage = ref('')
+const uploadError = ref('')
 
 // Computed
 const userEmail = computed(() => authStore.user?.email || '')
@@ -86,6 +88,23 @@ const handleSubmit = async () => {
 
 const selectAccountType = (type: 'traveler' | 'business') => {
   accountType.value = type
+}
+
+const handleAvatarUpload = (url: string) => {
+  avatarUrl.value = url
+  uploadError.value = ''
+}
+
+const handleBusinessImageUpload = (url: string) => {
+  businessImageUrl.value = url
+  uploadError.value = ''
+}
+
+const handleUploadError = (error: string) => {
+  uploadError.value = error
+  setTimeout(() => {
+    uploadError.value = ''
+  }, 5000)
 }
 </script>
 
@@ -184,24 +203,22 @@ const selectAccountType = (type: 'traveler' | 'business') => {
             />
           </div>
 
-          <!-- Avatar URL -->
+          <!-- Avatar Upload -->
           <div class="space-y-2">
-            <Label for="avatarUrl" class="text-sm font-medium">
-              Avatar URL <span class="text-muted-foreground">(Optional)</span>
+            <Label class="text-sm font-medium">
+              Profile Avatar <span class="text-muted-foreground">(Optional)</span>
             </Label>
-            <div class="flex gap-2">
-              <Input
-                id="avatarUrl"
-                v-model="avatarUrl"
-                type="url"
-                placeholder="https://example.com/avatar.jpg"
-                :disabled="isLoading"
-                class="flex-1"
-              />
-              <Button type="button" variant="outline" size="icon" :disabled="isLoading">
-                <Upload :size="16" />
-              </Button>
-            </div>
+            <ImageUpload
+              v-model="avatarUrl"
+              upload-type="avatar"
+              :max-size-in-m-b="2"
+              :disabled="isLoading"
+              @upload="handleAvatarUpload"
+              @error="handleUploadError"
+            />
+            <p class="text-xs text-muted-foreground">
+              Upload your profile picture (max 2MB)
+            </p>
           </div>
 
           <!-- Business Verification (shown only for business accounts) -->
@@ -209,25 +226,19 @@ const selectAccountType = (type: 'traveler' | 'business') => {
             <h3 class="text-lg font-semibold">Business Verification</h3>
 
             <div class="space-y-2">
-              <Label for="businessImageUrl" class="text-sm font-medium">
-                Business Image URL <span class="text-destructive">*</span>
+              <Label class="text-sm font-medium">
+                Business Verification Document <span class="text-destructive">*</span>
               </Label>
-              <div class="flex gap-2">
-                <Input
-                  id="businessImageUrl"
-                  v-model="businessImageUrl"
-                  type="url"
-                  placeholder="https://example.com/business-document.jpg"
-                  :disabled="isLoading"
-                  class="flex-1"
-                  required
-                />
-                <Button type="button" variant="outline" size="icon" :disabled="isLoading">
-                  <Upload :size="16" />
-                </Button>
-              </div>
+              <ImageUpload
+                v-model="businessImageUrl"
+                upload-type="profile"
+                :max-size-in-m-b="5"
+                :disabled="isLoading"
+                @upload="handleBusinessImageUpload"
+                @error="handleUploadError"
+              />
               <p class="text-xs text-muted-foreground">
-                Upload a business registration document or license
+                Upload a business registration document or license (max 5MB)
               </p>
             </div>
 
@@ -249,7 +260,10 @@ const selectAccountType = (type: 'traveler' | 'business') => {
             </div>
           </div>
 
-          <!-- Error Message -->
+          <!-- Error Messages -->
+          <div v-if="uploadError" class="p-4 rounded-lg bg-destructive/10 text-destructive text-sm">
+            {{ uploadError }}
+          </div>
           <p v-if="errorMessage" class="text-sm text-destructive">
             {{ errorMessage }}
           </p>

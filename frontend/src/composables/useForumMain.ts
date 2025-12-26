@@ -66,8 +66,8 @@ export function useForumMain() {
     activeTimeFilter.value = time;
   };
 
-  const setSort = (sort: "newest" | "popular" | "oldest") => {
-    activeSort.value = sort;
+  const setSort = (sort: string) => {
+    activeSort.value = sort as "newest" | "popular" | "oldest";
   };
 
   const setPage = (page: number) => {

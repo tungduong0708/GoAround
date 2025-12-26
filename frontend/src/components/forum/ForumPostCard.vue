@@ -25,7 +25,9 @@ const formatNumber = (num: number) => {
 
 // Helper for date formatting
 const formatDate = (dateStr: string) => {
+  if (!dateStr) return "Unknown";
   const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "Invalid date";
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
@@ -66,7 +68,7 @@ const formatDate = (dateStr: string) => {
               <span class="text-muted-foreground">@{{ post.author.id }}</span>
               <span class="text-muted-foreground">•</span>
               <span class="text-muted-foreground">{{
-                formatDate(post.createdAt)
+                formatDate(post.created_at)
               }}</span>
             </div>
 
@@ -74,7 +76,7 @@ const formatDate = (dateStr: string) => {
             <div class="space-y-2">
               <h3 class="text-lg font-bold leading-tight">{{ post.title }}</h3>
               <p class="text-muted-foreground leading-relaxed">
-                {{ post.contentSnippet || post.content }}
+                {{ post.content_snippet }}
               </p>
               <div class="flex flex-wrap gap-1">
                 <span
@@ -139,7 +141,7 @@ const formatDate = (dateStr: string) => {
                 </div>
                 <span
                   class="text-sm font-medium text-muted-foreground group-hover:text-blue-500"
-                  >{{ formatNumber(post.replyCount || 0) }}</span
+                  >{{ formatNumber(post.reply_count || 0) }}</span
                 >
               </div>
               <div class="flex items-center gap-2 group cursor-pointer">
@@ -150,10 +152,9 @@ const formatDate = (dateStr: string) => {
                     class="size-5 text-muted-foreground group-hover:text-red-500"
                   />
                 </div>
-                <!-- Mocking likes since interface doesn't have it yet -->
                 <span
                   class="text-sm font-medium text-muted-foreground group-hover:text-red-500"
-                  >{{ formatNumber(post.likeCount || 0) }}</span
+                  >{{ formatNumber(post.like_count || 0) }}</span
                 >
               </div>
               <div class="flex items-center gap-2 group cursor-pointer">
@@ -164,10 +165,9 @@ const formatDate = (dateStr: string) => {
                     class="size-5 text-muted-foreground group-hover:text-green-500"
                   />
                 </div>
-                <!-- Mocking views -->
                 <span
                   class="text-sm font-medium text-muted-foreground group-hover:text-green-500"
-                  >{{ formatNumber(post.viewCount || 0) }}</span
+                  >{{ formatNumber(post.view_count || 0) }}</span
                 >
               </div>
 

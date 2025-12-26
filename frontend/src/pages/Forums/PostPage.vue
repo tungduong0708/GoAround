@@ -62,7 +62,7 @@ const {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background pb-20">
+  <div class="bg-background pb-20">
     <div class="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
       <!-- Back Button -->
       <Button
@@ -128,7 +128,7 @@ const {
                   <AvatarFallback
                     class="bg-primary/10 text-primary font-medium"
                   >
-                    {{ post.author.username.slice(0, 2).toUpperCase() }}
+                    {{ post?.author.username ? post.author.username.slice(0, 2).toUpperCase() : '' }}
                   </AvatarFallback>
                 </Avatar>
                 <div>
@@ -182,7 +182,7 @@ const {
 
             <!-- Post Content -->
             <p class="text-foreground/90 leading-relaxed whitespace-pre-wrap">
-              {{ post.content || post.content_snippet }}
+              {{ post.content ? post.content : post.content }}
             </p>
 
             <!-- Tags (inline hashtags) -->
@@ -199,7 +199,7 @@ const {
             <!-- Image Gallery -->
             <ForumImageGallery
               v-if="post.images && post.images.length"
-              :images="post.images"
+              :images="post.images.map((image) => image.image_url)"
             />
 
             <!-- Tag Badges -->
@@ -215,12 +215,15 @@ const {
             </div>
 
             <!-- Stats -->
-            <ForumPostStats
+             <!-- TODO: Refactor this to match new interface 
+             <ForumPostStats
               :reply-count="post.reply_count || 0"
               :like-count="post.like_count || 0"
               :view-count="post.view_count || 0"
               :format-number="formatNumber"
-            />
+              />
+            -->
+
           </CardContent>
         </Card>
 

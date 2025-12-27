@@ -111,14 +111,29 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
     error.value = null
     try {
+      // Sign out from Supabase - this clears access token from storage
       await AuthenticationService.signOut()
-    } catch (err: any) {
-      error.value = err?.message ?? 'Sign out failed'
-    } finally {
+      
+      // Clear local auth state
       setAuthState(null)
-      // Clear profile store on logout
+      session.value = null
+      user.value = null
+      role.value = null
+      
+      // Clear profile store
       const userProfileStore = useUserProfileStore()
       userProfileStore.clearProfile()
+    } catch (err: any) {
+      error.value = err?.message ?? 'Sign out failed'
+      // Even if signout fails, clear local state
+      setAuthState(null)
+      session.value = null
+      user.value = null
+      role.value = null
+      
+      const userProfileStore = useUserProfileStore()
+      userProfileStore.clearProfile()
+    } finally {
       isLoading.value = false
     }
   }

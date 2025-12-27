@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { useTripDetails } from "@/composables";
 import Button from "@/components/ui/button/Button.vue";
@@ -9,6 +9,7 @@ import Separator from "@/components/ui/separator/Separator.vue";
 import Collapsible from "@/components/ui/collapsible/Collapsible.vue";
 import CollapsibleTrigger from "@/components/ui/collapsible/CollapsibleTrigger.vue";
 import CollapsibleContent from "@/components/ui/collapsible/CollapsibleContent.vue";
+import SavedPlacesModal from "@/components/trip/SavedPlacesModal.vue";
 import {
     MapPin,
     Calendar,
@@ -19,6 +20,7 @@ import {
     Trash2,
     Clock,
     AlertCircle,
+    Bookmark,
 } from "lucide-vue-next";
 
 const route = useRoute();
@@ -41,6 +43,17 @@ const {
     formatArrivalTime,
     clearErrors,
 } = useTripDetails({ tripId, autoLoad: true });
+
+const showSavedPlacesModal = ref(false);
+
+const handleAddFromSavedPlaces = () => {
+    showSavedPlacesModal.value = true;
+};
+
+const handlePlaceAdded = async () => {
+    // Reload trip to show newly added place
+    await loadTrip(true);
+};
 
 const handleRemoveStop = async (stopId: string) => {
     if (confirm("Are you sure you want to remove this place from your trip?")) {
@@ -130,13 +143,23 @@ onMounted(async () => {
                             Organize places into collections for your trips
                         </p>
                     </div>
-                    <Button
-                        class="shrink-0 inline-flex items-center gap-2 px-6 py-3 bg-coral text-white font-semibold rounded-xl shadow-lg shadow-coral/25 hover:bg-coral-dark hover:-translate-y-0.5 hover:shadow-xl hover:shadow-coral/30 active:translate-y-0 transition-all duration-200"
-                        @click="navigateToAddPlace"
-                    >
-                        <Plus :size="20" />
-                        Add Place
-                    </Button>
+                    <div class="flex gap-3 shrink-0">
+                        <Button
+                            variant="outline"
+                            class="inline-flex items-center gap-2 px-5 py-3 border-2 border-coral text-coral font-semibold rounded-xl hover:bg-coral hover:text-white transition-all duration-200"
+                            @click="handleAddFromSavedPlaces"
+                        >
+                            <Bookmark :size="20" />
+                            From Saved
+                        </Button>
+                        <Button
+                            class="inline-flex items-center gap-2 px-6 py-3 bg-coral text-white font-semibold rounded-xl shadow-lg shadow-coral/25 hover:bg-coral-dark hover:-translate-y-0.5 hover:shadow-xl hover:shadow-coral/30 active:translate-y-0 transition-all duration-200"
+                            @click="navigateToAddPlace"
+                        >
+                            <Plus :size="20" />
+                            Add Place
+                        </Button>
+                    </div>
                 </div>
 
                 <!-- Trip Info -->
@@ -360,6 +383,13 @@ onMounted(async () => {
             </div>
         </section>
     </div>
+
+    <!-- Saved Places Modal -->
+    <SavedPlacesModal
+        v-model:open="showSavedPlacesModal"
+        :trip-id="tripId"
+        @success="handlePlaceAdded"
+    />
 </template>
 
 <style scoped>

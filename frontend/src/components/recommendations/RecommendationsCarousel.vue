@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { Button } from "@/components/ui/button";
+import BookmarkButton from "@/components/common/BookmarkButton.vue";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
   MapPinIcon,
   StarIcon,
-  BookmarkIcon,
 } from "lucide-vue-next";
 import type { IPlacePublic } from "@/utils/interfaces";
 import { useRecommendations } from "@/composables";
@@ -114,14 +114,7 @@ const formatLocation = (place: IPlacePublic) =>
               class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
             />
             <div class="absolute right-3 top-3 flex items-center gap-2">
-              <Button
-                variant="secondary"
-                size="icon"
-                class="rounded-full bg-white/80 text-foreground shadow"
-                aria-label="Save to bookmarks"
-              >
-                <BookmarkIcon class="size-4" aria-hidden="true" />
-              </Button>
+              <BookmarkButton :place="item" variant="icon" />
               <div
                 class="flex items-center gap-1 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold text-white"
               >

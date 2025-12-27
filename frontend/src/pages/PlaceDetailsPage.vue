@@ -5,12 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import GoogleMap from "@/components/common/GoogleMap.vue";
+import BookmarkButton from "@/components/common/BookmarkButton.vue";
 import {
   MapPinIcon,
   StarIcon,
   ClockIcon,
   TicketIcon,
-  BookmarkIcon,
   TagIcon,
   ChevronDownIcon,
   ChevronUpIcon,
@@ -83,14 +83,9 @@ const showAllHours = ref(false);
             :alt="place?.name"
             class="h-full w-full object-cover"
           />
-          <Button
-            variant="secondary"
-            size="icon"
-            class="absolute right-4 top-4 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white"
-            aria-label="Save place"
-          >
-            <BookmarkIcon class="size-5" />
-          </Button>
+          <div class="absolute right-4 top-4">
+            <BookmarkButton v-if="place && place.average_rating !== undefined" :place="place as any" variant="icon" size="lg" />
+          </div>
         </div>
       </div>
 

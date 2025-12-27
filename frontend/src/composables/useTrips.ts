@@ -91,6 +91,14 @@ export function useTrips(options: UseTripOptions = {}) {
     return getPlaceCountText(trip.stop_count || 0);
   };
 
+  const formatTripLocation = (trip: ITripListSchema): string => {
+    // For trip list view, we don't have detailed location info
+    // Return a generic message or could be enhanced to fetch first stop location
+    return trip.stop_count && trip.stop_count > 0 
+      ? `${trip.stop_count} destination${trip.stop_count > 1 ? 's' : ''}`
+      : 'No destinations yet';
+  };
+
   // Initialize
   if (autoLoad) {
     onMounted(async () => {
@@ -123,5 +131,6 @@ export function useTrips(options: UseTripOptions = {}) {
     formatTripDate,
     formatTripDateRange,
     formatTripPlaceCount,
+    formatTripLocation,
   };
 }

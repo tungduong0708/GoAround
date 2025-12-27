@@ -14,6 +14,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -36,7 +37,6 @@ const {
   lists,
   currentList,
   hasLists,
-  loadLists,
   loadListById,
   createList,
   deleteList,
@@ -63,24 +63,31 @@ const isCreating = ref(false);
 const isDeleting = ref(false);
 const isRenaming = ref(false);
 
-// Watch for lists loading and select first list
+// Watch for lists loading and auto-select + load first list
 watch(
   lists,
   (newLists) => {
+    // Only auto-select if we don't have a selection yet
     if (newLists.length > 0 && !selectedListId.value) {
-      selectedListId.value = newLists[0].id;
-      loadListById(newLists[0].id);
+      const firstListId = newLists[0]?.id;
+      if (firstListId) {
+        selectedListId.value = firstListId;
+        // Auto-load first list's details on initial mount
+        loadListById(firstListId);
+      }
     }
   },
   { immediate: true }
 );
 
-// Watch selected list and load its details
-watch(selectedListId, (newId) => {
-  if (newId) {
-    loadListById(newId);
+// Load list details when user selects a list
+const handleSelectList = (listId: string) => {
+  selectedListId.value = listId;
+  // Only load if different from current selection
+  if (currentList.value?.id !== listId) {
+    loadListById(listId);
   }
-});
+};
 
 // Computed
 const selectedList = computed(() => {
@@ -106,8 +113,7 @@ const handleCreateList = async () => {
     });
     newListName.value = "";
     showCreateListModal.value = false;
-    // Reload lists in background (non-blocking)
-    loadLists(true).catch(console.error);
+    // No need to reload - optimistic update already added it
   } catch (error) {
     console.error("Failed to create list:", error);
     toast.error("Failed to create list", {
@@ -122,24 +128,31 @@ const handleDeleteList = async () => {
   if (!listToDelete.value) return;
 
   const listName = lists.value.find((l) => l.id === listToDelete.value)?.name || "List";
+  const deletingListId = listToDelete.value;
+
+  // Close modal immediately for better UX
+  showDeleteConfirm.value = false;
+  listToDelete.value = null;
 
   isDeleting.value = true;
   try {
-    const success = await deleteList(listToDelete.value);
+    const success = await deleteList(deletingListId);
     if (success) {
       toast.success("List deleted", {
         description: `"${listName}" has been removed`,
       });
       
-      // If deleted list was selected, reset selection
-      if (selectedListId.value === listToDelete.value) {
-        selectedListId.value = lists.value[0]?.id || null;
-        if (selectedListId.value) {
-          await loadListById(selectedListId.value);
+      // If deleted list was selected, auto-select next list
+      if (selectedListId.value === deletingListId) {
+        const nextList = lists.value[0];
+        if (nextList) {
+          selectedListId.value = nextList.id;
+          // Load the next list's details
+          await loadListById(nextList.id);
+        } else {
+          selectedListId.value = null;
         }
       }
-      showDeleteConfirm.value = false;
-      listToDelete.value = null;
     }
   } catch (error) {
     console.error("Failed to delete list:", error);
@@ -158,22 +171,8 @@ const handleRemovePlace = async (placeId: string) => {
   const placeItem = currentList.value?.items?.find((item) => item.place.id === placeId);
   const placeName = placeItem?.place.name || "Place";
 
-  // Optimistically remove from UI
-  const previousList = currentList.value ? { ...currentList.value } : null;
-  if (currentList.value?.items) {
-    currentList.value.items = currentList.value.items.filter(
-      (item) => item.place.id !== placeId
-    );
-  }
-
-  // Update count in sidebar
-  const selectedListInSidebar = lists.value.find((l) => l.id === selectedListId.value);
-  const previousCount = selectedListInSidebar?.item_count;
-  if (selectedListInSidebar && selectedListInSidebar.item_count) {
-    selectedListInSidebar.item_count -= 1;
-  }
-
   try {
+    // Use optimistic remove from composable (which uses store's optimistic method)
     await removePlaceFromList(selectedListId.value, placeId);
     toast.success("Place removed", {
       description: `Removed "${placeName}" from list`,
@@ -183,14 +182,7 @@ const handleRemovePlace = async (placeId: string) => {
     toast.error("Failed to remove place", {
       description: "Please try again",
     });
-    
-    // Revert optimistic update on error
-    if (previousList) {
-      await loadListById(selectedListId.value);
-    }
-    if (selectedListInSidebar && previousCount !== undefined) {
-      selectedListInSidebar.item_count = previousCount;
-    }
+    // Store already handles rollback
   }
 };
 
@@ -209,10 +201,6 @@ const openDeleteConfirm = (listId: string) => {
   showDeleteConfirm.value = true;
 };
 
-const handleSelectList = (listId: string) => {
-  selectedListId.value = listId;
-};
-
 const openRenameModal = (listId: string) => {
   const list = lists.value.find((l) => l.id === listId);
   if (list) {
@@ -225,36 +213,28 @@ const openRenameModal = (listId: string) => {
 const handleRenameList = async () => {
   if (!renameListName.value.trim() || !listToRename.value) return;
 
-  isRenaming.value = true;
   const listId = listToRename.value;
   const newName = renameListName.value.trim();
   
-  // Optimistically update the UI
-  const listToUpdate = lists.value.find((l) => l.id === listId);
-  const previousName = listToUpdate?.name;
-  if (listToUpdate) {
-    listToUpdate.name = newName;
-  }
+  // Close modal immediately for better UX
+  showRenameModal.value = false;
+  listToRename.value = null;
+  renameListName.value = "";
+  
+  isRenaming.value = true;
   
   try {
+    // Use optimistic update from composable (runs in background)
     await updateList(listId, newName);
     toast.success("List renamed", {
       description: `Updated to "${newName}"`,
     });
-    showRenameModal.value = false;
-    listToRename.value = null;
-    renameListName.value = "";
-    // Reload in background to ensure sync
-    loadLists(true).catch(console.error);
   } catch (error) {
     console.error("Failed to rename list:", error);
     toast.error("Failed to rename list", {
       description: "Please try again",
     });
-    // Revert optimistic update on error
-    if (listToUpdate && previousName) {
-      listToUpdate.name = previousName;
-    }
+    // Store already handles rollback
   } finally {
     isRenaming.value = false;
   }
@@ -509,6 +489,9 @@ const handleRenameList = async () => {
       <DialogContent class="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Create New List</DialogTitle>
+          <DialogDescription>
+            Create a new list to organize places you want to visit
+          </DialogDescription>
         </DialogHeader>
         <div class="space-y-4 py-4">
           <div class="space-y-2">
@@ -545,11 +528,13 @@ const handleRenameList = async () => {
       <DialogContent class="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Delete List?</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete this list? This action cannot be undone.
+          </DialogDescription>
         </DialogHeader>
         <div class="py-4">
           <p class="text-muted-foreground">
-            Are you sure you want to delete this list? This action cannot be
-            undone.
+            This will permanently remove the list and all its saved places.
           </p>
         </div>
         <DialogFooter>
@@ -576,6 +561,9 @@ const handleRenameList = async () => {
       <DialogContent class="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Rename List</DialogTitle>
+          <DialogDescription>
+            Choose a new name for your list
+          </DialogDescription>
         </DialogHeader>
         <div class="space-y-4 py-4">
           <div class="space-y-2">

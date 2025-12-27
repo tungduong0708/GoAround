@@ -12,16 +12,18 @@ export function useSavedLists(options: UseSavedListsOptions = {}) {
   const store = useListPlaceStore();
 
   // Reactive state from store
-  const { listLists, listCurrentSelection } = storeToRefs(store);
+  const { listLists, listCurrentSelection, isFetching, isCreating, isDeleting, isUpdating, error } = storeToRefs(store);
 
   // Computed properties
   const lists = computed(() => listLists.value);
   const currentList = computed(() => listCurrentSelection.value);
   const hasLists = computed(() => lists.value.length > 0);
   const listCount = computed(() => lists.value.length);
+  const isLoading = computed(() => isFetching.value || isCreating.value || isDeleting.value || isUpdating.value);
 
   // Actions
   const loadLists = async (force = false) => {
+    // Only fetch if forced OR if we have no lists yet
     if (force || lists.value.length === 0) {
       await store.fetchListPlaces();
     }
@@ -38,11 +40,8 @@ export function useSavedLists(options: UseSavedListsOptions = {}) {
 
   const deleteList = async (listId: string) => {
     try {
-      // Call delete API through service
-      const { default: ListService } = await import("@/services/ListService");
-      await ListService.deleteList(listId);
-      // Reload lists after deletion
-      await loadLists(true);
+      // Use optimistic delete from store
+      await store.deleteListPlace(listId);
       return true;
     } catch (error) {
       console.error("Error deleting list:", error);
@@ -52,21 +51,20 @@ export function useSavedLists(options: UseSavedListsOptions = {}) {
 
   const updateList = async (listId: string, name?: string, placeIds?: string[]) => {
     try {
-      const { default: ListService } = await import("@/services/ListService");
-      
-      // Use the efficient rename endpoint if only updating name
+      // If only updating name, use optimistic rename
       if (name && !placeIds) {
-        await ListService.renameList(listId, name);
+        await store.renameListPlace(listId, name);
       } else if (placeIds !== undefined) {
-        // If updating places, use the full update endpoint
+        // If updating places, use the full update endpoint and reload
+        const { default: ListService } = await import("@/services/ListService");
         await ListService.updateList(listId, {
           name: name || null,
           place_ids: placeIds || null,
         });
+        // Only reload this specific list
+        await loadListById(listId);
       }
       
-      // Only reload the specific list, not all lists (for performance)
-      await loadListById(listId);
       return true;
     } catch (error) {
       console.error("Error updating list:", error);
@@ -76,15 +74,22 @@ export function useSavedLists(options: UseSavedListsOptions = {}) {
 
   const removePlaceFromList = async (listId: string, placeId: string) => {
     try {
-      // Use the efficient remove endpoint
-      const { default: ListService } = await import("@/services/ListService");
-      await ListService.removePlaceFromList(listId, placeId);
-      
-      // Only reload the specific list, not all lists
-      await loadListById(listId);
+      // Use optimistic remove from store
+      await store.removePlaceFromListOptimistic(listId, placeId);
       return true;
     } catch (error) {
       console.error("Error removing place from list:", error);
+      return false;
+    }
+  };
+
+  const addPlaceToList = async (listId: string, placeId: string, placeData?: any) => {
+    try {
+      // Use optimistic add from store
+      await store.addPlaceToListOptimistic(listId, placeId, placeData);
+      return true;
+    } catch (error) {
+      console.error("Error adding place to list:", error);
       return false;
     }
   };
@@ -102,6 +107,12 @@ export function useSavedLists(options: UseSavedListsOptions = {}) {
     currentList,
     hasLists,
     listCount,
+    isLoading,
+    isFetching,
+    isCreating,
+    isDeleting,
+    isUpdating,
+    error,
 
     // Actions
     loadLists,
@@ -110,5 +121,6 @@ export function useSavedLists(options: UseSavedListsOptions = {}) {
     deleteList,
     updateList,
     removePlaceFromList,
+    addPlaceToList,
   };
 }

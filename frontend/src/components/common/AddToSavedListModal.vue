@@ -15,7 +15,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bookmark, Plus, Loader2, CheckCircle2 } from "lucide-vue-next";
 import type { IPlacePublic } from "@/utils/interfaces";
-import { ListService } from "@/services";
 
 const props = defineProps<{
   open: boolean;
@@ -44,12 +43,13 @@ const handleOpenChange = async (open: boolean) => {
     newListName.value = "";
     creatingNew.value = false;
     successListId.value = null;
+    // Only load if we don't have lists already
     await loadLists();
   }
 };
 
 const loadLists = async () => {
-  // Avoid loading if already loaded (unless forced)
+  // Skip if already loaded
   if (lists.value.length > 0) {
     return;
   }
@@ -74,17 +74,11 @@ const handleSelectList = async (listId: string) => {
   adding.value = true;
 
   try {
-    // Optimistically update the UI - find and increment count
     const targetList = lists.value.find(l => l.id === listId);
     const listName = targetList?.name || "list";
-    if (targetList && targetList.item_count !== undefined) {
-      targetList.item_count += 1;
-    }
 
-    // Add the place to the list using the efficient endpoint
-    await ListService.addPlaceToList(listId, {
-      place_id: props.place.id,
-    });
+    // Use optimistic add from store
+    await listPlaceStore.addPlaceToListOptimistic(listId, props.place.id, props.place);
 
     // Show success indicator on the list card
     successListId.value = listId;
@@ -100,20 +94,12 @@ const handleSelectList = async (listId: string) => {
       emit("update:open", false);
       successListId.value = null;
     }, 800);
-    
-    // Reload lists in background to sync counts (non-blocking)
-    loadLists().catch(console.error);
   } catch (error: any) {
     console.error("Failed to add place:", error);
     toast.error("Failed to add place", {
       description: error?.response?.data?.detail || error?.message,
     });
-    
-    // Revert optimistic update on error
-    const targetList = lists.value.find(l => l.id === listId);
-    if (targetList && targetList.item_count !== undefined) {
-      targetList.item_count -= 1;
-    }
+    // Store already handles rollback
   } finally {
     adding.value = false;
   }
@@ -127,16 +113,8 @@ const handleCreateNewList = async () => {
   try {
     const listName = newListName.value.trim();
     
-    // Create new list only (don't add place automatically)
-    const newList = await ListService.createList({ name: listName });
-
-    // Optimistically add to lists array
-    listPlaceStore.listLists.push({
-      id: newList.id,
-      name: newList.name,
-      created_at: newList.created_at,
-      item_count: 0, // No places added yet
-    });
+    // Use optimistic create from store
+    await listPlaceStore.createListPlace(listName);
 
     toast.success("List created!", {
       description: `"${listName}" is ready - now select it to save your place`,
@@ -145,9 +123,6 @@ const handleCreateNewList = async () => {
     // Reset the form and show the lists
     newListName.value = "";
     creatingNew.value = false;
-    
-    // Reload lists in background to ensure sync
-    loadLists().catch(console.error);
   } catch (error: any) {
     console.error("Failed to create list:", error);
     toast.error("Failed to create list", {

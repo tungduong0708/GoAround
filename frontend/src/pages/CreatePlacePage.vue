@@ -1,92 +1,293 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
+import { useRouter } from "vue-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowLeft, CheckCircle2 } from "lucide-vue-next";
-import { useRouter } from "vue-router";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, MapPin, Hotel, UtensilsCrossed, Coffee, Landmark, Loader2 } from "lucide-vue-next";
 import ImageUpload from "@/components/common/ImageUpload.vue";
+import PlacesService from "@/services/PlacesService";
+import type { IPlaceCreate } from "@/utils/interfaces";
 
 const router = useRouter();
 
-const avatarUrl = ref<string>("");
-const placeImages = ref<string[]>([]);
-const uploadError = ref<string>("");
-const successMessage = ref<string>("");
+// Form state
+const placeName = ref("");
+const selectedCategory = ref<"hotel" | "restaurant" | "cafe" | "landmark">("hotel");
+const address = ref("");
+const city = ref("");
+const country = ref("");
+const description = ref("");
+const mainImageUrl = ref("");
+const additionalImages = ref<string[]>([]);
+const tags = ref("");
 
-const handleAvatarUpload = (url: string) => {
-  console.log("Avatar uploaded:", url);
-  avatarUrl.value = url;
-  showSuccess("Avatar uploaded successfully!");
+// UI state
+const isSubmitting = ref(false);
+const errorMessage = ref("");
+const uploadError = ref("");
+
+const categories = [
+  { value: "hotel", label: "Hotel", icon: Hotel },
+  { value: "restaurant", label: "Restaurant", icon: UtensilsCrossed },
+  { value: "cafe", label: "Café", icon: Coffee },
+  { value: "landmark", label: "Landmark", icon: Landmark },
+];
+
+const fullAddress = computed(() => {
+  const parts = [address.value, city.value, country.value].filter(Boolean);
+  return parts.join(", ");
+});
+
+const isFormValid = computed(() => {
+  return placeName.value.trim() !== "" && 
+         address.value.trim() !== "" && 
+         selectedCategory.value !== null;
+});
+
+const handleMainImageUpload = (url: string) => {
+  mainImageUrl.value = url;
+  uploadError.value = "";
 };
 
-const handlePlaceImagesUpdate = (urls: string[]) => {
-  console.log("Place images updated:", urls);
-  placeImages.value = urls;
+const handleAdditionalImagesUpdate = (urls: string[]) => {
+  additionalImages.value = urls;
 };
 
 const handleUploadError = (error: string) => {
   uploadError.value = error;
-  successMessage.value = "";
   setTimeout(() => {
     uploadError.value = "";
   }, 5000);
 };
 
-const showSuccess = (message: string) => {
-  successMessage.value = message;
-  uploadError.value = "";
-  setTimeout(() => {
-    successMessage.value = "";
-  }, 3000);
-};
+const handleSubmit = async () => {
+  if (!isFormValid.value) return;
 
-const handleSubmit = () => {
-  console.log("Submitted data:", {
-    avatar: avatarUrl.value,
-    placeImages: placeImages.value,
-  });
-  
-  const totalImages = (avatarUrl.value ? 1 : 0) + placeImages.value.length;
-  showSuccess(`${totalImages} image(s) saved successfully!`);
+  isSubmitting.value = true;
+  errorMessage.value = "";
+
+  try {
+    const placeData: IPlaceCreate = {
+      name: placeName.value.trim(),
+      address: address.value.trim(),
+      city: city.value.trim() || null,
+      country: country.value.trim() || null,
+      place_type: selectedCategory.value,
+      description: description.value.trim() || null,
+      main_image_url: mainImageUrl.value || null,
+      images: additionalImages.value.length > 0 ? additionalImages.value : null,
+      tags: tags.value ? tags.value.split(",").map(t => t.trim()).filter(Boolean) : null,
+    };
+
+    const createdPlace = await PlacesService.createPlace(placeData);
+    
+    // Navigate to the created place details page
+    router.push({ name: "details", params: { id: createdPlace.id } });
+  } catch (error: any) {
+    errorMessage.value = "Error creating place:" + error.detail;
+    
+    // Extract error message from various possible error structures
+    if (error.response?.data) {
+      const errorData = error.response.data;
+      
+      // Handle validation errors (array of error objects)
+      if (Array.isArray(errorData.detail)) {
+        errorMessage.value = errorData.detail
+          .map((err: any) => `${err.loc?.join(' → ') || 'Error'}: ${err.msg}`)
+          .join('; ');
+      } 
+      // Handle single error detail (string or object)
+      else if (typeof errorData.detail === 'string') {
+        errorMessage.value = errorData.detail;
+      } 
+      // Handle error object with message
+      else if (errorData.message) {
+        errorMessage.value = errorData.message;
+      }
+      // Fallback to generic message from error data
+      else {
+        errorMessage.value = JSON.stringify(errorData.detail || errorData);
+      }
+    } 
+    // Handle error message directly on error object
+    else if (error.message) {
+      errorMessage.value = error.message;
+    } 
+    // Ultimate fallback
+    else {
+      errorMessage.value = "Failed to create place. Please try again.";
+    }
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 </script>
 
 <template>
-  <div class="container max-w-4xl mx-auto p-6">
-    <div class="mb-6">
-      <Button variant="ghost" @click="router.back()">
+  <div class="container max-w-4xl mx-auto p-6 space-y-6">
+    <!-- Header -->
+    <div class="space-y-2">
+      <Button variant="ghost" @click="router.back()" class="mb-2">
         <ArrowLeft class="mr-2 size-4" />
         Go Back
       </Button>
+      <h1 class="text-3xl font-bold">Add New Place</h1>
+      <p class="text-muted-foreground">Register a new venue, attraction, or business location</p>
     </div>
 
-    <div class="space-y-6">
-      <!-- Avatar Upload Card -->
+    <form @submit.prevent="handleSubmit" class="space-y-6">
+      <!-- Place Name -->
+      <Card>
+        <CardContent class="pt-6">
+          <div class="space-y-2">
+            <Label for="placeName" class="text-base">
+              Place Name <span class="text-destructive">*</span>
+            </Label>
+            <Input
+              id="placeName"
+              v-model="placeName"
+              type="text"
+              placeholder="e.g., Grand Plaza Hotel"
+              :disabled="isSubmitting"
+              required
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- Category -->
+      <Card>
+        <CardContent class="pt-6">
+          <div class="space-y-3">
+            <Label class="text-base">
+              Category <span class="text-destructive">*</span>
+            </Label>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <button
+                v-for="category in categories"
+                :key="category.value"
+                type="button"
+                @click="selectedCategory = category.value as any"
+                :class="[
+                  'flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all hover:border-primary/50',
+                  selectedCategory === category.value
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border bg-background'
+                ]"
+                :disabled="isSubmitting"
+              >
+                <component 
+                  :is="category.icon" 
+                  :size="32" 
+                  :class="selectedCategory === category.value ? 'text-primary' : 'text-muted-foreground'" 
+                />
+                <span class="font-medium text-sm">{{ category.label }}</span>
+              </button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- Location -->
       <Card>
         <CardHeader>
-          <CardTitle>Profile Avatar</CardTitle>
+          <CardTitle>Location <span class="text-destructive">*</span></CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-4">
+          <div class="space-y-2">
+            <Label for="address">
+              Physical Address <span class="text-destructive">*</span>
+            </Label>
+            <div class="relative">
+              <MapPin class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Input
+                id="address"
+                v-model="address"
+                type="text"
+                placeholder="e.g., 123 Main Street, Paris, France"
+                class="pl-10"
+                :disabled="isSubmitting"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-2">
+              <Label for="city">City</Label>
+              <Input
+                id="city"
+                v-model="city"
+                type="text"
+                placeholder="Paris"
+                :disabled="isSubmitting"
+              />
+            </div>
+            <div class="space-y-2">
+              <Label for="country">Country</Label>
+              <Input
+                id="country"
+                v-model="country"
+                type="text"
+                placeholder="France"
+                :disabled="isSubmitting"
+              />
+            </div>
+          </div>
+
+          <div class="p-4 border-2 border-dashed rounded-xl text-center text-sm text-muted-foreground">
+            <MapPin class="size-5 mx-auto mb-2 text-muted-foreground" />
+            <p>Click to select location on map</p>
+            <p class="text-xs mt-1">Select exact coordinates on map for precise location marking</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- Description -->
+      <Card>
+        <CardContent class="pt-6">
+          <div class="space-y-2">
+            <Label for="description" class="text-base">
+              Description <span class="text-destructive">*</span>
+            </Label>
+            <Textarea
+              id="description"
+              v-model="description"
+              placeholder="Describe your place, its features, and what makes it special..."
+              :disabled="isSubmitting"
+              rows="5"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- Main Image -->
+      <Card>
+        <CardHeader>
+          <CardTitle>Main Image</CardTitle>
           <CardDescription>
-            Upload your profile picture (max 2MB). This will be displayed as your account avatar.
+            Upload a primary image for your place (max 10MB). This will be the cover image.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <ImageUpload
-            v-model="avatarUrl"
-            upload-type="avatar"
-            :max-size-in-m-b="2"
-            @upload="handleAvatarUpload"
+            v-model="mainImageUrl"
+            upload-type="place"
+            :max-size-in-m-b="10"
+            :disabled="isSubmitting"
+            @upload="handleMainImageUpload"
             @error="handleUploadError"
           />
-          <p v-if="avatarUrl" class="mt-3 p-3 rounded-lg bg-muted text-xs break-all">
-            <span class="font-medium">Uploaded URL:</span> {{ avatarUrl }}
-          </p>
         </CardContent>
       </Card>
 
-      <!-- Place Images Upload Card -->
+      <!-- Additional Images -->
       <Card>
         <CardHeader>
-          <CardTitle>Place Images</CardTitle>
+          <CardTitle>Additional Images</CardTitle>
           <CardDescription>
             Upload multiple images for your place (up to 10 images, max 10MB each). 
             These will showcase your location to other users.
@@ -94,60 +295,69 @@ const handleSubmit = () => {
         </CardHeader>
         <CardContent>
           <ImageUpload
-            v-model="placeImages"
+            v-model="additionalImages"
             multiple
             upload-type="place"
             :max-files="10"
             :max-size-in-m-b="10"
-            @update:model-value="handlePlaceImagesUpdate"
+            :disabled="isSubmitting"
+            @update:model-value="handleAdditionalImagesUpdate"
             @error="handleUploadError"
           />
-          <div v-if="placeImages.length > 0" class="mt-4 space-y-2">
-            <p class="text-sm font-medium">
-              {{ placeImages.length }} image(s) uploaded
+        </CardContent>
+      </Card>
+
+      <!-- Tags -->
+      <Card>
+        <CardContent class="pt-6">
+          <div class="space-y-2">
+            <Label for="tags" class="text-base">Tags (Optional)</Label>
+            <Input
+              id="tags"
+              v-model="tags"
+              type="text"
+              placeholder="e.g., luxury, family-friendly, pet-friendly (comma separated)"
+              :disabled="isSubmitting"
+            />
+            <p class="text-xs text-muted-foreground">
+              Separate tags with commas to help users find your place
             </p>
-            <div class="max-h-32 overflow-y-auto space-y-1">
-              <p
-                v-for="(url, index) in placeImages"
-                :key="url"
-                class="text-xs text-muted-foreground break-all p-2 rounded bg-muted"
-              >
-                {{ index + 1 }}. {{ url }}
-              </p>
-            </div>
           </div>
         </CardContent>
       </Card>
 
-      <!-- Messages -->
-      <div v-if="successMessage" class="flex items-center gap-2 p-4 rounded-lg bg-green-500/10 text-green-600 dark:text-green-400">
-        <CheckCircle2 class="size-5" />
-        <span class="text-sm font-medium">{{ successMessage }}</span>
-      </div>
-
+      <!-- Error Messages -->
       <div v-if="uploadError" class="p-4 rounded-lg bg-destructive/10 text-destructive text-sm">
         {{ uploadError }}
       </div>
 
-      <!-- Submit Button -->
-      <div class="flex justify-end gap-3">
+      <div v-if="errorMessage" class="p-4 rounded-lg bg-destructive/10 text-destructive text-sm">
+        {{ errorMessage }}
+      </div>
+
+      <!-- Submit Buttons -->
+      <div class="flex justify-end gap-3 pt-4">
         <Button
+          type="button"
           variant="outline"
           size="lg"
           @click="router.back()"
+          :disabled="isSubmitting"
         >
           Cancel
         </Button>
         <Button
+          type="submit"
           size="lg"
-          @click="handleSubmit"
-          :disabled="!avatarUrl && placeImages.length === 0"
+          :disabled="!isFormValid || isSubmitting"
         >
-          Save All Images
+          <Loader2 v-if="isSubmitting" class="mr-2 size-4 animate-spin" />
+          {{ isSubmitting ? "Creating..." : "Create Place" }}
         </Button>
       </div>
-    </div>
+    </form>
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+</style>

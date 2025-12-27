@@ -2,13 +2,16 @@ import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import type { RouteLocationRaw } from "vue-router";
 import { useAuthStore } from "@/stores/authStore";
+import { useUserProfileStore } from "@/stores";
 import { useRouter } from "vue-router";
 import { ref } from "vue";
 
 export function useHeader() {
   const authStore = useAuthStore();
+  const userProfileStore = useUserProfileStore();
   const router = useRouter();
   const { isAuthenticated, user } = storeToRefs(authStore);
+  const { profile } = storeToRefs(userProfileStore);
   const isGuest = computed(() => !isAuthenticated.value);
   const showDropdown = ref(false);
 
@@ -21,7 +24,7 @@ export function useHeader() {
   });
 
   const avatarUrl = computed(() => {
-    return user.value?.user_metadata?.avatar_url || "";
+    return profile.value?.avatar_url || user.value?.user_metadata?.avatar_url || "";
   });
 
   const profileLink = computed<RouteLocationRaw>(() => {
@@ -33,7 +36,20 @@ export function useHeader() {
   });
 
   const profileSubtext = computed(() => {
-    return isAuthenticated.value ? "My Account" : "Get Started";
+    if (!isAuthenticated.value) return "Get Started";
+    
+    const role = profile.value?.role || 'traveler';
+    const roleLabels = {
+      traveler: 'Traveler',
+      business: 'Business',
+      admin: 'Administrator'
+    };
+    
+    return roleLabels[role] || 'Traveler';
+  });
+
+  const accountType = computed(() => {
+    return profile.value?.role || 'traveler';
   });
 
   const initials = computed(() => {
@@ -49,6 +65,11 @@ export function useHeader() {
   function handleProfile() {
     showDropdown.value = false;
     router.push(profileLink.value);
+  }
+
+  function handleManagePlaces() {
+    showDropdown.value = false;
+    router.push({ name: 'manage-places' });
   }
 
   async function handleLogout() {
@@ -74,7 +95,9 @@ export function useHeader() {
     profileLabel,
     profileSubtext,
     initials,
+    accountType,
     handleProfile,
+    handleManagePlaces,
     handleLogout,
   };
 }

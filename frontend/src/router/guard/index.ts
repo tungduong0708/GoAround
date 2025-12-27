@@ -20,6 +20,15 @@ const guardRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: "/profile/manage-places",
+    name: "manage-places",
+    component: () => import("@/pages/UserProfile/ManagePlacesPage.vue"),
+    meta: {
+      title: "Manage Places",
+      authRequired: true,
+    },
+  },
+  {
     path: "/trip",
     name: "trip",
     component: () => import("@/pages/Trips/MainPage.vue"),

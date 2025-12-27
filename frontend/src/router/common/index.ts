@@ -58,6 +58,15 @@ const commonRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: "/places/create",
+    name: "create-place",
+    component: () => import("@/pages/CreatePlacePage.vue"),
+    meta: {
+      title: "Create Place",
+      authRequired: true,
+    },
+  },
+  {
     path: "/profile",
     name: "profile-me",
     component: () => import("@/pages/UserProfile/UserProfilePage.vue"),

@@ -27,7 +27,9 @@ const {
   profileLabel,
   profileSubtext,
   initials,
+  accountType,
   handleProfile,
+  handleManagePlaces,
   handleLogout,
 } = useHeader();
 
@@ -128,6 +130,14 @@ const {
                     @click="handleProfile"
                   >
                     Profile
+                  </button>
+                </li>
+                <li v-if="accountType === 'business'">
+                  <button
+                    class="w-full text-left px-4 py-2 hover:bg-accent hover:text-accent-foreground text-sm"
+                    @click="handleManagePlaces"
+                  >
+                    Manage Places
                   </button>
                 </li>
                 <li>

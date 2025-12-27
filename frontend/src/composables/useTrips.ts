@@ -29,6 +29,10 @@ export function useTrips(options: UseTripOptions = {}) {
     tripCount,
     hasTrips,
     sortedTrips,
+    deletingTripId,
+    upcomingTrips,
+    pastTrips,
+    tripStats,
   } = storeToRefs(store);
 
   // Computed property for authentication status
@@ -67,6 +71,10 @@ export function useTrips(options: UseTripOptions = {}) {
 
   const getTripById = (id: string): Promise<ITripSchema | undefined> => {
     return store.getTripById(id);
+  };
+
+  const deleteTrip = async (id: string) => {
+    await store.deleteTrip(id);
   };
 
   const handleTripSelect = (trip: ITripListSchema) => {
@@ -116,6 +124,10 @@ export function useTrips(options: UseTripOptions = {}) {
     tripCount,
     hasTrips,
     sortedTrips,
+    deletingTripId,
+    upcomingTrips,
+    pastTrips,
+    tripStats,
 
     // Actions
     loadTrips,
@@ -124,6 +136,7 @@ export function useTrips(options: UseTripOptions = {}) {
     addPlaceToTrip,
     removePlaceFromTrip,
     getTripById,
+    deleteTrip,
     handleTripSelect,
     clearError,
 

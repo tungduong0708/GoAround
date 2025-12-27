@@ -9,6 +9,7 @@ export const useTripStore = defineStore("trip", () => {
   const currentTrip = ref<ITripSchema | null>(null);
   const loading = ref(false);
   const planTripLoading = ref(false);
+  const deletingTripId = ref<string | null>(null);
   const error = ref<string | null>(null);
 
   // Computed
@@ -25,6 +26,28 @@ export const useTripStore = defineStore("trip", () => {
       );
     });
   });
+
+  const upcomingTrips = computed(() => {
+    const now = new Date();
+    return trips.value.filter((trip) => {
+      if (!trip.start_date) return false;
+      return new Date(trip.start_date) > now;
+    });
+  });
+
+  const pastTrips = computed(() => {
+    const now = new Date();
+    return trips.value.filter((trip) => {
+      if (!trip.end_date) return false;
+      return new Date(trip.end_date) < now;
+    });
+  });
+
+  const tripStats = computed(() => ({
+    total: trips.value.length,
+    upcoming: upcomingTrips.value.length,
+    completed: pastTrips.value.length,
+  }));
 
   // Actions
   const loadTrips = async () => {
@@ -156,18 +179,44 @@ export const useTripStore = defineStore("trip", () => {
     }
   };
 
+  const deleteTrip = async (id: string) => {
+    deletingTripId.value = id;
+    error.value = null;
+
+    try {
+      await TripService.deleteTrip(id);
+      // Remove from local state
+      trips.value = trips.value.filter((trip) => trip.id !== id);
+      
+      // Clear current trip if it's the one being deleted
+      if (currentTrip.value?.id === id) {
+        currentTrip.value = null;
+      }
+    } catch (err) {
+      error.value =
+        err instanceof Error ? err.message : "Failed to delete trip";
+      throw err;
+    } finally {
+      deletingTripId.value = null;
+    }
+  };
+
   return {
     // State
     trips,
     currentTrip,
     loading,
     planTripLoading,
+    deletingTripId,
     error,
 
     // Computed
     tripCount,
     hasTrips,
     sortedTrips,
+    upcomingTrips,
+    pastTrips,
+    tripStats,
 
     // Actions
     loadTrips,
@@ -175,6 +224,7 @@ export const useTripStore = defineStore("trip", () => {
     createTrip,
     addPlaceToTrip,
     removePlaceFromTrip,
+    deleteTrip,
     clearError,
     getTripById,
   };

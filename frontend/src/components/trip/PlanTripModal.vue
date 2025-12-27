@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import Button from "@/components/ui/button/Button.vue";
 import Input from "@/components/ui/input/Input.vue";
 import Label from "@/components/ui/label/Label.vue";
-import { MapPin, Calendar, Trash2, Star, Sparkles } from "lucide-vue-next";
+import { MapPin, Calendar, Trash2, Star, Sparkles, Globe, Lock } from "lucide-vue-next";
 import type { IPlacePublic } from "@/utils/interfaces";
 
 interface PlanTripModalProps {
@@ -28,6 +28,7 @@ interface TripFormData {
   startDate: string;
   endDate: string;
   places: IPlacePublic[];
+  isPublic?: boolean;
 }
 
 const props = withDefaults(defineProps<PlanTripModalProps>(), {
@@ -41,6 +42,7 @@ const tripName = ref("");
 const destination = ref("");
 const startDate = ref("");
 const endDate = ref("");
+const isPublic = ref(false);
 const places = ref<IPlacePublic[]>([]);
 const newPlaceInput = ref("");
 
@@ -61,6 +63,7 @@ const handleSubmit = () => {
     startDate: startDate.value,
     endDate: endDate.value,
     places: places.value,
+    isPublic: isPublic.value,
   });
 
   handleCancel();
@@ -72,6 +75,7 @@ const handleCancel = () => {
   destination.value = "";
   startDate.value = "";
   endDate.value = "";
+  isPublic.value = false;
   places.value = [];
   newPlaceInput.value = "";
   emit("update:open", false);
@@ -88,6 +92,15 @@ const addPlaceFromInput = () => {
     newPlaceInput.value = "";
   }
 };
+
+const togglePublic = () => {
+  isPublic.value = !isPublic.value;
+};
+
+const handleAIGenerate = () => {
+  // TODO: Implement AI generation
+  console.log("AI Generate trip coming soon!");
+};
 </script>
 
 <template>
@@ -101,22 +114,36 @@ const addPlaceFromInput = () => {
       />
 
       <DialogHeader class="px-6 pt-5 pb-2">
-        <div class="flex items-center gap-3">
-          <div
-            class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-coral/20 to-coral/5"
-          >
-            <Sparkles :size="20" class="text-coral" />
-          </div>
-          <div>
-            <DialogTitle
-              class="text-xl font-bold text-foreground tracking-tight"
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div
+              class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-coral/20 to-coral/5"
             >
-              Plan a New Trip
-            </DialogTitle>
-            <p class="text-sm text-muted-foreground mt-0.5">
-              Create and organize your perfect itinerary
-            </p>
+              <Sparkles :size="20" class="text-coral" />
+            </div>
+            <div>
+              <DialogTitle
+                class="text-xl font-bold text-foreground tracking-tight"
+              >
+                Plan a New Trip
+              </DialogTitle>
+              <p class="text-sm text-muted-foreground mt-0.5">
+                Create and organize your perfect itinerary
+              </p>
+            </div>
           </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            class="flex items-center gap-2 border-2 hover:bg-gradient-to-r hover:from-purple-50 hover:to-coral-light transition-all"
+            @click="handleAIGenerate"
+          >
+            <Sparkles :size="16" class="text-purple-600" />
+            <span class="text-sm font-semibold bg-gradient-to-r from-purple-600 to-coral bg-clip-text text-transparent">
+              AI Generate
+            </span>
+          </Button>
         </div>
       </DialogHeader>
 
@@ -166,8 +193,7 @@ const addPlaceFromInput = () => {
             <Input
               id="start-date"
               v-model="startDate"
-              type="text"
-              placeholder="mm/dd/yyyy"
+              type="date"
               class="h-11 text-sm rounded-xl border-border/80 focus:border-coral focus:ring-coral/20"
             />
           </div>
@@ -179,11 +205,37 @@ const addPlaceFromInput = () => {
             <Input
               id="end-date"
               v-model="endDate"
-              type="text"
-              placeholder="mm/dd/yyyy"
+              type="date"
               class="h-11 text-sm rounded-xl border-border/80 focus:border-coral focus:ring-coral/20"
             />
           </div>
+        </div>
+
+        <!-- Public/Private Toggle -->
+        <div class="flex items-center justify-between p-4 rounded-xl border border-border/80 bg-muted/20">
+          <div class="flex-1">
+            <Label class="text-sm font-semibold text-foreground mb-1 block">
+              Trip Visibility
+            </Label>
+            <p class="text-xs text-muted-foreground">
+              {{ isPublic ? 'Anyone can view this trip' : 'Only you can view this trip' }}
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            :variant="isPublic ? 'default' : 'outline'"
+            :class="[
+              'flex items-center gap-2 min-w-[100px] transition-all',
+              isPublic 
+                ? 'bg-green-600 hover:bg-green-700 text-white' 
+                : 'border-2 hover:bg-muted/50'
+            ]"
+            @click="togglePublic"
+          >
+            <component :is="isPublic ? Globe : Lock" :size="16" />
+            {{ isPublic ? 'Public' : 'Private' }}
+          </Button>
         </div>
 
         <!-- Add Places Section -->

@@ -1,29 +1,31 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import { useRoute } from "vue-router";
+import { onMounted, ref, computed } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useTripDetails } from "@/composables";
 import Button from "@/components/ui/button/Button.vue";
 import Card from "@/components/ui/card/Card.vue";
 import Badge from "@/components/ui/badge/Badge.vue";
 import Separator from "@/components/ui/separator/Separator.vue";
-import Collapsible from "@/components/ui/collapsible/Collapsible.vue";
-import CollapsibleTrigger from "@/components/ui/collapsible/CollapsibleTrigger.vue";
-import CollapsibleContent from "@/components/ui/collapsible/CollapsibleContent.vue";
+import Input from "@/components/ui/input/Input.vue";
+import Label from "@/components/ui/label/Label.vue";
 import SavedPlacesModal from "@/components/trip/SavedPlacesModal.vue";
+import TripItinerary from "@/components/trip/TripItinerary.vue";
+import AddPlaceToTripModal from "@/components/trip/AddPlaceToTripModal.vue";
 import {
   MapPin,
   Calendar,
-  ChevronDown,
-  Star,
   ArrowLeft,
   Plus,
-  Trash2,
-  Clock,
   AlertCircle,
   Bookmark,
+  Save,
+  Globe,
+  Lock,
+  Sparkles,
 } from "lucide-vue-next";
 
 const route = useRoute();
+const router = useRouter();
 const tripId = route.params.tripId as string;
 
 const {
@@ -39,12 +41,18 @@ const {
   removeStop,
   navigateToPlace,
   navigateBack,
-  navigateToAddPlace,
-  formatArrivalTime,
   clearErrors,
 } = useTripDetails({ tripId, autoLoad: true });
 
 const showSavedPlacesModal = ref(false);
+const showAddPlaceModal = ref(false);
+const selectedDayForPlace = ref<number>(0);
+const isEditingDetails = ref(false);
+
+// Editable trip details
+const editableTripName = ref("");
+const editableStartDate = ref("");
+const editableEndDate = ref("");
 
 const handleAddFromSavedPlaces = () => {
   showSavedPlacesModal.value = true;
@@ -60,10 +68,49 @@ const handleRemoveStop = async (stopId: string) => {
     try {
       await removeStop(stopId);
     } catch (err) {
-      // Error is handled by composable
       console.error("Failed to remove stop:", err);
     }
   }
+};
+
+const handleAddPlaceToDay = (dayIndex: number) => {
+  selectedDayForPlace.value = dayIndex;
+  showAddPlaceModal.value = true;
+};
+
+const handleAddPlace = (place: any) => {
+  // TODO: Implement adding place to specific day
+  console.log("Add place to day", selectedDayForPlace.value, place);
+  showAddPlaceModal.value = false;
+};
+
+const startEditingDetails = () => {
+  if (trip.value) {
+    editableTripName.value = trip.value.trip_name;
+    editableStartDate.value = trip.value.start_date || "";
+    editableEndDate.value = trip.value.end_date || "";
+    isEditingDetails.value = true;
+  }
+};
+
+const saveEditedDetails = async () => {
+  // TODO: Implement save trip details
+  console.log("Save trip details");
+  isEditingDetails.value = false;
+};
+
+const cancelEditingDetails = () => {
+  isEditingDetails.value = false;
+};
+
+const togglePublic = () => {
+  // TODO: Implement toggle public/private
+  console.log("Toggle public/private");
+};
+
+const handleAIGenerate = () => {
+  // TODO: Implement AI generation
+  console.log("AI Generate trip coming soon!");
 };
 
 onMounted(async () => {
@@ -73,21 +120,78 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div>
-    <div class="flex w-full flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
-      <!-- Header Section -->
-      <section v-motion-slide-visible-once-top class="mx-auto w-full max-w-6xl">
-        <Button
-          variant="ghost"
-          class="mb-4 -ml-2 group hover:bg-coral-light transition-colors duration-200"
-          @click="navigateBack"
-        >
-          <ArrowLeft
-            :size="20"
-            class="mr-2 transition-transform group-hover:-translate-x-1"
-          />
-          Back to Trips
-        </Button>
+  <div class="min-h-screen bg-background">
+    <!-- Header Section -->
+    <div class="bg-card border-b border-border/50 sticky top-0 z-40">
+      <div class="max-w-full px-6 py-4">
+        <div class="flex items-center justify-between mb-4">
+          <Button
+            variant="ghost"
+            class="group hover:bg-coral-light transition-colors duration-200"
+            @click="navigateBack"
+          >
+            <ArrowLeft
+              :size="20"
+              class="mr-2 transition-transform group-hover:-translate-x-1"
+            />
+            Back to My Trips
+          </Button>
+
+          <div class="flex items-center gap-3">
+            <Button
+              size="sm"
+              variant="outline"
+              class="flex items-center gap-2 border-2 hover:bg-gradient-to-r hover:from-purple-50 hover:to-coral-light transition-all"
+              @click="handleAIGenerate"
+            >
+              <Sparkles :size="16" class="text-purple-600" />
+              <span class="text-sm font-semibold bg-gradient-to-r from-purple-600 to-coral bg-clip-text text-transparent">
+                AI Generate
+              </span>
+            </Button>
+            
+            <Button
+              size="sm"
+              variant="outline"
+              :class="[
+                'flex items-center gap-2 transition-all',
+                trip?.public
+                  ? 'bg-green-100 text-green-800 hover:bg-green-200 border-green-300'
+                  : 'border-2 hover:bg-muted/50'
+              ]"
+              @click="togglePublic"
+            >
+              <component :is="trip?.public ? Globe : Lock" :size="16" />
+              {{ trip?.public ? 'Public' : 'Private' }}
+            </Button>
+
+            <Button
+              v-if="!isEditingDetails"
+              size="sm"
+              class="bg-coral text-white hover:bg-coral-dark"
+              @click="startEditingDetails"
+            >
+              Edit Details
+            </Button>
+            <template v-else>
+              <Button
+                size="sm"
+                class="bg-coral text-white hover:bg-coral-dark flex items-center gap-2"
+                @click="saveEditedDetails"
+              >
+                <Save :size="16" />
+                Save Trip
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                @click="cancelEditingDetails"
+              >
+                Cancel
+              </Button>
+            </template>
+          </div>
+        </div>
 
         <!-- Loading State -->
         <div v-if="loading" class="flex items-center justify-center py-16">
@@ -131,238 +235,122 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Trip Header -->
-        <div v-else-if="trip && tripInfo" class="space-y-6">
-          <div class="flex items-start justify-between gap-6 flex-wrap">
-            <div class="flex-1 min-w-0 space-y-2">
-              <h1
-                class="text-4xl sm:text-5xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text break-words"
-              >
-                {{ tripInfo.name }}
-              </h1>
-              <p class="text-muted-foreground text-lg max-w-2xl">
-                Organize places into collections for your trips
-              </p>
-            </div>
-            <div class="flex gap-3 shrink-0">
-              <Button
-                variant="outline"
-                class="inline-flex items-center gap-2 px-5 py-3 border-2 border-coral text-coral font-semibold rounded-xl hover:bg-coral hover:text-white transition-all duration-200"
-                @click="handleAddFromSavedPlaces"
-              >
-                <Bookmark :size="20" />
-                From Saved
-              </Button>
-              <Button
-                class="inline-flex items-center gap-2 px-6 py-3 bg-coral text-white font-semibold rounded-xl shadow-lg shadow-coral/25 hover:bg-coral-dark hover:-translate-y-0.5 hover:shadow-xl hover:shadow-coral/30 active:translate-y-0 transition-all duration-200"
-                @click="navigateToAddPlace"
-              >
-                <Plus :size="20" />
-                Add Place
-              </Button>
-            </div>
+        <!-- Trip Details Form -->
+        <div v-else-if="trip" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <Label class="block text-sm mb-2 text-muted-foreground">Trip Name</Label>
+            <Input
+              v-if="isEditingDetails"
+              v-model="editableTripName"
+              placeholder="e.g., Summer in Da Nang"
+              class="h-11 rounded-xl"
+            />
+            <p v-else class="text-xl font-bold text-foreground">
+              {{ trip.trip_name }}
+            </p>
           </div>
 
-          <!-- Trip Info -->
-          <div class="flex flex-wrap gap-4 items-center">
-            <div
-              v-if="tripInfo.hasDateRange"
-              class="flex items-center gap-2.5 text-muted-foreground bg-muted/50 px-4 py-2 rounded-full"
-            >
-              <Calendar :size="18" class="text-coral shrink-0" />
-              <span class="font-medium">{{ tripInfo.dateRange }}</span>
-            </div>
-            <Badge
-              variant="secondary"
-              class="px-4 py-1.5 text-sm font-semibold bg-coral/10 text-coral border-0"
-            >
-              {{ tripInfo.placeCount }}
-            </Badge>
+          <div>
+            <Label class="block text-sm mb-2 text-muted-foreground">Start Date</Label>
+            <Input
+              v-if="isEditingDetails"
+              v-model="editableStartDate"
+              type="date"
+              class="h-11 rounded-xl"
+            />
+            <p v-else class="text-lg text-foreground">
+              {{ trip.start_date ? new Date(trip.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set' }}
+            </p>
           </div>
 
-          <!-- Remove Error Alert -->
-          <div
-            v-if="removeError"
-            class="rounded-xl border border-destructive/30 bg-destructive/5 p-4 animate-in fade-in slide-in-from-top-2 duration-300"
-          >
-            <div class="flex items-center gap-3">
-              <AlertCircle :size="20" class="text-destructive shrink-0" />
-              <p class="text-sm text-destructive flex-1">
-                {{ removeError }}
-              </p>
-              <Button
-                variant="ghost"
-                size="sm"
-                class="text-destructive hover:bg-destructive/10"
-                @click="clearErrors"
-              >
-                Dismiss
-              </Button>
-            </div>
+          <div>
+            <Label class="block text-sm mb-2 text-muted-foreground">End Date</Label>
+            <Input
+              v-if="isEditingDetails"
+              v-model="editableEndDate"
+              type="date"
+              class="h-11 rounded-xl"
+            />
+            <p v-else class="text-lg text-foreground">
+              {{ trip.end_date ? new Date(trip.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set' }}
+            </p>
           </div>
         </div>
-      </section>
 
-      <Separator class="mx-auto w-full max-w-6xl" />
-
-      <!-- Stops Section -->
-      <section
-        v-if="trip && !loading"
-        class="mx-auto w-full max-w-6xl space-y-4"
-      >
-        <!-- Empty State -->
+        <!-- Remove Error Alert -->
         <div
-          v-if="!hasStops"
-          v-motion-pop-visible-once
-          class="text-center py-16"
+          v-if="removeError"
+          class="rounded-xl border border-destructive/30 bg-destructive/5 p-4 animate-in fade-in slide-in-from-top-2 duration-300 mt-4"
         >
-          <div
-            class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-coral/20 to-coral/5 mb-6"
-          >
-            <MapPin :size="40" class="text-coral" />
-          </div>
-          <h3 class="text-2xl font-bold mb-3">No places yet</h3>
-          <p class="text-muted-foreground mb-8 max-w-md mx-auto">
-            Start adding places to your trip and make it unforgettable!
-          </p>
-          <Button
-            class="inline-flex items-center gap-2 px-8 py-3 bg-coral text-white font-semibold rounded-xl shadow-lg shadow-coral/25 hover:bg-coral-dark hover:-translate-y-0.5 hover:shadow-xl hover:shadow-coral/30 transition-all duration-200"
-            @click="navigateToAddPlace"
-          >
-            <Plus :size="20" />
-            Add Your First Place
-          </Button>
-        </div>
-
-        <!-- Stop Groups -->
-        <div v-else class="space-y-4">
-          <Collapsible
-            v-for="(group, index) in stopGroups"
-            :key="group.id"
-            :default-open="true"
-            v-motion
-            :initial="{ opacity: 0, y: 50 }"
-            :enter="{ opacity: 1, y: 0, transition: { delay: index * 100 } }"
-            class="rounded-2xl bg-card border border-border/80 overflow-hidden shadow-sm hover:shadow-md hover:border-border transition-all duration-200"
-          >
-            <CollapsibleTrigger
-              class="w-full px-5 py-4 bg-muted/30 hover:bg-muted/50 transition-colors duration-200 flex items-center justify-between cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          <div class="flex items-center gap-3">
+            <AlertCircle :size="20" class="text-destructive shrink-0" />
+            <p class="text-sm text-destructive flex-1">
+              {{ removeError }}
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              class="text-destructive hover:bg-destructive/10"
+              @click="clearErrors"
             >
-              <div class="flex items-center gap-4">
-                <span class="font-semibold text-foreground text-lg">
-                  {{ group.title }}
-                </span>
-                <Badge variant="outline" class="text-xs font-medium">
-                  {{ group.stops.length }} places
-                </Badge>
-              </div>
-              <ChevronDown
-                :size="20"
-                class="text-muted-foreground shrink-0 transition-transform duration-300 group-data-[state=open]:rotate-180"
-              />
-            </CollapsibleTrigger>
-
-            <CollapsibleContent class="px-3 pb-3 pt-2">
-              <div class="space-y-2">
-                <Card
-                  v-for="stop in group.stops"
-                  :key="stop.id"
-                  class="cursor-pointer p-0 overflow-hidden transition-all duration-200 hover:shadow-lg hover:translate-x-1 hover:border-coral/50 group/card"
-                  @click="stop?.place && navigateToPlace(stop.place.id)"
-                >
-                  <div class="flex items-center gap-4 p-3 sm:p-4">
-                    <!-- Place Image -->
-                    <img
-                      v-if="stop.place?.main_image_url != null"
-                      :src="stop.place.main_image_url"
-                      :alt="stop.place.name"
-                      class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover shrink-0 bg-muted ring-1 ring-border/50 group-hover/card:ring-coral/30 transition-all duration-200"
-                      loading="lazy"
-                    />
-
-                    <!-- Place Info -->
-                    <div class="flex-1 min-w-0 flex flex-col gap-1.5">
-                      <div
-                        class="flex items-start sm:items-center justify-between gap-2 flex-col sm:flex-row"
-                      >
-                        <h3
-                          class="font-semibold text-foreground text-base sm:text-lg truncate max-w-[200px] sm:max-w-none"
-                          :title="stop.place?.name"
-                        >
-                          {{ stop.place?.name }}
-                        </h3>
-                        <div
-                          class="flex items-center gap-1 text-sm font-medium shrink-0"
-                        >
-                          <Star :size="16" class="text-amber fill-amber" />
-                          <span>{{
-                            stop.place?.average_rating.toFixed(1)
-                          }}</span>
-                        </div>
-                      </div>
-
-                      <div
-                        class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm text-muted-foreground"
-                      >
-                        <div class="flex items-center gap-1.5">
-                          <MapPin :size="14" class="shrink-0 text-coral" />
-                          <span class="truncate">
-                            {{ stop.place?.city }},
-                            {{ stop.place?.country }}
-                          </span>
-                        </div>
-                        <span class="hidden sm:inline text-muted-foreground/50"
-                          >•</span
-                        >
-                        <span class="text-muted-foreground">
-                          {{ stop.place?.review_count }}
-                          reviews
-                        </span>
-                      </div>
-
-                      <!-- Stop Info -->
-                      <div
-                        v-if="stop.arrival_time || stop.notes"
-                        class="flex flex-col gap-1 pt-1 border-t border-border/50 mt-1"
-                      >
-                        <div
-                          v-if="stop.arrival_time"
-                          class="flex items-center gap-1.5 text-xs text-muted-foreground"
-                        >
-                          <Clock :size="12" class="shrink-0" />
-                          <span>{{
-                            formatArrivalTime(stop.arrival_time)
-                          }}</span>
-                        </div>
-                        <p
-                          v-if="stop.notes"
-                          class="text-xs text-muted-foreground line-clamp-2"
-                          :title="stop.notes"
-                        >
-                          {{ stop.notes }}
-                        </p>
-                      </div>
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="flex items-center shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        class="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                        :disabled="isRemoving"
-                        @click.stop="handleRemoveStop(stop.id)"
-                      >
-                        <Trash2 :size="18" />
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+              Dismiss
+            </Button>
+          </div>
         </div>
-      </section>
+      </div>
+    </div>
+
+    <!-- Main Content: Two-Column Layout -->
+    <div v-if="!loading && !error && trip" class="flex h-[calc(100vh-200px)]">
+      <!-- Left Panel: Timeline/Itinerary -->
+      <div class="w-[400px] bg-card border-r border-border/50">
+        <TripItinerary
+          :start-date="trip.start_date"
+          :end-date="trip.end_date"
+          :stops="trip.stops"
+          @add-place="handleAddPlaceToDay"
+          @remove-stop="handleRemoveStop"
+          @reorder-stop="(fromIdx, toIdx, dayIdx) => console.log('Reorder', fromIdx, toIdx, dayIdx)"
+        />
+      </div>
+
+      <!-- Right Panel: Map Placeholder -->
+      <div class="flex-1 relative bg-muted/20">
+        <div class="absolute inset-0 flex items-center justify-center">
+          <div class="relative w-full h-full">
+            <img
+              src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&h=800&fit=crop"
+              alt="Map"
+              class="w-full h-full object-cover"
+            />
+            <div class="absolute inset-0 bg-black/10 flex items-center justify-center">
+              <div class="bg-card/95 backdrop-blur-sm rounded-2xl p-8 text-center shadow-2xl border border-border/50 max-w-md">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-coral/10 mb-4">
+                  <MapPin :size="32" class="text-coral" />
+                </div>
+                <h3 class="text-2xl font-bold mb-2 text-foreground">Interactive Map View</h3>
+                <p class="text-muted-foreground mb-4">
+                  {{ hasStops 
+                    ? 'Map will display markers and routes for your trip'
+                    : 'Add places to see them on the map'
+                  }}
+                </p>
+                <div class="text-sm text-muted-foreground">
+                  {{ trip.stops?.length || 0 }} stop{{ (trip.stops?.length || 0) !== 1 ? 's' : '' }} in this trip
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating Add Place Button -->
+        <Button
+          class="absolute right-6 bottom-6 w-14 h-14 rounded-full shadow-2xl bg-coral text-white hover:bg-coral-dark hover:scale-110 transition-all duration-200"
+          @click="handleAddFromSavedPlaces"
+        >
+          <Plus :size="24" />
+        </Button>
+      </div>
     </div>
 
     <!-- Saved Places Modal -->
@@ -370,6 +358,13 @@ onMounted(async () => {
       v-model:open="showSavedPlacesModal"
       :trip-id="tripId"
       @success="handlePlaceAdded"
+    />
+
+    <!-- Add Place to Trip Modal -->
+    <AddPlaceToTripModal
+      v-model:open="showAddPlaceModal"
+      :day-number="selectedDayForPlace + 1"
+      @add-place="handleAddPlace"
     />
   </div>
 </template>

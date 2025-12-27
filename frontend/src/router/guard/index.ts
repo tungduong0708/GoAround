@@ -2,11 +2,20 @@ import { RouterView, type RouteRecordRaw } from "vue-router";
 
 const guardRoutes: RouteRecordRaw[] = [
   {
+    path: "/places/create",
+    name: "create-place",
+    component: () => import("@/pages/CreatePlacePage.vue"),
+    meta: {
+      title: "Create Place",
+      authRequired: true,
+    },
+  },
+  {
     path: "/profile",
-    name: "profile",
+    name: "profile-me",
     component: () => import("@/pages/UserProfile/UserProfilePage.vue"),
     meta: {
-      title: "Profile",
+      title: "My Profile",
       authRequired: true,
     },
   },
@@ -78,16 +87,6 @@ const guardRoutes: RouteRecordRaw[] = [
         component: () => import("@/pages/Forums/PostPage.vue"),
         meta: {
           title: "Post Details",
-          authRequired: false,
-        },
-      },
-      // Not Found
-      {
-        path: ":catchAll(.*)",
-        name: "not-found",
-        component: () => import("@/pages/NotFound.vue"),
-        meta: {
-          title: "Not Found",
           authRequired: false,
         },
       },

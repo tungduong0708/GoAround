@@ -73,8 +73,9 @@ async def create_list(
 @router.put(
     "/{list_id}",
     response_model=APIResponse[SavedListDetailSchema],
-    status_code=501,
+    status_code=status.HTTP_200_OK,
     responses={
+        403: {"model": HTTPError},
         404: {"model": HTTPError},
     },
 )
@@ -87,10 +88,15 @@ async def update_list(
     """
     Update a saved list (name and/or places).
     """
-    raise HTTPException(
-        status_code=501,
-        detail="Update list endpoint not yet implemented",
-    )
+    try:
+        updated_list = await crud.update_saved_list(
+            session, current_user.id, list_id, body
+        )
+        return APIResponse(data=updated_list)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Not allowed")
 
 
 @router.delete(

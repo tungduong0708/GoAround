@@ -79,38 +79,40 @@ class ListService {
     }
   }
 
-  // Commented out for now, since this will be handled by updateList
+  // Commented out - use updateList instead to manage places
   // async addPlaceToList(
   //   listId: string,
   //   input: IAddPlaceToListRequest
-  // ): Promise<{ message: string }> {
+  // ): Promise<IMessage> {
   //   try {
   //     const response = await authInstance.post(`/lists/${listId}/places`, input);
-  //     return (response.data as IApiResponse<{ message: string }>).data;
+  //     return (response.data as IApiResponse<IMessage>).data;
   //   } catch (error: any) {
   //     if (error.response && error.response.status === 404) {
+  //       console.error("Not Found: ", error.response.data.detail);
+  //     } else if (error.response && error.response.status === 403) {
   //       console.error("Access Forbidden: ", error.response.data.detail);
-  //       // Handle specific logic here (e.g., redirect to home, show a toast)
   //     }
-  //     throw error; // Re-throw so the calling component knows the request failed
+  //     throw error;
   //   }
   // }
 
   // async removePlaceFromList(
   //   listId: string,
   //   placeId: string
-  // ): Promise<{ message: string }> {
+  // ): Promise<IMessage> {
   //   try {
-  //   const response = await authInstance.delete(
-  //     `/lists/${listId}/places/${placeId}`
-  //   );
-  //   return (response.data as IApiResponse<IMessage>).data;
+  //     const response = await authInstance.delete(
+  //       `/lists/${listId}/places/${placeId}`
+  //     );
+  //     return (response.data as IApiResponse<IMessage>).data;
   //   } catch (error: any) {
   //     if (error.response && error.response.status === 404) {
+  //       console.error("Not Found: ", error.response.data.detail);
+  //     } else if (error.response && error.response.status === 403) {
   //       console.error("Access Forbidden: ", error.response.data.detail);
-  //       // Handle specific logic here (e.g., redirect to home, show a toast)
   //     }
-  //     throw error; // Re-throw so the calling component knows the request failed
+  //     throw error;
   //   }
   // }
 }

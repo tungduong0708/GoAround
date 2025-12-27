@@ -10,11 +10,13 @@ export const useListPlaceStore = defineStore("listPlace", {
   actions: {
     async fetchListPlaces(query?: IPagingQuery) {
       try {
-        const response = await ListService.getLists(query || { page: 1, limit: 10 });
-        console.log(response.data);
+        const response = await ListService.getLists(query || { page: 1, limit: 50 });
+        console.log("Fetched lists:", response);
+        // response is already { data: [...], meta: {...} }
         this.listLists = response.data;
       } catch (error) {
-        console.error(error);
+        console.error("Error fetching lists:", error);
+        throw error;
       }
     },
     async fetchListCurrentSelection(id: string) {

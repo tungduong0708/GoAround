@@ -51,10 +51,13 @@ const handleOpenChange = async (open: boolean) => {
 
 const loadLists = async () => {
   loading.value = true;
+  errorMessage.value = null;
   try {
     await listPlaceStore.fetchListPlaces({ page: 1, limit: 50 });
+    console.log("Lists loaded:", lists.value);
   } catch (error: any) {
-    errorMessage.value = error?.message || "Failed to load lists";
+    console.error("Failed to load lists:", error);
+    errorMessage.value = error?.response?.data?.detail || error?.message || "Failed to load lists";
   } finally {
     loading.value = false;
   }
@@ -68,7 +71,7 @@ const handleSelectList = async (listId: string) => {
   successMessage.value = null;
 
   try {
-    // Get current list details
+    // Get current list to check if place already exists
     const listDetails = await ListService.getListById(listId);
     const currentPlaceIds = listDetails.data.items?.map(item => item.place.id) || [];
     
@@ -79,7 +82,7 @@ const handleSelectList = async (listId: string) => {
       return;
     }
 
-    // Add the new place
+    // Add the new place to the list
     await ListService.updateList(listId, {
       place_ids: [...currentPlaceIds, props.place.id],
     });
@@ -95,7 +98,8 @@ const handleSelectList = async (listId: string) => {
       emit("update:open", false);
     }, 1500);
   } catch (error: any) {
-    errorMessage.value = error?.message || "Failed to add place to list";
+    console.error("Failed to add place:", error);
+    errorMessage.value = error?.response?.data?.detail || error?.message || "Failed to add place to list";
   } finally {
     adding.value = false;
   }
@@ -128,7 +132,8 @@ const handleCreateNewList = async () => {
       emit("update:open", false);
     }, 1500);
   } catch (error: any) {
-    errorMessage.value = error?.message || "Failed to create list";
+    console.error("Failed to create list:", error);
+    errorMessage.value = error?.response?.data?.detail || error?.message || "Failed to create list";
   } finally {
     adding.value = false;
   }

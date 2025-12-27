@@ -56,6 +56,15 @@ const guardRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: "/saved-places",
+    name: "saved-places",
+    component: () => import("@/pages/SavedPlacesPage.vue"),
+    meta: {
+      title: "Saved Places",
+      authRequired: true,
+    },
+  },
+  {
     path: "/forums",
     component: RouterView,
     meta: {

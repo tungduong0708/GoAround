@@ -14,6 +14,7 @@ from app.schemas import (
     SavedListItemSchema,
     SavedListItemWithPlace,
     SavedListSchema,
+    SavedListUpdate,
 )
 from app.service.place_service import _enrich_place_public
 
@@ -170,6 +171,68 @@ async def remove_place_from_list(
     except Exception as e:
         await session.rollback()
         raise ValueError(f"Failed to remove place from list: {str(e)}")
+
+
+async def update_saved_list(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    list_id: uuid.UUID,
+    data: SavedListUpdate,
+) -> SavedListDetailSchema:
+    """Update a saved list (name and/or places)."""
+    # Use with_polymorphic to eagerly load subclass attributes
+    poly_place = with_polymorphic(Place, [Hotel, Restaurant, Cafe, Landmark])
+
+    stmt = (
+        select(SavedList)
+        .options(
+            selectinload(SavedList.items)
+            .selectinload(SavedListItem.place.of_type(poly_place))
+            .selectinload(poly_place.tags)
+        )
+        .where(SavedList.id == list_id)
+    )
+    res = await session.execute(stmt)
+    saved_list = res.scalars().first()
+    
+    if not saved_list:
+        raise ValueError("Saved list not found")
+    if saved_list.user_id != user_id:
+        raise PermissionError("Not authorized to modify this list")
+
+    try:
+        # Update name if provided
+        if data.name is not None:
+            saved_list.name = data.name
+
+        # Update places if provided
+        if data.place_ids is not None:
+            # Remove all existing items
+            for item in saved_list.items:
+                await session.delete(item)
+            await session.flush()
+
+            # Add new items
+            for place_id in data.place_ids:
+                # Verify place exists
+                place = await session.get(Place, place_id)
+                if not place:
+                    raise ValueError(f"Place {place_id} not found")
+                
+                new_item = SavedListItem(list_id=list_id, place_id=place_id)
+                session.add(new_item)
+
+        await session.commit()
+        await session.refresh(saved_list)
+
+        # Return the updated list with items
+        return await get_saved_list(session, user_id, list_id)
+    except ValueError:
+        await session.rollback()
+        raise
+    except Exception as e:
+        await session.rollback()
+        raise ValueError(f"Failed to update saved list: {str(e)}")
 
 
 async def delete_saved_list(

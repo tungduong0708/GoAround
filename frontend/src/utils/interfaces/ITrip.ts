@@ -61,3 +61,9 @@ export interface ITripStopSchema {
   arrival_time: string;
   notes: string;
 }
+
+export interface ITripGenerateRequest {
+  destination: string;
+  start_date: string;
+  end_date: string;
+}

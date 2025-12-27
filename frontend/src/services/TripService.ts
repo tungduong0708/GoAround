@@ -13,6 +13,7 @@ import type {
   ITripCreate,
   IPagingQuery,
   IMessage,
+  ITripGenerateRequest,
 } from "@/utils/interfaces";
 
 class TripService {
@@ -92,13 +93,17 @@ class TripService {
     }
   }
 
-  async generateTrip(): Promise<IMessage> {
+  async generateTrip(input: ITripGenerateRequest): Promise<ITripSchema> {
     try {
-      const response = await authInstance.post("/trips/generate");
-      return (response.data as IApiResponse<IMessage>).data;
+      const response = await authInstance.post("/trips/generate", input);
+      return (response.data as IApiResponse<ITripSchema>).data;
     } catch (error: any) {
-      console.error("Error generating trip: ", error);
-      throw error; // Re-throw so the calling component knows the request failed
+      if (error.response && error.response.status === 400) {
+        console.error("Bad Request: ", error.response.data.detail);
+      } else if (error.response && error.response.status === 500) {
+        console.error("Server Error: ", error.response.data.detail);
+      }
+      throw error;
     }
   }
   // Commented out trip stop APIs since they are handled by updateTrip now.

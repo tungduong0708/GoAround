@@ -57,6 +57,24 @@ const commonRoutes: RouteRecordRaw[] = [
       authRequired: false,
     },
   },
+  {
+    path: "/profile",
+    name: "profile-me",
+    component: () => import("@/pages/UserProfile/UserProfilePage.vue"),
+    meta: {
+      title: "My Profile",
+      authRequired: true,
+    },
+  },
+  {
+    path: "/users/:id",
+    name: "user-profile",
+    component: () => import("@/pages/UserProfile/UserProfilePage.vue"),
+    meta: {
+      title: "User Profile",
+      authRequired: false,
+    },
+  },
 ];
 
 export default commonRoutes;

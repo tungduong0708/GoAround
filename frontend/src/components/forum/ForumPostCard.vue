@@ -44,23 +44,31 @@ const formatDate = (dateStr: string) => {
         <div class="flex gap-4">
           <!-- Avatar -->
           <div class="hidden sm:block">
-            <Avatar class="size-12 border-2 border-background shadow-sm">
-              <AvatarImage
-                :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author.username}`"
-              />
-              <AvatarFallback>UN</AvatarFallback>
-            </Avatar>
-          </div>
-
-          <div class="flex-1 space-y-4">
-            <!-- Header -->
-            <div class="flex items-center gap-2 text-sm">
-              <Avatar class="sm:hidden size-8">
+            <RouterLink :to="`/users/${post.author.id}`" @click.stop>
+              <Avatar
+                class="size-12 border-2 border-background shadow-sm hover:opacity-80 transition-opacity"
+              >
                 <AvatarImage
                   :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author.username}`"
                 />
                 <AvatarFallback>UN</AvatarFallback>
               </Avatar>
+            </RouterLink>
+          </div>
+
+          <div class="flex-1 space-y-4">
+            <!-- Header -->
+            <div class="flex items-center gap-2 text-sm">
+              <RouterLink :to="`/users/${post.author.id}`" @click.stop>
+                <Avatar
+                  class="sm:hidden size-8 hover:opacity-80 transition-opacity"
+                >
+                  <AvatarImage
+                    :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author.username}`"
+                  />
+                  <AvatarFallback>UN</AvatarFallback>
+                </Avatar>
+              </RouterLink>
               <span class="font-bold text-foreground">{{
                 post.author.username
               }}</span>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { IForumReply } from "@/utils/interfaces";
+import type { IForumCommentSchema } from "@/utils/interfaces";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,15 +10,17 @@ import {
 } from "lucide-vue-next";
 
 const props = defineProps<{
-  reply: IForumReply;
+  reply: IForumCommentSchema;
   formatDate: (date: string) => string;
   formatNumber: (num: number) => string;
   isAuthenticated: boolean;
+  isLiked?: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: "report", replyId: string): void;
   (e: "reply", replyId: string): void;
+  (e: "like", replyId: string): void;
 }>();
 
 const getInitials = (username: string) => {
@@ -40,13 +42,13 @@ const getInitials = (username: string) => {
       <Avatar class="size-10 border-2 border-background shadow-sm">
         <AvatarImage
           :src="
-            reply.user.avatarUrl ||
+            reply.user.avatar_url ||
             `https://api.dicebear.com/7.x/avataaars/svg?seed=${reply.user.username}`
           "
           :alt="reply.user.username"
         />
         <AvatarFallback class="bg-primary/10 text-primary text-xs font-medium">
-          {{ getInitials(reply.user.username) }}
+          {{ getInitials(reply.user.username || 'User') }}
         </AvatarFallback>
       </Avatar>
     </div>
@@ -59,7 +61,7 @@ const getInitials = (username: string) => {
           {{ reply.user.username }}
         </span>
         <BadgeCheckIcon
-          v-if="reply.likeCount && reply.likeCount > 50"
+          v-if="reply.like_count && reply.like_count > 50"
           class="size-4 text-blue-500 fill-blue-500/10"
         />
         <span class="text-xs text-muted-foreground">
@@ -67,7 +69,7 @@ const getInitials = (username: string) => {
         </span>
         <span class="text-muted-foreground text-xs">•</span>
         <span class="text-xs text-muted-foreground">
-          {{ formatDate(reply.createdAt) }}
+          {{ formatDate(reply.created_at) }}
         </span>
       </div>
 
@@ -82,11 +84,17 @@ const getInitials = (username: string) => {
         <Button
           variant="ghost"
           size="sm"
-          class="h-auto px-3 py-1.5 rounded-full text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 transition-colors"
+          :class="[
+            'h-auto px-3 py-1.5 rounded-full transition-colors',
+            isLiked
+              ? 'text-orange-500 hover:text-orange-600 bg-orange-500/10 hover:bg-orange-500/20'
+              : 'text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10'
+          ]"
+          @click="emit('like', reply.id)"
         >
-          <HeartIcon class="size-4 mr-1.5" />
+          <HeartIcon :class="['size-4 mr-1.5', isLiked && 'fill-current']" />
           <span class="text-xs font-medium">
-            {{ formatNumber(reply.likeCount || 0) }}
+            {{ formatNumber(reply.like_count || 0) }}
           </span>
         </Button>
 

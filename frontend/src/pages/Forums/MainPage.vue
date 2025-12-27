@@ -5,6 +5,7 @@ import ForumFilterBar from "@/components/forum/ForumFilterBar.vue";
 import ForumPostCard from "@/components/forum/ForumPostCard.vue";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { onBeforeRouteLeave } from "vue-router";
 
 const {
   searchQuery,
@@ -26,7 +27,16 @@ const {
   isAuthenticated,
   likedPosts,
   toggleLike,
+  flushPendingLikes,
 } = useForumMain();
+
+// Ensure likes are saved before navigating away
+onBeforeRouteLeave(async () => {
+  if (flushPendingLikes) {
+    await flushPendingLikes();
+  }
+  return true;
+});
 </script>
 
 <template>

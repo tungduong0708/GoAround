@@ -558,6 +558,7 @@ class ForumPostListItem(BaseModel):
     like_count: int = 0
     view_count: int = 0
     created_at: datetime
+    is_liked: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -576,6 +577,8 @@ class ForumCommentSchema(BaseModel):
     user: ForumCommentUserSchema
     created_at: datetime
     parent_id: uuid.UUID | None = None
+    like_count: int = 0
+    is_liked: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -592,6 +595,7 @@ class ForumPostDetail(BaseModel):
     like_count: int = 0
     view_count: int = 0
     created_at: datetime
+    is_liked: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

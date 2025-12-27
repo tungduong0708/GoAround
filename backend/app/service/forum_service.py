@@ -11,8 +11,10 @@ from app.models import (
     ForumPost,
     ModerationTarget,
     PostImage,
+    PostLike,
     PostReply,
     Profile,
+    ReplyLike,
     Tag,
     post_tags,
 )
@@ -171,6 +173,11 @@ async def list_forum_posts(
             post.content[:200] + "..." if len(post.content) > 200 else post.content
         )
 
+        # Check if current user liked this post
+        is_liked = False
+        if current_user_id:
+            is_liked = await check_user_liked_post(session, post.id, current_user_id)
+
         posts.append(
             ForumPostListItem(
                 id=post.id,
@@ -186,6 +193,7 @@ async def list_forum_posts(
                 like_count=post.like_count,
                 view_count=post.view_count,
                 created_at=post.created_at,
+                is_liked=is_liked,
             )
         )
 
@@ -193,7 +201,7 @@ async def list_forum_posts(
 
 
 async def get_forum_post(
-    session: AsyncSession, post_id: uuid.UUID
+    session: AsyncSession, post_id: uuid.UUID, current_user_id: uuid.UUID | None = None
 ) -> ForumPostDetail | None:
     """
     Get a forum post with all its details including replies.
@@ -217,6 +225,38 @@ async def get_forum_post(
     post.view_count += 1
     await session.commit()
 
+    # Check if current user liked this post
+    is_liked = False
+    if current_user_id:
+        is_liked = await check_user_liked_post(session, post.id, current_user_id)
+
+    # Check which replies are liked by current user
+    replies_data = []
+    for comment in post.replies:
+        if not comment.visible:
+            continue
+
+        is_reply_liked = False
+        if current_user_id:
+            is_reply_liked = await check_user_liked_reply(
+                session, comment.id, current_user_id
+            )
+
+        # Calculate like count for reply
+        reply_like_count = await get_reply_like_count(session, comment.id)
+
+        replies_data.append(
+            ForumCommentSchema(
+                id=comment.id,
+                content=comment.content,
+                user=_sanitize_comment_user(comment.user),
+                created_at=comment.created_at,
+                parent_id=comment.parent_id,
+                like_count=reply_like_count,
+                is_liked=is_reply_liked,
+            )
+        )
+
     return ForumPostDetail(
         id=post.id,
         title=post.title,
@@ -227,21 +267,12 @@ async def get_forum_post(
             for img in post.images
         ],
         tags=[ForumTagSchema(id=tag.id, name=tag.name) for tag in post.tags],
-        replies=[
-            ForumCommentSchema(
-                id=comment.id,
-                content=comment.content,
-                user=_sanitize_comment_user(comment.user),
-                created_at=comment.created_at,
-                parent_id=comment.parent_id,
-            )
-            for comment in post.replies
-            if comment.visible
-        ],
+        replies=replies_data,
         reply_count=post.reply_count,
         like_count=post.like_count,
         view_count=post.view_count,
         created_at=post.created_at,
+        is_liked=is_liked,
     )
 
 
@@ -432,7 +463,7 @@ async def update_forum_reply(
     # Get the reply with user info
     result = await session.execute(
         select(PostReply)
-        .options(selectinload(PostReply.profile))
+        .options(selectinload(PostReply.user))
         .where(PostReply.id == reply_id, PostReply.post_id == post_id)
     )
     reply = result.scalar_one_or_none()
@@ -451,9 +482,9 @@ async def update_forum_reply(
     return ForumCommentSchema(
         id=reply.id,
         content=reply.content,
-        user=_sanitize_comment_user(reply.profile),
+        user=_sanitize_comment_user(reply.user),
         created_at=reply.created_at,
-        parent_id=reply.parent_reply_id,
+        parent_id=reply.parent_id,
     )
 
 
@@ -581,31 +612,123 @@ async def report_forum_reply(
     await session.commit()
 
 
+async def get_post_like_count(session: AsyncSession, post_id: uuid.UUID) -> int:
+    """Get the total number of likes for a post."""
+    count_res = await session.execute(
+        select(func.count(PostLike.id)).where(PostLike.post_id == post_id)
+    )
+    return count_res.scalar() or 0
+
+
+async def get_reply_like_count(session: AsyncSession, reply_id: uuid.UUID) -> int:
+    """Get the total number of likes for a reply."""
+    count_res = await session.execute(
+        select(func.count(ReplyLike.id)).where(ReplyLike.reply_id == reply_id)
+    )
+    return count_res.scalar() or 0
+
+
 async def toggle_forum_post_like(
     session: AsyncSession,
     post_id: uuid.UUID,
-    action: str,
-) -> int:
+    user_id: uuid.UUID,
+) -> dict[str, any]:
     """
     Toggle like on a forum post.
-    action: 'like' or 'unlike'
-    Returns the updated like count.
+    Returns dict with like_count and is_liked status.
     """
-    # Get the post
+    # Check if post exists
     res = await session.execute(select(ForumPost).where(ForumPost.id == post_id))
     post = res.scalars().first()
     if not post:
         raise ValueError("Post not found")
 
-    # Update like count based on action
-    if action == "like":
-        post.like_count += 1
-    elif action == "unlike":
-        post.like_count = max(0, post.like_count - 1)  # Prevent negative counts
+    # Check if user already liked this post
+    like_res = await session.execute(
+        select(PostLike).where(PostLike.post_id == post_id, PostLike.user_id == user_id)
+    )
+    existing_like = like_res.scalars().first()
+
+    if existing_like:
+        # Unlike: remove the like
+        await session.delete(existing_like)
+        post.like_count = max(0, post.like_count - 1)
+        is_liked = False
     else:
-        raise ValueError("Invalid action. Must be 'like' or 'unlike'")
+        # Like: create new like
+        new_like = PostLike(post_id=post_id, user_id=user_id)
+        session.add(new_like)
+        post.like_count += 1
+        is_liked = True
 
     await session.commit()
     await session.refresh(post)
 
-    return post.like_count
+    return {"like_count": post.like_count, "is_liked": is_liked}
+
+
+async def check_user_liked_post(
+    session: AsyncSession,
+    post_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> bool:
+    """Check if user has liked a specific post."""
+    res = await session.execute(
+        select(PostLike).where(PostLike.post_id == post_id, PostLike.user_id == user_id)
+    )
+    return res.scalars().first() is not None
+
+
+async def toggle_reply_like(
+    session: AsyncSession,
+    reply_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> dict[str, any]:
+    """
+    Toggle like on a forum reply.
+    Returns dict with like_count and is_liked status.
+    """
+    # Check if reply exists
+    res = await session.execute(select(PostReply).where(PostReply.id == reply_id))
+    reply = res.scalars().first()
+    if not reply:
+        raise ValueError("Reply not found")
+
+    # Check if user already liked this reply
+    like_res = await session.execute(
+        select(ReplyLike).where(
+            ReplyLike.reply_id == reply_id, ReplyLike.user_id == user_id
+        )
+    )
+    existing_like = like_res.scalars().first()
+
+    if existing_like:
+        # Unlike: remove the like
+        await session.delete(existing_like)
+        is_liked = False
+    else:
+        # Like: create new like
+        new_like = ReplyLike(reply_id=reply_id, user_id=user_id)
+        session.add(new_like)
+        is_liked = True
+
+    await session.commit()
+
+    # Count total likes for this reply
+    like_count = await get_reply_like_count(session, reply_id)
+
+    return {"like_count": like_count, "is_liked": is_liked}
+
+
+async def check_user_liked_reply(
+    session: AsyncSession,
+    reply_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> bool:
+    """Check if user has liked a specific reply."""
+    res = await session.execute(
+        select(ReplyLike).where(
+            ReplyLike.reply_id == reply_id, ReplyLike.user_id == user_id
+        )
+    )
+    return res.scalars().first() is not None

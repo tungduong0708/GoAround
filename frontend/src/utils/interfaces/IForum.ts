@@ -18,6 +18,8 @@ export interface IForumCommentSchema {
   user: IForumCommentUserSchema;
   created_at: string;
   parent_id?: string | null;
+  like_count?: number;
+  is_liked?: boolean;
 }
 
 export interface IForumReplyCreate {
@@ -54,6 +56,7 @@ export interface IForumPostListItem {
   like_count?: number;
   view_count?: number;
   created_at: string;
+  is_liked?: boolean;
 }
 
 export interface IForumPostDetail {
@@ -68,6 +71,7 @@ export interface IForumPostDetail {
   like_count?: number;
   view_count?: number;
   created_at: string;
+  is_liked?: boolean;
 }
 
 export interface IForumPostCreate {

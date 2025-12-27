@@ -19,6 +19,7 @@ import {
   MessageCircleIcon,
   Loader2Icon,
 } from "lucide-vue-next";
+import { onBeforeRouteLeave } from "vue-router";
 
 const router = useRouter();
 const route = useRoute();
@@ -65,6 +66,9 @@ const {
   formatDate,
   formatNumber,
   toggleLike,
+  toggleReplyLike,
+  likedReplies,
+  flushPendingLikes,
 } = useForumPost();
 
 // Navigate to edit page
@@ -72,6 +76,13 @@ const navigateToEdit = () => {
   const postId = route.params.postId as string;
   router.push(`/forums/${postId}/edit`);
 };
+// Ensure likes are saved before navigating away
+onBeforeRouteLeave(async () => {
+  if (flushPendingLikes) {
+    await flushPendingLikes();
+  }
+  return true;
+});
 </script>
 
 <template>
@@ -302,8 +313,10 @@ const navigateToEdit = () => {
                   :format-date="formatDate"
                   :format-number="formatNumber"
                   :is-authenticated="isAuthenticated"
+                  :is-liked="likedReplies.has(reply.id)"
                   @report="openReportDialog('comment', $event)"
                   @reply="openReplyEditor"
+                  @like="toggleReplyLike"
                 />
 
                 <!-- Nested replies -->
@@ -322,8 +335,10 @@ const navigateToEdit = () => {
                     :format-date="formatDate"
                     :format-number="formatNumber"
                     :is-authenticated="isAuthenticated"
+                    :is-liked="likedReplies.has(nestedReply.id)"
                     @report="openReportDialog('comment', $event)"
                     @reply="openReplyEditor"
+                    @like="toggleReplyLike"
                   />
                 </div>
               </template>

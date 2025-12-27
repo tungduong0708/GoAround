@@ -17,7 +17,7 @@ export function useForumMain() {
   
   // Like functionality
   const likedPosts = ref<Set<string>>(new Set());
-  const pendingLikes = ref<Map<string, { action: 'like' | 'unlike'; timeout: ReturnType<typeof setTimeout> }>>(new Map());
+  const pendingLikes = ref<Map<string, { timeout: ReturnType<typeof setTimeout> }>>(new Map());
 
   const sortOptions = ["newest", "popular", "oldest"];
   const tagOptions = [
@@ -32,14 +32,24 @@ export function useForumMain() {
   ];
   const timeOptions = ["All Time", "Last 7 Days", "Last 30 Days"];
 
-  const fetchPosts = () => {
-    store.fetchPosts({
+  const fetchPosts = async () => {
+    await store.fetchPosts({
       q: searchQuery.value,
       sort: activeSort.value,
       page: currentPage.value,
       limit: 5, // 5 per page for easier testing of pagination
       tags: activeTags.value,
     });
+    
+    // Initialize likedPosts from the is_liked field in posts
+    if (isAuthenticated.value) {
+      likedPosts.value.clear();
+      posts.value.forEach(post => {
+        if ((post as any).is_liked) {
+          likedPosts.value.add(post.id);
+        }
+      });
+    }
   };
 
   // Initial fetch
@@ -101,15 +111,24 @@ export function useForumMain() {
   };
 
   // Like functionality
-  const sendLikeRequest = async (postId: string, action: 'like' | 'unlike') => {
+  const sendLikeRequest = async (postId: string) => {
     try {
-      if (action === 'like') {
-        await ForumService.likePost(postId);
+      const result = await ForumService.likePost(postId);
+      
+      // Update the post's like count and liked status
+      const post = posts.value.find(p => p.id === postId);
+      if (post) {
+        post.like_count = result.like_count;
+      }
+      
+      // Update liked posts set
+      if (result.is_liked) {
+        likedPosts.value.add(postId);
       } else {
-        await ForumService.unlikePost(postId);
+        likedPosts.value.delete(postId);
       }
     } catch (error) {
-      console.error(`Error ${action} post:`, error);
+      console.error(`Error toggling like for post:`, error);
     }
   };
 
@@ -121,7 +140,6 @@ export function useForumMain() {
     if (!post) return;
 
     const isCurrentlyLiked = likedPosts.value.has(postId);
-    const action = isCurrentlyLiked ? 'unlike' : 'like';
 
     // Update UI optimistically
     if (isCurrentlyLiked) {
@@ -140,20 +158,22 @@ export function useForumMain() {
 
     // Schedule API call after 5 seconds
     const timeout = setTimeout(() => {
-      sendLikeRequest(postId, action);
+      sendLikeRequest(postId);
       pendingLikes.value.delete(postId);
     }, 5000);
 
-    pendingLikes.value.set(postId, { action, timeout });
+    pendingLikes.value.set(postId, { timeout });
   };
 
   // Send all pending likes before unmounting
-  const flushPendingLikes = () => {
-    pendingLikes.value.forEach(({ action, timeout }, postId) => {
+  const flushPendingLikes = async () => {
+    const promises: Promise<void>[] = [];
+    pendingLikes.value.forEach(({ timeout }, postId) => {
       clearTimeout(timeout);
-      sendLikeRequest(postId, action);
+      promises.push(sendLikeRequest(postId));
     });
     pendingLikes.value.clear();
+    await Promise.all(promises);
   };
 
   onUnmounted(() => {
@@ -195,5 +215,6 @@ export function useForumMain() {
     nextPage,
     previousPage,
     toggleLike,
+    flushPendingLikes,
   };
 }

@@ -83,6 +83,15 @@ class AxiosService {
       timeout: 10000,
     });
 
+    // Add request interceptor to include auth token if available (for optional auth endpoints)
+    AxiosService.commonInstance.interceptors.request.use(async (request) => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.access_token) {
+        request.headers.Authorization = `Bearer ${data.session.access_token}`;
+      }
+      return request;
+    });
+
     // Add response interceptor to common instance as well for consistent error handling
     AxiosService.commonInstance.interceptors.response.use(
       (response) => response,

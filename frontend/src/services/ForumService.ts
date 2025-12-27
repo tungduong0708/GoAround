@@ -155,20 +155,40 @@ class ForumService {
     }
   }
 
-  async likePost(id: string): Promise<number> {
+  async likePost(id: string): Promise<{ like_count: number; is_liked: boolean }> {
     try {
       const response = await authInstance.post(`/forum/posts/${id}/like`);
-      return (response.data as IApiResponse<{ like_count: number }>).data.like_count;
+      return (response.data as IApiResponse<{ like_count: number; is_liked: boolean }>).data;
     } catch (error: any) {
       console.error(error);
       throw error;
     }
   }
 
-  async unlikePost(id: string): Promise<number> {
+  async checkPostLikeStatus(id: string): Promise<{ is_liked: boolean }> {
     try {
-      const response = await authInstance.delete(`/forum/posts/${id}/like`);
-      return (response.data as IApiResponse<{ like_count: number }>).data.like_count;
+      const response = await authInstance.get(`/forum/posts/${id}/like/check`);
+      return (response.data as IApiResponse<{ is_liked: boolean }>).data;
+    } catch (error: any) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async likeReply(postId: string, replyId: string): Promise<{ like_count: number; is_liked: boolean }> {
+    try {
+      const response = await authInstance.post(`/forum/posts/${postId}/replies/${replyId}/like`);
+      return (response.data as IApiResponse<{ like_count: number; is_liked: boolean }>).data;
+    } catch (error: any) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async checkReplyLikeStatus(postId: string, replyId: string): Promise<{ is_liked: boolean }> {
+    try {
+      const response = await authInstance.get(`/forum/posts/${postId}/replies/${replyId}/like/check`);
+      return (response.data as IApiResponse<{ is_liked: boolean }>).data;
     } catch (error: any) {
       console.error(error);
       throw error;

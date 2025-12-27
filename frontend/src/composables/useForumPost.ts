@@ -30,7 +30,7 @@ export function useForumPost() {
   const isLiked = ref(false);
   const isLiking = ref(false);
   let likeTimeout: ReturnType<typeof setTimeout> | null = null;
-  let pendingLikeAction: { action: 'like' | 'unlike'; postId: string } | null = null;
+  let pendingLikeAction: { postId: string; originalCount: number; originalLiked: boolean } | null = null;
 
   // Computed
   const postId = computed(() => route.params.postId as string);
@@ -123,6 +123,10 @@ export function useForumPost() {
     const success = await postStore.fetchPost(postId.value);
     if (success) {
       currentReplyPage.value = 1;
+      // Sync isLiked from the API response
+      if (post.value) {
+        isLiked.value = post.value.is_liked || false;
+      }
       // Replies are already populated by fetchPost
     }
   };
@@ -258,22 +262,29 @@ export function useForumPost() {
     return num.toString();
   };
 
-  // Like/Unlike actions with optimistic UI and delayed API call
+  // Like/Unlike actions with server-side state
   const sendPendingLikeRequest = async () => {
     if (!pendingLikeAction) return;
 
-    const { action, postId } = pendingLikeAction;
+    const { postId } = pendingLikeAction;
     try {
-      console.log(`Sending ${action} request for post ${postId}`);
-      if (action === 'like') {
-        await ForumService.likePost(postId);
-      } else {
-        await ForumService.unlikePost(postId);
+      console.log(`Sending like toggle request for post ${postId}`);
+      const result = await ForumService.likePost(postId);
+      
+      // Update with server response
+      if (post.value) {
+        post.value.like_count = result.like_count;
       }
-      console.log(`${action} request completed successfully`);
+      isLiked.value = result.is_liked;
+      
+      console.log(`Like toggle completed: count=${result.like_count}, liked=${result.is_liked}`);
     } catch (error) {
-      console.error(`Error sending ${action} request:`, error);
-      // Optionally: revert the UI state on error
+      console.error(`Error toggling like:`, error);
+      // Revert optimistic update on error
+      if (post.value && pendingLikeAction.originalCount !== undefined) {
+        post.value.like_count = pendingLikeAction.originalCount;
+        isLiked.value = pendingLikeAction.originalLiked;
+      }
     } finally {
       pendingLikeAction = null;
     }
@@ -287,8 +298,9 @@ export function useForumPost() {
       clearTimeout(likeTimeout);
     }
 
-    // Determine the action
-    const action = isLiked.value ? 'unlike' : 'like';
+    // Store original values for potential rollback
+    const originalCount = post.value.like_count || 0;
+    const originalLiked = isLiked.value;
     
     // Update UI immediately (optimistic update)
     isLiked.value = !isLiked.value;
@@ -300,13 +312,119 @@ export function useForumPost() {
     }
 
     // Store the pending action
-    pendingLikeAction = { action, postId: postId.value };
+    pendingLikeAction = { 
+      postId: postId.value,
+      originalCount,
+      originalLiked
+    };
 
     // Schedule API call after 5 seconds
     likeTimeout = setTimeout(() => {
       sendPendingLikeRequest();
     }, 5000);
   };
+
+  // Reply like functionality
+  const likedReplies = ref<Set<string>>(new Set());
+  const pendingReplyLikes = ref<Map<string, { timeout: ReturnType<typeof setTimeout>; originalCount: number; originalLiked: boolean }>>(new Map());
+
+  const sendReplyLikeRequest = async (replyId: string) => {
+    const pending = pendingReplyLikes.value.get(replyId);
+    if (!pending || !postId.value) return;
+
+    try {
+      const result = await ForumService.likeReply(postId.value, replyId);
+      
+      // Update the reply's like count and liked status
+      const reply = replies.value.find(r => r.id === replyId);
+      if (reply) {
+        reply.like_count = result.like_count;
+        reply.is_liked = result.is_liked;
+      }
+      
+      // Update liked replies set
+      if (result.is_liked) {
+        likedReplies.value.add(replyId);
+      } else {
+        likedReplies.value.delete(replyId);
+      }
+    } catch (error) {
+      console.error('Error toggling reply like:', error);
+      // Revert optimistic update on error
+      const reply = replies.value.find(r => r.id === replyId);
+      if (reply && pending) {
+        reply.like_count = pending.originalCount;
+        reply.is_liked = pending.originalLiked;
+        if (pending.originalLiked) {
+          likedReplies.value.add(replyId);
+        } else {
+          likedReplies.value.delete(replyId);
+        }
+      }
+    } finally {
+      pendingReplyLikes.value.delete(replyId);
+    }
+  };
+
+  const toggleReplyLike = (replyId: string) => {
+    if (!isAuthenticated.value) return;
+
+    const reply = replies.value.find(r => r.id === replyId);
+    if (!reply) return;
+
+    // Use reply.is_liked as the source of truth (from API)
+    const isCurrentlyLiked = reply.is_liked || likedReplies.value.has(replyId);
+    const originalCount = reply.like_count || 0;
+    const originalLiked = isCurrentlyLiked;
+
+    // Update UI optimistically
+    if (isCurrentlyLiked) {
+      likedReplies.value.delete(replyId);
+      reply.like_count = Math.max(0, (reply.like_count || 0) - 1);
+      reply.is_liked = false;
+    } else {
+      likedReplies.value.add(replyId);
+      reply.like_count = (reply.like_count || 0) + 1;
+      reply.is_liked = true;
+    }
+
+    // Clear existing timeout if any
+    const existing = pendingReplyLikes.value.get(replyId);
+    if (existing) {
+      clearTimeout(existing.timeout);
+    }
+
+    // Schedule API call after 5 seconds
+    const timeout = setTimeout(() => {
+      sendReplyLikeRequest(replyId);
+    }, 5000);
+
+    pendingReplyLikes.value.set(replyId, { timeout, originalCount, originalLiked });
+  };
+
+  const flushPendingReplyLikes = async () => {
+    const promises: Promise<void>[] = [];
+    pendingReplyLikes.value.forEach(({ timeout }, replyId) => {
+      clearTimeout(timeout);
+      promises.push(sendReplyLikeRequest(replyId));
+    });
+    pendingReplyLikes.value.clear();
+    await Promise.all(promises);
+  };
+
+  // Initialize and sync liked replies from API data
+  watch(replies, (newReplies) => {
+    if (newReplies && newReplies.length > 0) {
+      // Sync likedReplies Set with API response
+      newReplies.forEach(reply => {
+        if (reply.is_liked) {
+          likedReplies.value.add(reply.id);
+        } else {
+          likedReplies.value.delete(reply.id);
+        }
+      });
+    }
+  }, { immediate: true, deep: true });
 
   // Lifecycle
   onMounted(() => {
@@ -319,6 +437,7 @@ export function useForumPost() {
       clearTimeout(likeTimeout);
       sendPendingLikeRequest();
     }
+    flushPendingReplyLikes();
     postStore.clearPost();
   });
 
@@ -332,6 +451,7 @@ export function useForumPost() {
           clearTimeout(likeTimeout);
           sendPendingLikeRequest();
         }
+        flushPendingReplyLikes();
         fetchPostData();
       }
     }
@@ -381,5 +501,16 @@ export function useForumPost() {
     formatDate,
     formatNumber,
     toggleLike,
+    toggleReplyLike,
+    likedReplies,
+    
+    // Flush functions for navigation guards
+    flushPendingLikes: async () => {
+      if (likeTimeout) {
+        clearTimeout(likeTimeout);
+        await sendPendingLikeRequest();
+      }
+      await flushPendingReplyLikes();
+    },
   };
 }

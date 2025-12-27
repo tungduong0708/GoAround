@@ -75,6 +75,7 @@ def get_token_payload(
             issuer=settings.SUPABASE_JWT_ISSUER,
             audience="authenticated",
             options={"verify_signature": True},  # Verify exp, iss, aud
+            leeway=60,  # Allow 60 seconds clock skew
         )
         return TokenPayload(**payload)  # Validate fields
     except ValidationError:

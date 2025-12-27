@@ -173,7 +173,7 @@ async def update_place(
     place_in: PlaceUpdate,
 ) -> Any:
     """
-    Update a place. Only the owner can perform this action.
+    Update a place. Only the owner or admin can perform this action.
     """
     # Retrieve DB object directly to check ownership and pass to CRUD
     db_place = await session.get(Place, id)
@@ -181,7 +181,8 @@ async def update_place(
     if not db_place:
         raise HTTPException(status_code=404, detail="Place not found")
 
-    if db_place.owner_id != current_user.id:
+    # Allow owner or admin to update
+    if db_place.owner_id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=403, detail="Not authorized to update this place"
         )
@@ -205,14 +206,15 @@ async def delete_place(
     id: uuid.UUID,
 ) -> Any:
     """
-    Delete a place. Only the owner can perform this action.
+    Delete a place. Only the owner or admin can perform this action.
     """
     db_place = await session.get(Place, id)
 
     if not db_place:
         raise HTTPException(status_code=404, detail="Place not found")
 
-    if db_place.owner_id != current_user.id:
+    # Allow owner or admin to delete
+    if db_place.owner_id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=403, detail="Not authorized to delete this place"
         )

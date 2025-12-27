@@ -5,15 +5,11 @@ import UserProfileTabs from "@/components/UserProfile/UserProfileTabs.vue";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { RefreshCwIcon } from "lucide-vue-next";
-import { onMounted } from "vue";
 
 // Initialise composable
 const { user, loading, error, isMe, loadData } = useUserProfile();
 
 // Ensure data is loaded
-onMounted(() => {
-  loadData();
-});
 
 const retry = () => {
   loadData();

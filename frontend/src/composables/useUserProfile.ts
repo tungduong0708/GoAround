@@ -1,4 +1,4 @@
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { useUserStore, useAuthStore } from "@/stores";
 import { storeToRefs } from "pinia";
@@ -7,6 +7,11 @@ import type { IUserDetail, IUserPublic } from "@/utils/interfaces";
 export function useUserProfile() {
   const route = useRoute();
   const store = useUserStore();
+
+  // Reset state immediately to prevent flash of stale data from previous route
+  store.user = null;
+  store.error = null;
+
   const { user, loading, error } = storeToRefs(store);
 
   const isMe = computed(() => {
@@ -19,11 +24,17 @@ export function useUserProfile() {
   const activeTab = ref("posts");
 
   const loadData = async () => {
-    if (isMe.value) {
+    const authStore = useAuthStore();
+    const userId = route.params.id as string;
+
+    if (route.name === "profile-me") {
       await store.loadMe();
-    } else {
-      const userId = route.params.id as string;
-      if (userId) {
+    } else if (userId) {
+      // If the user attempts to view their own public profile via ID,
+      // load the detailed 'me' profile instead to allow editing/private info.
+      if (authStore.user?.id === userId) {
+        await store.loadMe();
+      } else {
         await store.loadUser(userId);
       }
     }
@@ -32,13 +43,6 @@ export function useUserProfile() {
   onMounted(() => {
     loadData();
   });
-
-  watch(
-    () => route.path,
-    () => {
-      loadData();
-    }
-  );
 
   const displayName = computed(
     () => user.value?.full_name || user.value?.username || "User"

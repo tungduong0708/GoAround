@@ -24,11 +24,13 @@ export function useHeader() {
   });
 
   const avatarUrl = computed(() => {
-    return profile.value?.avatar_url || user.value?.user_metadata?.avatar_url || "";
+    return (
+      profile.value?.avatar_url || user.value?.user_metadata?.avatar_url || ""
+    );
   });
 
   const profileLink = computed<RouteLocationRaw>(() => {
-    return isAuthenticated.value ? { name: "profile" } : { name: "login" };
+    return isAuthenticated.value ? { name: "profile-me" } : { name: "login" };
   });
 
   const profileLabel = computed(() => {
@@ -37,19 +39,19 @@ export function useHeader() {
 
   const profileSubtext = computed(() => {
     if (!isAuthenticated.value) return "Get Started";
-    
-    const role = profile.value?.role || 'traveler';
+
+    const role = profile.value?.role || "traveler";
     const roleLabels = {
-      traveler: 'Traveler',
-      business: 'Business',
-      admin: 'Administrator'
+      traveler: "Traveler",
+      business: "Business",
+      admin: "Administrator",
     };
-    
-    return roleLabels[role] || 'Traveler';
+
+    return roleLabels[role] || "Traveler";
   });
 
   const accountType = computed(() => {
-    return profile.value?.role || 'traveler';
+    return profile.value?.role || "traveler";
   });
 
   const initials = computed(() => {
@@ -69,7 +71,7 @@ export function useHeader() {
 
   function handleManagePlaces() {
     showDropdown.value = false;
-    router.push({ name: 'manage-places' });
+    router.push({ name: "manage-places" });
   }
 
   async function handleLogout() {
@@ -87,7 +89,7 @@ export function useHeader() {
   return {
     isAuthenticated,
     isGuest,
-    showDropdown, 
+    showDropdown,
     user,
     displayName,
     avatarUrl,

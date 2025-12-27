@@ -2,7 +2,7 @@ import { createApp } from "vue";
 import { createPinia } from "pinia";
 import "./style.css";
 import App from "./App.vue";
-import { useThemeStore } from "@/stores";
+import { useThemeStore, useAuthStore } from "@/stores";
 import router from "./router/index.ts";
 
 import { MotionPlugin } from "@vueuse/motion";
@@ -16,5 +16,8 @@ app.use(MotionPlugin);
 
 const themeStore = useThemeStore(pinia);
 themeStore.initTheme();
+
+const authStore = useAuthStore(pinia);
+authStore.initialize();
 
 app.mount("#app");

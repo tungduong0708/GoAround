@@ -16,7 +16,7 @@ const showFooter = computed(() => route.meta.hideFooter !== true);
     <div class="content-shell">
       <router-view v-slot="{ Component }">
         <transition name="page-fade" mode="out-in">
-          <component :is="Component" />
+          <component :is="Component" :key="route.fullPath" />
         </transition>
       </router-view>
       <AppFooter v-if="showFooter" />

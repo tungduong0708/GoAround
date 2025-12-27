@@ -14,29 +14,57 @@ export const useUserStore = defineStore("user-profile", () => {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
+  let abortController: AbortController | null = null;
+
+  const cancelPendingRequest = () => {
+    if (abortController) {
+      abortController.abort();
+      abortController = null;
+    }
+  };
+
   const loadMe = async () => {
+    cancelPendingRequest();
+    abortController = new AbortController();
+
     loading.value = true;
     error.value = null;
     user.value = null;
+
     try {
-      user.value = await UserService.getCurrentUser();
+      user.value = await UserService.getCurrentUser(abortController.signal);
     } catch (err: any) {
-      error.value = err.message || "Failed to load profile";
+      if (err.code !== "ERR_CANCELED") {
+        error.value = err.message || "Failed to load profile";
+      }
     } finally {
-      loading.value = false;
+      // Only turn off loading if this request wasn't cancelled (or replaced)
+      if (!abortController?.signal.aborted) {
+        loading.value = false;
+        abortController = null;
+      }
     }
   };
 
   const loadUser = async (id: string) => {
+    cancelPendingRequest();
+    abortController = new AbortController();
+
     loading.value = true;
     error.value = null;
     user.value = null;
+
     try {
-      user.value = await UserService.publicProfile(id);
+      user.value = await UserService.publicProfile(id, abortController.signal);
     } catch (err: any) {
-      error.value = err.message || "Failed to load user profile";
+      if (err.code !== "ERR_CANCELED") {
+        error.value = err.message || "Failed to load user profile";
+      }
     } finally {
-      loading.value = false;
+      if (!abortController?.signal.aborted) {
+        loading.value = false;
+        abortController = null;
+      }
     }
   };
 

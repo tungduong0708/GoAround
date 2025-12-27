@@ -38,24 +38,63 @@ export const useAuthStore = defineStore("auth", () => {
     error.value = null;
     await initSession();
 
-    supabase.auth.onAuthStateChange((_event, currentSession) => {
-      setAuthState(currentSession);
-    });
-
-    isLoading.value = false;
-  };
-
-  const subscribeToAuth = (
-    callback?: (event: AuthChangeEvent, session: Session | null) => void
-  ) => {
-    const { data } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
-        setAuthState(currentSession);
-        callback?.(event, currentSession);
+    supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      setAuthState(currentSession)
+      
+      // Fetch profile when user signs in
+      if (event === 'SIGNED_IN' && currentSession) {
+        const userProfileStore = useUserProfileStore()
+        try {
+          await userProfileStore.fetchProfile()
+        } catch (err) {
+          console.error('Failed to fetch profile after sign in:', err)
+        }
       }
-    );
-    return data.subscription;
-  };
+      
+      // Clear profile when user signs out
+      if (event === 'SIGNED_OUT') {
+        const userProfileStore = useUserProfileStore()
+        userProfileStore.clearProfile()
+      }
+    })
+
+    isLoading.value = false
+
+    // Fetch profile if user is authenticated
+    if (isAuthenticated.value) {
+      const userProfileStore = useUserProfileStore()
+      try {
+        await userProfileStore.fetchProfile()
+      } catch (err) {
+        console.error('Failed to fetch profile during auth initialization:', err)
+      }
+    }
+  }
+
+  const subscribeToAuth = (callback?: (event: AuthChangeEvent, session: Session | null) => void) => {
+    const { data } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      setAuthState(currentSession)
+      
+      // Fetch profile when user signs in
+      if (event === 'SIGNED_IN' && currentSession) {
+        const userProfileStore = useUserProfileStore()
+        try {
+          await userProfileStore.fetchProfile()
+        } catch (err) {
+          console.error('Failed to fetch profile after sign in:', err)
+        }
+      }
+      
+      // Clear profile when user signs out
+      if (event === 'SIGNED_OUT') {
+        const userProfileStore = useUserProfileStore()
+        userProfileStore.clearProfile()
+      }
+      
+      callback?.(event, currentSession)
+    })
+    return data.subscription
+  }
 
   const signInWithPassword = async (email: string, password: string) => {
     isLoading.value = true;

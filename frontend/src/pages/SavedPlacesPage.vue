@@ -3,6 +3,7 @@ import { ref, computed, watch } from "vue";
 import { useSavedLists } from "@/composables/useSavedLists";
 import { useAuthGuard } from "@/composables/useAuthGuard";
 import { useRouter } from "vue-router";
+import { toast } from "vue-sonner";
 import Button from "@/components/ui/button/Button.vue";
 import Card from "@/components/ui/card/Card.vue";
 import CardHeader from "@/components/ui/card/CardHeader.vue";
@@ -95,15 +96,23 @@ const savedPlaces = computed(() => {
 const handleCreateList = async () => {
   if (!newListName.value.trim()) return;
 
+  const listName = newListName.value.trim();
+
   isCreating.value = true;
   try {
-    await createList(newListName.value.trim());
+    await createList(listName);
+    toast.success("List created", {
+      description: `"${listName}" is ready to use`,
+    });
     newListName.value = "";
     showCreateListModal.value = false;
-    // Reload lists to get the new one
-    await loadLists(true);
+    // Reload lists in background (non-blocking)
+    loadLists(true).catch(console.error);
   } catch (error) {
     console.error("Failed to create list:", error);
+    toast.error("Failed to create list", {
+      description: "Please try again",
+    });
   } finally {
     isCreating.value = false;
   }
@@ -112,10 +121,16 @@ const handleCreateList = async () => {
 const handleDeleteList = async () => {
   if (!listToDelete.value) return;
 
+  const listName = lists.value.find((l) => l.id === listToDelete.value)?.name || "List";
+
   isDeleting.value = true;
   try {
     const success = await deleteList(listToDelete.value);
     if (success) {
+      toast.success("List deleted", {
+        description: `"${listName}" has been removed`,
+      });
+      
       // If deleted list was selected, reset selection
       if (selectedListId.value === listToDelete.value) {
         selectedListId.value = lists.value[0]?.id || null;
@@ -128,6 +143,9 @@ const handleDeleteList = async () => {
     }
   } catch (error) {
     console.error("Failed to delete list:", error);
+    toast.error("Failed to delete list", {
+      description: "Please try again",
+    });
   } finally {
     isDeleting.value = false;
   }
@@ -136,10 +154,43 @@ const handleDeleteList = async () => {
 const handleRemovePlace = async (placeId: string) => {
   if (!selectedListId.value) return;
 
+  // Get place name for toast
+  const placeItem = currentList.value?.items?.find((item) => item.place.id === placeId);
+  const placeName = placeItem?.place.name || "Place";
+
+  // Optimistically remove from UI
+  const previousList = currentList.value ? { ...currentList.value } : null;
+  if (currentList.value?.items) {
+    currentList.value.items = currentList.value.items.filter(
+      (item) => item.place.id !== placeId
+    );
+  }
+
+  // Update count in sidebar
+  const selectedListInSidebar = lists.value.find((l) => l.id === selectedListId.value);
+  const previousCount = selectedListInSidebar?.item_count;
+  if (selectedListInSidebar && selectedListInSidebar.item_count) {
+    selectedListInSidebar.item_count -= 1;
+  }
+
   try {
     await removePlaceFromList(selectedListId.value, placeId);
+    toast.success("Place removed", {
+      description: `Removed "${placeName}" from list`,
+    });
   } catch (error) {
     console.error("Failed to remove place:", error);
+    toast.error("Failed to remove place", {
+      description: "Please try again",
+    });
+    
+    // Revert optimistic update on error
+    if (previousList) {
+      await loadListById(selectedListId.value);
+    }
+    if (selectedListInSidebar && previousCount !== undefined) {
+      selectedListInSidebar.item_count = previousCount;
+    }
   }
 };
 
@@ -175,14 +226,35 @@ const handleRenameList = async () => {
   if (!renameListName.value.trim() || !listToRename.value) return;
 
   isRenaming.value = true;
+  const listId = listToRename.value;
+  const newName = renameListName.value.trim();
+  
+  // Optimistically update the UI
+  const listToUpdate = lists.value.find((l) => l.id === listId);
+  const previousName = listToUpdate?.name;
+  if (listToUpdate) {
+    listToUpdate.name = newName;
+  }
+  
   try {
-    await updateList(listToRename.value, renameListName.value.trim());
+    await updateList(listId, newName);
+    toast.success("List renamed", {
+      description: `Updated to "${newName}"`,
+    });
     showRenameModal.value = false;
     listToRename.value = null;
     renameListName.value = "";
-    await loadLists(true);
+    // Reload in background to ensure sync
+    loadLists(true).catch(console.error);
   } catch (error) {
     console.error("Failed to rename list:", error);
+    toast.error("Failed to rename list", {
+      description: "Please try again",
+    });
+    // Revert optimistic update on error
+    if (listToUpdate && previousName) {
+      listToUpdate.name = previousName;
+    }
   } finally {
     isRenaming.value = false;
   }

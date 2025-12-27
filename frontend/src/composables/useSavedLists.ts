@@ -53,13 +53,20 @@ export function useSavedLists(options: UseSavedListsOptions = {}) {
   const updateList = async (listId: string, name?: string, placeIds?: string[]) => {
     try {
       const { default: ListService } = await import("@/services/ListService");
-      await ListService.updateList(listId, {
-        name: name || null,
-        place_ids: placeIds || null,
-      });
-      // Reload the specific list after update
+      
+      // Use the efficient rename endpoint if only updating name
+      if (name && !placeIds) {
+        await ListService.renameList(listId, name);
+      } else if (placeIds !== undefined) {
+        // If updating places, use the full update endpoint
+        await ListService.updateList(listId, {
+          name: name || null,
+          place_ids: placeIds || null,
+        });
+      }
+      
+      // Only reload the specific list, not all lists (for performance)
       await loadListById(listId);
-      await loadLists(true);
       return true;
     } catch (error) {
       console.error("Error updating list:", error);
@@ -69,23 +76,12 @@ export function useSavedLists(options: UseSavedListsOptions = {}) {
 
   const removePlaceFromList = async (listId: string, placeId: string) => {
     try {
-      // Get current list details
-      const list = currentList.value;
-      if (!list || !list.items) return false;
-
-      // Filter out the place to remove
-      const updatedPlaceIds = list.items
-        .map(item => item.place.id)
-        .filter(id => id !== placeId);
-
+      // Use the efficient remove endpoint
       const { default: ListService } = await import("@/services/ListService");
-      await ListService.updateList(listId, {
-        place_ids: updatedPlaceIds,
-      });
+      await ListService.removePlaceFromList(listId, placeId);
       
-      // Reload the list after removal
+      // Only reload the specific list, not all lists
       await loadListById(listId);
-      await loadLists(true);
       return true;
     } catch (error) {
       console.error("Error removing place from list:", error);

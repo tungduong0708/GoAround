@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { useListPlaceStore } from "@/stores/listPlaceStore";
+import { toast } from "vue-sonner";
 import {
   Dialog,
   DialogContent,
@@ -32,8 +33,7 @@ const loading = ref(false);
 const adding = ref(false);
 const creatingNew = ref(false);
 const newListName = ref("");
-const successMessage = ref<string | null>(null);
-const errorMessage = ref<string | null>(null);
+const successListId = ref<string | null>(null);
 
 const lists = computed(() => listPlaceStore.listLists);
 
@@ -41,23 +41,28 @@ const handleOpenChange = async (open: boolean) => {
   emit("update:open", open);
   
   if (open) {
-    successMessage.value = null;
-    errorMessage.value = null;
     newListName.value = "";
     creatingNew.value = false;
+    successListId.value = null;
     await loadLists();
   }
 };
 
 const loadLists = async () => {
+  // Avoid loading if already loaded (unless forced)
+  if (lists.value.length > 0) {
+    return;
+  }
+  
   loading.value = true;
-  errorMessage.value = null;
   try {
     await listPlaceStore.fetchListPlaces({ page: 1, limit: 50 });
     console.log("Lists loaded:", lists.value);
   } catch (error: any) {
     console.error("Failed to load lists:", error);
-    errorMessage.value = error?.response?.data?.detail || error?.message || "Failed to load lists";
+    toast.error("Failed to load lists", {
+      description: error?.response?.data?.detail || error?.message,
+    });
   } finally {
     loading.value = false;
   }
@@ -67,73 +72,87 @@ const handleSelectList = async (listId: string) => {
   if (!props.place || adding.value) return;
 
   adding.value = true;
-  errorMessage.value = null;
-  successMessage.value = null;
 
   try {
-    // Get current list to check if place already exists
-    const listDetails = await ListService.getListById(listId);
-    const currentPlaceIds = listDetails.data.items?.map(item => item.place.id) || [];
-    
-    // Check if place already exists
-    if (currentPlaceIds.includes(props.place.id)) {
-      errorMessage.value = "This place is already in the list";
-      adding.value = false;
-      return;
+    // Optimistically update the UI - find and increment count
+    const targetList = lists.value.find(l => l.id === listId);
+    const listName = targetList?.name || "list";
+    if (targetList && targetList.item_count !== undefined) {
+      targetList.item_count += 1;
     }
 
-    // Add the new place to the list
-    await ListService.updateList(listId, {
-      place_ids: [...currentPlaceIds, props.place.id],
+    // Add the place to the list using the efficient endpoint
+    await ListService.addPlaceToList(listId, {
+      place_id: props.place.id,
     });
 
-    successMessage.value = `Added "${props.place.name}" to your list!`;
+    // Show success indicator on the list card
+    successListId.value = listId;
+
+    toast.success("Place saved!", {
+      description: `Added "${props.place.name}" to ${listName}`,
+    });
+
     emit("success");
     
-    // Reload lists to update counts
-    await loadLists();
-    
-    // Close modal after a short delay
+    // Close modal after showing success animation (800ms)
     setTimeout(() => {
       emit("update:open", false);
-    }, 1500);
+      successListId.value = null;
+    }, 800);
+    
+    // Reload lists in background to sync counts (non-blocking)
+    loadLists().catch(console.error);
   } catch (error: any) {
     console.error("Failed to add place:", error);
-    errorMessage.value = error?.response?.data?.detail || error?.message || "Failed to add place to list";
+    toast.error("Failed to add place", {
+      description: error?.response?.data?.detail || error?.message,
+    });
+    
+    // Revert optimistic update on error
+    const targetList = lists.value.find(l => l.id === listId);
+    if (targetList && targetList.item_count !== undefined) {
+      targetList.item_count -= 1;
+    }
   } finally {
     adding.value = false;
   }
 };
 
 const handleCreateNewList = async () => {
-  if (!newListName.value.trim() || !props.place) return;
+  if (!newListName.value.trim()) return;
 
   adding.value = true;
-  errorMessage.value = null;
-  successMessage.value = null;
 
   try {
-    // Create new list
-    const newList = await ListService.createList({ name: newListName.value.trim() });
+    const listName = newListName.value.trim();
     
-    // Add place to the new list
-    await ListService.updateList(newList.id, {
-      place_ids: [props.place.id],
+    // Create new list only (don't add place automatically)
+    const newList = await ListService.createList({ name: listName });
+
+    // Optimistically add to lists array
+    listPlaceStore.listLists.push({
+      id: newList.id,
+      name: newList.name,
+      created_at: newList.created_at,
+      item_count: 0, // No places added yet
     });
 
-    successMessage.value = `Created list "${newListName.value}" with "${props.place.name}"!`;
-    emit("success");
+    toast.success("List created!", {
+      description: `"${listName}" is ready - now select it to save your place`,
+    });
+
+    // Reset the form and show the lists
+    newListName.value = "";
+    creatingNew.value = false;
     
-    // Reload lists
-    await loadLists();
-    
-    // Close modal after a short delay
-    setTimeout(() => {
-      emit("update:open", false);
-    }, 1500);
+    // Reload lists in background to ensure sync
+    loadLists().catch(console.error);
   } catch (error: any) {
     console.error("Failed to create list:", error);
-    errorMessage.value = error?.response?.data?.detail || error?.message || "Failed to create list";
+    toast.error("Failed to create list", {
+      description: error?.response?.data?.detail || error?.message,
+    });
   } finally {
     adding.value = false;
   }
@@ -151,23 +170,6 @@ const hasNoLists = computed(() => !loading.value && lists.value.length === 0);
           Select a list to save <strong>{{ place.name }}</strong>
         </DialogDescription>
       </DialogHeader>
-
-      <!-- Success Message -->
-      <div
-        v-if="successMessage"
-        class="rounded-lg bg-green-50 border border-green-200 p-4 text-green-800 flex items-center gap-2"
-      >
-        <CheckCircle2 class="h-5 w-5" />
-        {{ successMessage }}
-      </div>
-
-      <!-- Error Message -->
-      <div
-        v-if="errorMessage"
-        class="rounded-lg bg-red-50 border border-red-200 p-4 text-red-800"
-      >
-        {{ errorMessage }}
-      </div>
 
       <!-- Create New List Section -->
       <div class="space-y-3">
@@ -230,7 +232,8 @@ const hasNoLists = computed(() => !loading.value && lists.value.length === 0);
             :key="list.id"
             class="cursor-pointer transition-all hover:shadow-md hover:border-coral/40"
             :class="{
-              'opacity-50 pointer-events-none': adding,
+              'opacity-50 pointer-events-none': adding && successListId !== list.id,
+              'border-green-500 bg-green-50 dark:bg-green-950/20': successListId === list.id,
             }"
             @click="handleSelectList(list.id)"
           >
@@ -243,7 +246,17 @@ const hasNoLists = computed(() => !loading.value && lists.value.length === 0);
                   </p>
                 </div>
 
+                <!-- Success Checkmark -->
+                <div
+                  v-if="successListId === list.id"
+                  class="flex items-center justify-center w-10 h-10 rounded-full bg-green-500 text-white animate-in zoom-in duration-300"
+                >
+                  <CheckCircle2 class="h-6 w-6" />
+                </div>
+                
+                <!-- Bookmark Button -->
                 <Button
+                  v-else
                   size="sm"
                   class="bg-coral hover:bg-coral-dark text-white shrink-0"
                   :disabled="adding"

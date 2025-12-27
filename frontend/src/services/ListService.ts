@@ -9,6 +9,7 @@ import type {
   IMessage,
   IPagingQuery,
   ISavedListUpdate,
+  IAddPlaceToListRequest,
 } from "@/utils/interfaces";
 
 class ListService {
@@ -79,42 +80,58 @@ class ListService {
     }
   }
 
-  // Commented out - use updateList instead to manage places
-  // async addPlaceToList(
-  //   listId: string,
-  //   input: IAddPlaceToListRequest
-  // ): Promise<IMessage> {
-  //   try {
-  //     const response = await authInstance.post(`/lists/${listId}/places`, input);
-  //     return (response.data as IApiResponse<IMessage>).data;
-  //   } catch (error: any) {
-  //     if (error.response && error.response.status === 404) {
-  //       console.error("Not Found: ", error.response.data.detail);
-  //     } else if (error.response && error.response.status === 403) {
-  //       console.error("Access Forbidden: ", error.response.data.detail);
-  //     }
-  //     throw error;
-  //   }
-  // }
+  async addPlaceToList(
+    listId: string,
+    input: IAddPlaceToListRequest
+  ): Promise<IMessage> {
+    try {
+      const response = await authInstance.post(`/lists/${listId}/places`, input);
+      return (response.data as IApiResponse<IMessage>).data;
+    } catch (error: any) {
+      if (error.response && error.response.status === 404) {
+        console.error("Not Found: ", error.response.data.detail);
+      } else if (error.response && error.response.status === 403) {
+        console.error("Access Forbidden: ", error.response.data.detail);
+      }
+      throw error;
+    }
+  }
 
-  // async removePlaceFromList(
-  //   listId: string,
-  //   placeId: string
-  // ): Promise<IMessage> {
-  //   try {
-  //     const response = await authInstance.delete(
-  //       `/lists/${listId}/places/${placeId}`
-  //     );
-  //     return (response.data as IApiResponse<IMessage>).data;
-  //   } catch (error: any) {
-  //     if (error.response && error.response.status === 404) {
-  //       console.error("Not Found: ", error.response.data.detail);
-  //     } else if (error.response && error.response.status === 403) {
-  //       console.error("Access Forbidden: ", error.response.data.detail);
-  //     }
-  //     throw error;
-  //   }
-  // }
+  async removePlaceFromList(
+    listId: string,
+    placeId: string
+  ): Promise<IMessage> {
+    try {
+      const response = await authInstance.delete(
+        `/lists/${listId}/places/${placeId}`
+      );
+      return (response.data as IApiResponse<IMessage>).data;
+    } catch (error: any) {
+      if (error.response && error.response.status === 404) {
+        console.error("Not Found: ", error.response.data.detail);
+      } else if (error.response && error.response.status === 403) {
+        console.error("Access Forbidden: ", error.response.data.detail);
+      }
+      throw error;
+    }
+  }
+
+  async renameList(
+    listId: string,
+    name: string
+  ): Promise<ISavedListSchema> {
+    try {
+      const response = await authInstance.patch(`/lists/${listId}/name`, { name });
+      return (response.data as IApiResponse<ISavedListSchema>).data;
+    } catch (error: any) {
+      if (error.response && error.response.status === 404) {
+        console.error("Not Found: ", error.response.data.detail);
+      } else if (error.response && error.response.status === 403) {
+        console.error("Access Forbidden: ", error.response.data.detail);
+      }
+      throw error;
+    }
+  }
 }
 
 export default ListService.getInstance();

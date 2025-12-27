@@ -25,15 +25,40 @@ export const useListPlaceStore = defineStore("listPlace", {
         this.listCurrentSelection = response.data;
       } catch (error) {
         console.error(error);
+        throw error;
       }
     },
     async createListPlace(name: string) {
       try {
         const input: ISavedListCreate = { name };
-        await ListService.createList(input);
-        await this.fetchListPlaces();
+        const newList = await ListService.createList(input);
+        
+        // Optimistically add to local state
+        this.listLists.push({
+          id: newList.id,
+          name: newList.name,
+          created_at: newList.created_at,
+          item_count: 0,
+        });
+        
+        return newList;
       } catch (error) {
         console.error(error);
+        throw error;
+      }
+    },
+    // Optimistic update for incrementing item count
+    incrementListItemCount(listId: string) {
+      const list = this.listLists.find(l => l.id === listId);
+      if (list && list.item_count !== undefined) {
+        list.item_count += 1;
+      }
+    },
+    // Optimistic update for decrementing item count
+    decrementListItemCount(listId: string) {
+      const list = this.listLists.find(l => l.id === listId);
+      if (list && list.item_count !== undefined && list.item_count > 0) {
+        list.item_count -= 1;
       }
     },
   },

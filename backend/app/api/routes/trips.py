@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from app import crud
 from app.api.deps import CurrentUserDep, SessionDep
+from app.service.ai_service import generate_trip_plan
 from app.schemas import (
     APIResponse,
     HTTPError,
@@ -13,6 +14,7 @@ from app.schemas import (
     TripListSchema,
     TripSchema,
     TripUpdate,
+    TripGenerateRequest,
 )
 
 router = APIRouter(tags=["trips"], prefix="/trips")
@@ -69,14 +71,14 @@ async def create_trip(
     return APIResponse(data=trip)
 
 
-@router.post(
-    "/generate",
-    status_code=status.HTTP_501_NOT_IMPLEMENTED,
-    response_model=APIResponse[Message],
-)
-async def generate_trip():
-    # Placeholder for future AI itinerary generation
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED)
+# @router.post(
+#     "/generate",
+#     status_code=status.HTTP_501_NOT_IMPLEMENTED,
+#     response_model=APIResponse[Message],
+# )
+# async def generate_trip():
+#     # Placeholder for future AI itinerary generation
+#     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED)
 
 
 @router.put(
@@ -127,3 +129,35 @@ async def delete_trip(
     except PermissionError:
         raise HTTPException(status_code=403, detail="Not allowed")
     return APIResponse(data=Message(message="Trip deleted successfully"))
+
+
+
+@router.post(
+    "/generate",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[TripSchema],
+    responses={
+        400: {"model": HTTPError},
+        500: {"model": HTTPError},
+    },
+)
+async def generate_trip(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    body: TripGenerateRequest,
+):
+    """
+    Generate a trip itinerary using AI.
+    """
+    try:
+        # 1. Generate plan (returns TripCreate)
+        trip_plan = await generate_trip_plan(session, body)
+        
+        # 2. Save to database using existing manual trip creation logic
+        saved_trip = await crud.create_trip(session, current_user.id, trip_plan)
+        
+        return APIResponse(data=saved_trip)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")

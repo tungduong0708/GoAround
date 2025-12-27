@@ -122,6 +122,8 @@ export function useLoginForm() { // 2. No arguments needed now
     try {
       const { error } = await authStore.signInWithPassword(values.email, values.password)
       if (error) throw error
+      // Wait a bit for the session to be fully set before checking profile
+      await new Promise(resolve => setTimeout(resolve, 100))
       // Check profile and redirect accordingly
       await redirectHome()
     } catch (error: any) {

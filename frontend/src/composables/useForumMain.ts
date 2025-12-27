@@ -1,16 +1,23 @@
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, computed, watch, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
-import { useForumStore } from "@/stores";
+import { useForumStore, useAuthStore } from "@/stores";
+import ForumService from "@/services/ForumService";
 
 export function useForumMain() {
   const store = useForumStore();
+  const authStore = useAuthStore();
   const { posts, pagination, loading, error } = storeToRefs(store);
+  const { isAuthenticated } = storeToRefs(authStore);
 
   const searchQuery = ref("");
   const activeSort = ref<("newest" | "popular" | "oldest")>("newest");
   const activeTags = ref<string[]>([]);
   const activeTimeFilter = ref("All Time");
   const currentPage = ref(1);
+  
+  // Like functionality
+  const likedPosts = ref<Set<string>>(new Set());
+  const pendingLikes = ref<Map<string, { action: 'like' | 'unlike'; timeout: ReturnType<typeof setTimeout> }>>(new Map());
 
   const sortOptions = ["newest", "popular", "oldest"];
   const tagOptions = [
@@ -93,6 +100,71 @@ export function useForumMain() {
     }
   };
 
+  // Like functionality
+  const sendLikeRequest = async (postId: string, action: 'like' | 'unlike') => {
+    try {
+      if (action === 'like') {
+        await ForumService.likePost(postId);
+      } else {
+        await ForumService.unlikePost(postId);
+      }
+    } catch (error) {
+      console.error(`Error ${action} post:`, error);
+    }
+  };
+
+  const toggleLike = (postId: string) => {
+    if (!isAuthenticated.value) return;
+
+    // Find the post and update UI immediately
+    const post = posts.value.find(p => p.id === postId);
+    if (!post) return;
+
+    const isCurrentlyLiked = likedPosts.value.has(postId);
+    const action = isCurrentlyLiked ? 'unlike' : 'like';
+
+    // Update UI optimistically
+    if (isCurrentlyLiked) {
+      likedPosts.value.delete(postId);
+      post.like_count = Math.max(0, (post.like_count || 0) - 1);
+    } else {
+      likedPosts.value.add(postId);
+      post.like_count = (post.like_count || 0) + 1;
+    }
+
+    // Clear existing timeout if any
+    const existing = pendingLikes.value.get(postId);
+    if (existing) {
+      clearTimeout(existing.timeout);
+    }
+
+    // Schedule API call after 5 seconds
+    const timeout = setTimeout(() => {
+      sendLikeRequest(postId, action);
+      pendingLikes.value.delete(postId);
+    }, 5000);
+
+    pendingLikes.value.set(postId, { action, timeout });
+  };
+
+  // Send all pending likes before unmounting
+  const flushPendingLikes = () => {
+    pendingLikes.value.forEach(({ action, timeout }, postId) => {
+      clearTimeout(timeout);
+      sendLikeRequest(postId, action);
+    });
+    pendingLikes.value.clear();
+  };
+
+  onUnmounted(() => {
+    flushPendingLikes();
+  });
+
+  // Watch for route changes and flush pending likes
+  watch([searchQuery, activeSort, activeTags, activeTimeFilter, currentPage], () => {
+    flushPendingLikes();
+  });
+
   return {
     // State
     searchQuery,
@@ -101,6 +173,8 @@ export function useForumMain() {
     activeTimeFilter,
     currentPage,
     pagination,
+    isAuthenticated,
+    likedPosts,
 
     // Data
     posts: displayedPosts,
@@ -120,5 +194,6 @@ export function useForumMain() {
     setPage,
     nextPage,
     previousPage,
+    toggleLike,
   };
 }

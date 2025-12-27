@@ -27,6 +27,7 @@ from app.schemas import (
     ForumPostListItem,
     ForumPostUpdate,
     ForumReplyCreate,
+    ForumReplyUpdate,
     ForumSearchFilter,
     ForumTagSchema,
 )
@@ -119,6 +120,7 @@ async def list_forum_posts(
     main_query = select(ForumPost).options(
         selectinload(ForumPost.author),
         selectinload(ForumPost.tags),
+        selectinload(ForumPost.images),
     )
 
     # Apply search filter to main query
@@ -165,7 +167,13 @@ async def list_forum_posts(
                 content_snippet=content_snippet,
                 author=_sanitize_author(post.author),
                 tags=[ForumTagSchema(id=tag.id, name=tag.name) for tag in post.tags],
+                images=[
+                    ForumPostImageSchema(id=img.id, image_url=img.image_url)
+                    for img in post.images
+                ],
                 reply_count=post.reply_count,
+                like_count=post.like_count,
+                view_count=post.view_count,
                 created_at=post.created_at,
             )
         )
@@ -191,6 +199,10 @@ async def get_forum_post(
     if not post:
         return None
 
+    # Increment view count
+    post.view_count += 1
+    await session.commit()
+
     return ForumPostDetail(
         id=post.id,
         title=post.title,
@@ -211,6 +223,9 @@ async def get_forum_post(
             )
             for comment in post.replies
         ],
+        reply_count=post.reply_count,
+        like_count=post.like_count,
+        view_count=post.view_count,
         created_at=post.created_at,
     )
 
@@ -290,9 +305,13 @@ async def create_forum_reply(
         parent_id=data.parent_reply_id,
     )
     session.add(comment)
+    await session.flush()
 
-    # Increment reply_count on the post
-    post.reply_count += 1
+    # Recount replies for the post
+    count_res = await session.execute(
+        select(func.count()).select_from(PostReply).where(PostReply.post_id == post_id)
+    )
+    post.reply_count = int(count_res.scalar() or 0)
 
     await session.commit()
 
@@ -387,6 +406,42 @@ async def update_forum_post(
     return result
 
 
+async def update_forum_reply(
+    session: AsyncSession,
+    post_id: uuid.UUID,
+    reply_id: uuid.UUID,
+    user_id: uuid.UUID,
+    data: "ForumReplyUpdate",
+) -> ForumCommentSchema:
+    """Update a forum reply."""
+    # Get the reply with user info
+    result = await session.execute(
+        select(PostReply)
+        .options(selectinload(PostReply.profile))
+        .where(PostReply.id == reply_id, PostReply.post_id == post_id)
+    )
+    reply = result.scalar_one_or_none()
+
+    if not reply:
+        raise ValueError("Reply not found")
+
+    if reply.user_id != user_id:
+        raise PermissionError("You can only edit your own replies")
+
+    # Update the content
+    reply.content = data.content
+    await session.commit()
+    await session.refresh(reply)
+
+    return ForumCommentSchema(
+        id=reply.id,
+        content=reply.content,
+        user=_sanitize_comment_user(reply.profile),
+        created_at=reply.created_at,
+        parent_id=reply.parent_reply_id,
+    )
+
+
 async def delete_forum_post(
     session: AsyncSession, post_id: uuid.UUID, user_id: uuid.UUID
 ) -> None:
@@ -407,6 +462,40 @@ async def delete_forum_post(
 
     # Delete the post (cascading deletes will handle images and replies)
     await session.delete(post)
+    await session.commit()
+
+
+async def delete_forum_reply(
+    session: AsyncSession, post_id: uuid.UUID, reply_id: uuid.UUID, user_id: uuid.UUID
+) -> None:
+    """Delete a forum reply."""
+    # Get the reply
+    res = await session.execute(
+        select(PostReply).where(
+            PostReply.id == reply_id,
+            PostReply.post_id == post_id,
+        )
+    )
+    reply = res.scalars().first()
+    if not reply:
+        raise ValueError("Reply not found")
+
+    # Check ownership
+    if reply.user_id != user_id:
+        raise PermissionError("You can only delete your own replies")
+
+    # Delete the reply (cascading deletes will handle child replies)
+    await session.delete(reply)
+    await session.flush()
+
+    # Recount replies for the post
+    post = await session.get(ForumPost, post_id)
+    if post:
+        count_res = await session.execute(
+            select(func.count()).select_from(PostReply).where(PostReply.post_id == post_id)
+        )
+        post.reply_count = int(count_res.scalar() or 0)
+
     await session.commit()
 
 
@@ -473,3 +562,33 @@ async def report_forum_reply(
     )
     session.add(report)
     await session.commit()
+
+
+async def toggle_forum_post_like(
+    session: AsyncSession,
+    post_id: uuid.UUID,
+    action: str,
+) -> int:
+    """
+    Toggle like on a forum post.
+    action: 'like' or 'unlike'
+    Returns the updated like count.
+    """
+    # Get the post
+    res = await session.execute(select(ForumPost).where(ForumPost.id == post_id))
+    post = res.scalars().first()
+    if not post:
+        raise ValueError("Post not found")
+
+    # Update like count based on action
+    if action == "like":
+        post.like_count += 1
+    elif action == "unlike":
+        post.like_count = max(0, post.like_count - 1)  # Prevent negative counts
+    else:
+        raise ValueError("Invalid action. Must be 'like' or 'unlike'")
+
+    await session.commit()
+    await session.refresh(post)
+
+    return post.like_count

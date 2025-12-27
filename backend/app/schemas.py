@@ -540,21 +540,24 @@ class ForumTagSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ForumPostImageSchema(BaseModel):
+    id: uuid.UUID
+    image_url: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ForumPostListItem(BaseModel):
     id: uuid.UUID
     title: str
     content_snippet: str
     author: ForumAuthorSchema
     tags: list[ForumTagSchema] = Field(default_factory=list)
+    images: list[ForumPostImageSchema] = Field(default_factory=list)
     reply_count: int = 0
+    like_count: int = 0
+    view_count: int = 0
     created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class ForumPostImageSchema(BaseModel):
-    id: uuid.UUID
-    image_url: str
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -585,6 +588,9 @@ class ForumPostDetail(BaseModel):
     images: list[ForumPostImageSchema] = Field(default_factory=list)
     tags: list[ForumTagSchema] = Field(default_factory=list)
     replies: list[ForumCommentSchema] = Field(default_factory=list)
+    reply_count: int = 0
+    like_count: int = 0
+    view_count: int = 0
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -607,6 +613,10 @@ class ForumPostUpdate(BaseModel):
 class ForumReplyCreate(BaseModel):
     content: str = Field(..., min_length=1)
     parent_reply_id: uuid.UUID | None = None
+
+
+class ForumReplyUpdate(BaseModel):
+    content: str = Field(..., min_length=1)
 
 
 class ContentReportCreate(BaseModel):

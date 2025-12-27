@@ -29,6 +29,8 @@ export const useForumPostStore = defineStore("forumPost", () => {
         return false;
       }
       post.value = response.data;
+      // Populate replies from the post detail response
+      replies.value = response.data.replies || [];
       return true;
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Failed to fetch post";

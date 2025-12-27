@@ -23,6 +23,9 @@ const {
   currentPage,
   nextPage,
   previousPage,
+  isAuthenticated,
+  likedPosts,
+  toggleLike,
 } = useForumMain();
 </script>
 
@@ -85,6 +88,9 @@ const {
             v-for="(post, index) in posts"
             :key="post.id"
             :post="post"
+            :is-liked="likedPosts.has(post.id)"
+            :is-authenticated="isAuthenticated"
+            @toggle-like="toggleLike"
             v-motion
             :initial="{ opacity: 0, y: 50 }"
             :enter="{ opacity: 1, y: 0, transition: { delay: index * 50 } }"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router";
-import type { IForumPostDetail } from "@/utils/interfaces";
+import type { IForumPostListItem } from "@/utils/interfaces";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,7 +12,13 @@ import {
 } from "lucide-vue-next";
 
 const props = defineProps<{
-  post: IForumPostDetail;
+  post: IForumPostListItem;
+  isLiked?: boolean;
+  isAuthenticated?: boolean;
+}>();
+
+const emit = defineEmits<{
+  toggleLike: [postId: string];
 }>();
 
 // Helper to format numbers (e.g. 13.1k)
@@ -32,6 +38,14 @@ const formatDate = (dateStr: string) => {
     month: "short",
     day: "numeric",
   }).format(date);
+};
+
+const handleLikeClick = (event: Event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  if (props.isAuthenticated) {
+    emit('toggleLike', props.post.id);
+  }
 };
 </script>
 
@@ -84,7 +98,7 @@ const formatDate = (dateStr: string) => {
             <div class="space-y-2">
               <h3 class="text-lg font-bold leading-tight">{{ post.title }}</h3>
               <p class="text-muted-foreground leading-relaxed">
-                {{ post.content }}
+                {{ post.content_snippet }}
               </p>
               <div class="flex flex-wrap gap-1">
                 <span
@@ -149,20 +163,29 @@ const formatDate = (dateStr: string) => {
                 </div>
                 <span
                   class="text-sm font-medium text-muted-foreground group-hover:text-blue-500"
-                  >{{ formatNumber(post.replies?.length || 0) }}</span
+                  >{{ formatNumber(post.reply_count || 0) }}</span
                 >
               </div>
-              <div class="flex items-center gap-2 group cursor-pointer">
+              <div 
+                class="flex items-center gap-2 group cursor-pointer"
+                @click="handleLikeClick"
+              >
                 <div
                   class="p-2 rounded-full group-hover:bg-red-500/10 transition-colors"
                 >
                   <HeartIcon
-                    class="size-5 text-muted-foreground group-hover:text-red-500"
+                    :class="[
+                      'size-5 transition-colors',
+                      isLiked ? 'fill-red-500 text-red-500' : 'text-muted-foreground group-hover:text-red-500'
+                    ]"
                   />
                 </div>
                 <span
-                  class="text-sm font-medium text-muted-foreground group-hover:text-red-500"
-                  >{{ formatNumber(0) }}</span
+                  :class="[
+                    'text-sm font-medium transition-colors',
+                    isLiked ? 'text-red-500' : 'text-muted-foreground group-hover:text-red-500'
+                  ]"
+                  >{{ formatNumber(post.like_count || 0) }}</span
                 >
               </div>
               <div class="flex items-center gap-2 group cursor-pointer">
@@ -175,7 +198,7 @@ const formatDate = (dateStr: string) => {
                 </div>
                 <span
                   class="text-sm font-medium text-muted-foreground group-hover:text-green-500"
-                  >{{ formatNumber(0) }}</span
+                  >{{ formatNumber(post.view_count || 0) }}</span
                 >
               </div>
 

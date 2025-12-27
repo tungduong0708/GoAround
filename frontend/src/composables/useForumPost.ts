@@ -5,6 +5,7 @@ import { useForm, useField } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
 import { z } from "zod";
 import { useForumPostStore, useAuthStore } from "@/stores";
+import ForumService from "@/services/ForumService";
 
 export function useForumPost() {
   const route = useRoute();
@@ -26,6 +27,10 @@ export function useForumPost() {
   );
   const lastReplyTime = ref<number>(0);
   const replyRateLimitSeconds = 15;
+  const isLiked = ref(false);
+  const isLiking = ref(false);
+  let likeTimeout: ReturnType<typeof setTimeout> | null = null;
+  let pendingLikeAction: { action: 'like' | 'unlike'; postId: string } | null = null;
 
   // Computed
   const postId = computed(() => route.params.postId as string);
@@ -118,7 +123,7 @@ export function useForumPost() {
     const success = await postStore.fetchPost(postId.value);
     if (success) {
       currentReplyPage.value = 1;
-      await postStore.fetchReplies(postId.value);
+      // Replies are already populated by fetchPost
     }
   };
 
@@ -253,12 +258,67 @@ export function useForumPost() {
     return num.toString();
   };
 
+  // Like/Unlike actions with optimistic UI and delayed API call
+  const sendPendingLikeRequest = async () => {
+    if (!pendingLikeAction) return;
+
+    const { action, postId } = pendingLikeAction;
+    try {
+      console.log(`Sending ${action} request for post ${postId}`);
+      if (action === 'like') {
+        await ForumService.likePost(postId);
+      } else {
+        await ForumService.unlikePost(postId);
+      }
+      console.log(`${action} request completed successfully`);
+    } catch (error) {
+      console.error(`Error sending ${action} request:`, error);
+      // Optionally: revert the UI state on error
+    } finally {
+      pendingLikeAction = null;
+    }
+  };
+
+  const toggleLike = () => {
+    if (!isAuthenticated.value || !post.value) return;
+
+    // Clear any existing timeout
+    if (likeTimeout) {
+      clearTimeout(likeTimeout);
+    }
+
+    // Determine the action
+    const action = isLiked.value ? 'unlike' : 'like';
+    
+    // Update UI immediately (optimistic update)
+    isLiked.value = !isLiked.value;
+    
+    if (post.value) {
+      post.value.like_count = isLiked.value 
+        ? (post.value.like_count || 0) + 1 
+        : Math.max(0, (post.value.like_count || 0) - 1);
+    }
+
+    // Store the pending action
+    pendingLikeAction = { action, postId: postId.value };
+
+    // Schedule API call after 5 seconds
+    likeTimeout = setTimeout(() => {
+      sendPendingLikeRequest();
+    }, 5000);
+  };
+
   // Lifecycle
   onMounted(() => {
     fetchPostData();
   });
 
   onUnmounted(() => {
+    // Send any pending like request before unmounting
+    if (likeTimeout) {
+      clearTimeout(likeTimeout);
+      sendPendingLikeRequest();
+    }
     postStore.clearPost();
   });
 
@@ -267,6 +327,11 @@ export function useForumPost() {
     () => route.params.postId,
     (newId, oldId) => {
       if (newId && newId !== oldId) {
+        // Send pending like request before navigating away
+        if (likeTimeout) {
+          clearTimeout(likeTimeout);
+          sendPendingLikeRequest();
+        }
         fetchPostData();
       }
     }
@@ -285,6 +350,8 @@ export function useForumPost() {
     hasMoreReplies,
     canReply,
     timeUntilCanReply,
+    isLiked,
+    isLiking,
 
     // Reply editor
     isReplyEditorOpen,
@@ -313,5 +380,6 @@ export function useForumPost() {
     goBack,
     formatDate,
     formatNumber,
+    toggleLike,
   };
 }

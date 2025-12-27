@@ -24,6 +24,10 @@ export interface IForumReplyCreate {
   content: string;
   parent_reply_id?: string | null;
 }
+
+export interface IForumReplyUpdate {
+  content: string;
+}
 // Deprecated, using IForumCommentSchema
 // export interface IForumReply {
 //   id: string;
@@ -45,7 +49,10 @@ export interface IForumPostListItem {
   content_snippet: string; // For list view
   author: IForumAuthorSchema;
   tags: IForumTagSchema[];
+  images?: IForumPostImageSchema[];
   reply_count?: number;
+  like_count?: number;
+  view_count?: number;
   created_at: string;
 }
 
@@ -57,6 +64,9 @@ export interface IForumPostDetail {
   images?: IForumPostImageSchema[];
   tags?: IForumTagSchema[];
   replies?: IForumCommentSchema[];
+  reply_count?: number;
+  like_count?: number;
+  view_count?: number;
   created_at: string;
 }
 

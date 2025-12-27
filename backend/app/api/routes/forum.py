@@ -13,6 +13,7 @@ from app.schemas import (
     ForumPostListItem,
     ForumPostUpdate,
     ForumReplyCreate,
+    ForumReplyUpdate,
     ForumSearchFilter,
     HTTPError,
     Message,
@@ -22,11 +23,14 @@ from app.service.forum_service import (
     create_forum_post,
     create_forum_reply,
     delete_forum_post,
+    delete_forum_reply,
     get_forum_post,
     list_forum_posts,
     report_forum_post,
     report_forum_reply,
+    toggle_forum_post_like,
     update_forum_post,
+    update_forum_reply,
 )
 
 router = APIRouter(tags=["forum"], prefix="/forum")
@@ -144,6 +148,37 @@ async def update_post(
     return APIResponse(data=post)
 
 
+@router.put(
+    "/posts/{post_id}/replies/{reply_id}",
+    response_model=APIResponse[ForumCommentSchema],
+    status_code=status.HTTP_200_OK,
+    responses={
+        404: {"model": HTTPError},
+        403: {"model": HTTPError},
+    },
+)
+async def update_reply(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    post_id: uuid.UUID,
+    reply_id: uuid.UUID,
+    data: ForumReplyUpdate,
+) -> Any:
+    """
+    Update a forum reply.
+    """
+    try:
+        reply = await update_forum_reply(
+            session, post_id, reply_id, current_user.id, data
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+    return APIResponse(data=reply)
+
+
 @router.delete(
     "/posts/{id}",
     response_model=APIResponse[Message],
@@ -169,6 +204,82 @@ async def delete_post(
         raise HTTPException(status_code=403, detail=str(e))
 
     return APIResponse(data=Message(message="Post deleted successfully"))
+
+
+@router.delete(
+    "/posts/{post_id}/replies/{reply_id}",
+    response_model=APIResponse[Message],
+    status_code=status.HTTP_200_OK,
+    responses={
+        404: {"model": HTTPError},
+        403: {"model": HTTPError},
+    },
+)
+async def delete_reply(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    post_id: uuid.UUID,
+    reply_id: uuid.UUID,
+) -> Any:
+    """
+    Delete a forum reply.
+    """
+    try:
+        await delete_forum_reply(session, post_id, reply_id, current_user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+    return APIResponse(data=Message(message="Reply deleted successfully"))
+
+
+@router.post(
+    "/posts/{id}/like",
+    response_model=APIResponse[dict],
+    status_code=status.HTTP_200_OK,
+    responses={
+        404: {"model": HTTPError},
+    },
+)
+async def like_post(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    id: uuid.UUID,
+) -> Any:
+    """
+    Like a forum post. Increases like count.
+    """
+    try:
+        like_count = await toggle_forum_post_like(session, id, "like")
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return APIResponse(data={"like_count": like_count})
+
+
+@router.delete(
+    "/posts/{id}/like",
+    response_model=APIResponse[dict],
+    status_code=status.HTTP_200_OK,
+    responses={
+        404: {"model": HTTPError},
+    },
+)
+async def unlike_post(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    id: uuid.UUID,
+) -> Any:
+    """
+    Unlike a forum post. Decreases like count.
+    """
+    try:
+        like_count = await toggle_forum_post_like(session, id, "unlike")
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return APIResponse(data={"like_count": like_count})
 
 
 @router.post(

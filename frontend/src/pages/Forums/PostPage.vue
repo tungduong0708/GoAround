@@ -32,6 +32,8 @@ const {
   hasMoreReplies,
   canReply,
   timeUntilCanReply,
+  isLiked,
+  isLiking,
 
   // Reply editor
   isReplyEditorOpen,
@@ -58,6 +60,7 @@ const {
   goBack,
   formatDate,
   formatNumber,
+  toggleLike,
 } = useForumPost();
 </script>
 
@@ -143,7 +146,7 @@ const {
                   <div
                     class="flex items-center gap-2 text-sm text-muted-foreground"
                   >
-                    <span>@{{ post.author.id }}</span>
+                    <span>@{{ post.author.username }}</span>
                     <span>•</span>
                     <span>{{ formatDate(post.created_at) }}</span>
                   </div>
@@ -215,14 +218,16 @@ const {
             </div>
 
             <!-- Stats -->
-             <!-- TODO: Refactor this to match new interface 
-             <ForumPostStats
+            <ForumPostStats
               :reply-count="post.reply_count || 0"
               :like-count="post.like_count || 0"
               :view-count="post.view_count || 0"
               :format-number="formatNumber"
-              />
-            -->
+              :is-liked="isLiked"
+              :is-liking="isLiking"
+              :is-authenticated="isAuthenticated"
+              @toggle-like="toggleLike"
+            />
 
           </CardContent>
         </Card>
@@ -273,19 +278,34 @@ const {
 
             <!-- Replies List -->
             <div v-if="replies.length > 0" class="space-y-2">
-              <ForumReplyCard
-                v-for="(reply, index) in replies"
-                :key="reply.id"
-                :reply="reply"
-                :format-date="formatDate"
-                :format-number="formatNumber"
-                :is-authenticated="isAuthenticated"
-                v-motion
-                :initial="{ opacity: 0, x: -20 }"
-                :enter="{ opacity: 1, x: 0, transition: { delay: index * 50 } }"
-                @report="openReportDialog('comment', $event)"
-                @reply="openReplyEditor"
-              />
+              <template v-for="reply in replies.filter(r => !r.parent_id)" :key="reply.id">
+                <!-- Top-level reply -->
+                <ForumReplyCard
+                  :reply="reply"
+                  :format-date="formatDate"
+                  :format-number="formatNumber"
+                  :is-authenticated="isAuthenticated"
+                  @report="openReportDialog('comment', $event)"
+                  @reply="openReplyEditor"
+                />
+                
+                <!-- Nested replies -->
+                <div 
+                  v-if="replies.filter(r => r.parent_id === reply.id).length > 0"
+                  class="ml-8 space-y-2 border-l-2 border-border/50 pl-4"
+                >
+                  <ForumReplyCard
+                    v-for="nestedReply in replies.filter(r => r.parent_id === reply.id)"
+                    :key="nestedReply.id"
+                    :reply="nestedReply"
+                    :format-date="formatDate"
+                    :format-number="formatNumber"
+                    :is-authenticated="isAuthenticated"
+                    @report="openReportDialog('comment', $event)"
+                    @reply="openReplyEditor"
+                  />
+                </div>
+              </template>
             </div>
 
             <!-- Empty Replies State -->

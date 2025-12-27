@@ -63,7 +63,7 @@ const getInitials = (username: string) => {
           class="size-4 text-blue-500 fill-blue-500/10"
         />
         <span class="text-xs text-muted-foreground">
-          @{{ reply.user.id }}
+          @{{ reply.user.username }}
         </span>
         <span class="text-muted-foreground text-xs">•</span>
         <span class="text-xs text-muted-foreground">

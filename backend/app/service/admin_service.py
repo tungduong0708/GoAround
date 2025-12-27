@@ -306,21 +306,22 @@ async def _remove_content(
     target_id: uuid.UUID,
 ) -> None:
     """
-    Remove the reported content (post or reply).
+    Hide the reported content (post or reply) by setting visible=False.
+    This is a soft delete to preserve content for audit purposes.
     """
     if target_type == "post":
         stmt = select(ForumPost).where(ForumPost.id == target_id)
         result = await session.execute(stmt)
         post = result.scalars().first()
         if post:
-            await session.delete(post)
+            post.visible = False
 
     elif target_type == "reply":
         stmt = select(PostReply).where(PostReply.id == target_id)
         result = await session.execute(stmt)
         reply = result.scalars().first()
         if reply:
-            await session.delete(reply)
+            reply.visible = False
 
 
 async def _ban_content_author(

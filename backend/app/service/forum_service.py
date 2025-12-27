@@ -41,7 +41,7 @@ async def _get_or_create_moderation_target(
 ) -> ModerationTarget:
     """
     Find an existing pending moderation target or create a new one.
-    
+
     This implements the ticketing architecture where multiple reports
     can be associated with a single moderation case.
     """
@@ -53,10 +53,10 @@ async def _get_or_create_moderation_target(
     )
     result = await session.execute(stmt)
     existing_target = result.scalars().first()
-    
+
     if existing_target:
         return existing_target
-    
+
     # Create a new moderation target (case/ticket)
     new_target = ModerationTarget(
         target_type=target_type,
@@ -65,7 +65,7 @@ async def _get_or_create_moderation_target(
     )
     session.add(new_target)
     await session.flush()  # Get the ID without committing
-    
+
     return new_target
 
 
@@ -88,11 +88,18 @@ def _sanitize_comment_user(user: Profile) -> ForumCommentUserSchema:
 
 
 async def list_forum_posts(
-    session: AsyncSession, filter_params: ForumSearchFilter
+    session: AsyncSession,
+    filter_params: ForumSearchFilter,
+    current_user_id: uuid.UUID | None = None,
 ) -> tuple[list[ForumPostListItem], int]:
     """Search and list forum posts with filtering and pagination."""
-    # Base query
-    base_query = select(ForumPost.id)
+    # Base query - visible posts OR posts authored by current user
+    if current_user_id:
+        base_query = select(ForumPost.id).where(
+            or_(ForumPost.visible.is_(True), ForumPost.author_id == current_user_id)
+        )
+    else:
+        base_query = select(ForumPost.id).where(ForumPost.visible.is_(True))
 
     # Apply search filter
     if filter_params.q:
@@ -117,10 +124,14 @@ async def list_forum_posts(
     total = int(total_res.scalar() or 0)
 
     # Build main query using cached reply_count from database
-    main_query = select(ForumPost).options(
-        selectinload(ForumPost.author),
-        selectinload(ForumPost.tags),
-        selectinload(ForumPost.images),
+    main_query = (
+        select(ForumPost)
+        .options(
+            selectinload(ForumPost.author),
+            selectinload(ForumPost.tags),
+            selectinload(ForumPost.images),
+        )
+        .where(ForumPost.visible.is_(True))
     )
 
     # Apply search filter to main query
@@ -184,7 +195,10 @@ async def list_forum_posts(
 async def get_forum_post(
     session: AsyncSession, post_id: uuid.UUID
 ) -> ForumPostDetail | None:
-    """Get a forum post with all its details including replies."""
+    """
+    Get a forum post with all its details including replies.
+    Only visible posts and replies are shown on forum routes.
+    """
     res = await session.execute(
         select(ForumPost)
         .options(
@@ -193,7 +207,7 @@ async def get_forum_post(
             selectinload(ForumPost.tags),
             selectinload(ForumPost.replies).selectinload(PostReply.user),
         )
-        .where(ForumPost.id == post_id)
+        .where(ForumPost.id == post_id, ForumPost.visible.is_(True))
     )
     post = res.scalars().first()
     if not post:
@@ -222,6 +236,7 @@ async def get_forum_post(
                 parent_id=comment.parent_id,
             )
             for comment in post.replies
+            if comment.visible
         ],
         reply_count=post.reply_count,
         like_count=post.like_count,
@@ -492,7 +507,9 @@ async def delete_forum_reply(
     post = await session.get(ForumPost, post_id)
     if post:
         count_res = await session.execute(
-            select(func.count()).select_from(PostReply).where(PostReply.post_id == post_id)
+            select(func.count())
+            .select_from(PostReply)
+            .where(PostReply.post_id == post_id)
         )
         post.reply_count = int(count_res.scalar() or 0)
 

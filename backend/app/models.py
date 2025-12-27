@@ -378,6 +378,7 @@ class ForumPost(Base):
     view_count: Mapped[int] = mapped_column(Integer, default=0)
     like_count: Mapped[int] = mapped_column(Integer, default=0)
     reply_count: Mapped[int] = mapped_column(Integer, default=0)
+    visible: Mapped[bool] = mapped_column(Boolean, default=True)
 
     author: Mapped["Profile"] = relationship("Profile", back_populates="posts")
     images: Mapped[list["PostImage"]] = relationship(
@@ -428,6 +429,7 @@ class PostReply(Base):
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()
     )
+    visible: Mapped[bool] = mapped_column(Boolean, default=True)
     post: Mapped["ForumPost"] = relationship("ForumPost", back_populates="replies")
     user: Mapped["Profile"] = relationship("Profile", back_populates="replies")
     parent: Mapped["PostReply | None"] = relationship(

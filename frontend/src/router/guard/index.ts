@@ -81,6 +81,15 @@ const guardRoutes: RouteRecordRaw[] = [
           authRequired: false,
         },
       },
+      {
+        path: ":postId/edit",
+        name: "edit-post",
+        component: () => import("@/pages/Forums/NewPostPage.vue"),
+        meta: {
+          title: "Edit Post",
+          authRequired: true,
+        },
+      },
       // Not Found
       {
         path: ":catchAll(.*)",

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useRouter, useRoute } from "vue-router";
 import { useForumPost } from "@/composables";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,9 @@ import {
   MessageCircleIcon,
   Loader2Icon,
 } from "lucide-vue-next";
+
+const router = useRouter();
+const route = useRoute();
 
 const {
   // State
@@ -62,6 +66,12 @@ const {
   formatNumber,
   toggleLike,
 } = useForumPost();
+
+// Navigate to edit page
+const navigateToEdit = () => {
+  const postId = route.params.postId as string;
+  router.push(`/forums/${postId}/edit`);
+};
 </script>
 
 <template>
@@ -131,7 +141,11 @@ const {
                   <AvatarFallback
                     class="bg-primary/10 text-primary font-medium"
                   >
-                    {{ post?.author.username ? post.author.username.slice(0, 2).toUpperCase() : '' }}
+                    {{
+                      post?.author.username
+                        ? post.author.username.slice(0, 2).toUpperCase()
+                        : ""
+                    }}
                   </AvatarFallback>
                 </Avatar>
                 <div>
@@ -160,6 +174,7 @@ const {
                   variant="ghost"
                   size="sm"
                   class="rounded-xl text-muted-foreground hover:text-foreground"
+                  @click="navigateToEdit"
                 >
                   <PencilIcon class="size-4 mr-1" />
                   Edit
@@ -228,7 +243,6 @@ const {
               :is-authenticated="isAuthenticated"
               @toggle-like="toggleLike"
             />
-
           </CardContent>
         </Card>
 
@@ -278,7 +292,10 @@ const {
 
             <!-- Replies List -->
             <div v-if="replies.length > 0" class="space-y-2">
-              <template v-for="reply in replies.filter(r => !r.parent_id)" :key="reply.id">
+              <template
+                v-for="reply in replies.filter((r) => !r.parent_id)"
+                :key="reply.id"
+              >
                 <!-- Top-level reply -->
                 <ForumReplyCard
                   :reply="reply"
@@ -288,14 +305,18 @@ const {
                   @report="openReportDialog('comment', $event)"
                   @reply="openReplyEditor"
                 />
-                
+
                 <!-- Nested replies -->
-                <div 
-                  v-if="replies.filter(r => r.parent_id === reply.id).length > 0"
+                <div
+                  v-if="
+                    replies.filter((r) => r.parent_id === reply.id).length > 0
+                  "
                   class="ml-8 space-y-2 border-l-2 border-border/50 pl-4"
                 >
                   <ForumReplyCard
-                    v-for="nestedReply in replies.filter(r => r.parent_id === reply.id)"
+                    v-for="nestedReply in replies.filter(
+                      (r) => r.parent_id === reply.id
+                    )"
                     :key="nestedReply.id"
                     :reply="nestedReply"
                     :format-date="formatDate"

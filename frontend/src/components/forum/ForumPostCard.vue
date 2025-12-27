@@ -122,7 +122,7 @@ const handleLikeClick = (event: Event) => {
                 ]"
               >
                 <img
-                  :src="post?.images[0].image_url"
+                  :src="post?.images[0]?.image_url"
                   class="absolute inset-0 size-full object-cover hover:scale-105 transition-transform duration-500"
                   alt="Post Image"
                 />
@@ -133,7 +133,7 @@ const handleLikeClick = (event: Event) => {
               >
                 <div class="relative w-full h-full overflow-hidden">
                   <img
-                    :src="post.images[1].image_url"
+                    :src="post.images[1]?.image_url"
                     class="absolute inset-0 size-full object-cover hover:scale-105 transition-transform duration-500"
                     alt="Post Image"
                   />
@@ -143,7 +143,7 @@ const handleLikeClick = (event: Event) => {
                   class="relative w-full h-full overflow-hidden"
                 >
                   <img
-                    :src="post.images[2].image_url"
+                    :src="post.images[2]?.image_url"
                     class="absolute inset-0 size-full object-cover hover:scale-105 transition-transform duration-500"
                     alt="Post Image"
                   />

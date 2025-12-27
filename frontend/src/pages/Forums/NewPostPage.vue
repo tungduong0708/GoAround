@@ -42,7 +42,7 @@ const { isAuthenticated } = storeToRefs(authStore);
 
 // Check if editing
 const isEditMode = computed(() => route.path.includes("/edit"));
-const postId = computed(() => route.params.id as string);
+const postId = computed(() => route.params.postId as string);
 
 // State
 const showCancelDialog = ref(false);
@@ -96,10 +96,9 @@ onMounted(async () => {
         setValues({
           title: post.title,
           content: post.content,
-          tags: post.tags?.map((t) => t.name),
-          // images: post.images // Handling existing images for edit is complex with file input (can't preset files)
-          // We would typically show existing images separately and allow adding new ones.
-          // For this MVP mock, we might skip existing image editing or just clearer
+          tags: post.tags?.map((t) => t.name) || [],
+          // Load existing images - extract URLs from the image objects
+          images: post.images?.map((img) => img.image_url) || [],
         });
       }
     } catch (e) {
@@ -133,8 +132,12 @@ const onSubmit = handleSubmit(async (values) => {
       });
     }
 
-    // Redirect
-    router.push("/forums");
+    // Redirect - go to post page if editing, forums list if creating
+    if (isEditMode.value) {
+      router.push(`/forums/${postId.value}`);
+    } else {
+      router.push("/forums");
+    }
   } catch (error) {
     toast.error("Error", {
       description: "Something went wrong. Please try again.",

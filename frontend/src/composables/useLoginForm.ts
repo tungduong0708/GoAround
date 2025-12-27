@@ -70,32 +70,9 @@ export function useLoginForm() {
     }
     hasRedirected.value = true;
 
-    // Check if profile exists before redirecting
-    try {
-      console.log("[useLoginForm] Checking profile existence...");
-      const profileExists = await userProfileStore.fetchProfile();
-      console.log("[useLoginForm] Profile exists:", profileExists);
-
-      if (!profileExists) {
-        // Profile not found, redirect to profile creation
-        console.log("[useLoginForm] Redirecting to profile creation");
-        router.replace({ name: "profile-create" });
-        return;
-      }
-
-      // Profile exists, check for redirect path (captured at initialization)
-      if (redirectPath) {
-        console.log("[useLoginForm] Redirecting to:", redirectPath);
-        router.replace(redirectPath);
-      } else {
-        console.log("[useLoginForm] Redirecting to home");
-        router.replace("/");
-      }
-    } catch (error) {
-      // On other non-404 errors, still go home (e.g., network issues)
-      console.error("Error checking profile:", error);
-      router.replace("/");
-    }
+    // Redirect to auth callback page which will check profile
+    console.log("[useLoginForm] Redirecting to auth callback page");
+    router.replace({ name: "auth-callback" });
   };
 
   const initializeSession = async () => {
@@ -135,7 +112,7 @@ export function useLoginForm() {
   const handleGoogleLogin = async () => {
     isLoading.value = true;
     try {
-      await authStore.signInWithGoogle(`${window.location.origin}/`);
+      await authStore.signInWithGoogle(`${window.location.origin}/auth/callback`);
     } catch (error: any) {
       // Set a manual error on a specific field or a general area
       setFieldError("apiError", "Google login failed: " + error.message);

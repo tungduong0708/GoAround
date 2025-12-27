@@ -1,17 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { UserService } from "@/services";
 import type { IUserPhotoResponse } from "@/utils/interfaces";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import {
-  Image as ImageIcon,
-  Camera,
-  X,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
+import { Image as ImageIcon, Camera } from "lucide-vue-next";
+import Lightbox from "@/components/common/Lightbox.vue";
 
 interface Props {
   userId: string;
@@ -20,8 +14,10 @@ interface Props {
 const props = defineProps<Props>();
 const photos = ref<IUserPhotoResponse[]>([]);
 const loading = ref(true);
-const selectedPhoto = ref<IUserPhotoResponse | null>(null);
+const lightboxOpen = ref(false);
 const selectedIndex = ref(0);
+
+const imageUrls = computed(() => photos.value.map(photo => photo.image_url));
 
 onMounted(async () => {
   try {
@@ -37,28 +33,11 @@ onMounted(async () => {
   }
 });
 
-const openLightbox = (photo: IUserPhotoResponse, index: number) => {
-  selectedPhoto.value = photo;
+const openLightbox = (index: number) => {
   selectedIndex.value = index;
+  lightboxOpen.value = true;
 };
 
-const closeLightbox = () => {
-  selectedPhoto.value = null;
-};
-
-const nextPhoto = () => {
-  if (selectedIndex.value < photos.value.length - 1) {
-    selectedIndex.value++;
-    selectedPhoto.value = photos.value[selectedIndex.value] as IUserPhotoResponse;
-  }
-};
-
-const prevPhoto = () => {
-  if (selectedIndex.value > 0) {
-    selectedIndex.value--;
-    selectedPhoto.value = photos.value[selectedIndex.value] as IUserPhotoResponse;
-  }
-};
 </script>
 
 <template>
@@ -125,7 +104,7 @@ const prevPhoto = () => {
           transition: { delay: index * 50, duration: 400 },
         }"
         class="relative group aspect-square overflow-hidden rounded-2xl cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300"
-        @click="openLightbox(photo, index)"
+        @click="openLightbox(index)"
       >
         <img
           :src="photo.image_url"
@@ -152,72 +131,11 @@ const prevPhoto = () => {
       </div>
     </div>
 
-    <!-- Lightbox Modal -->
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition-opacity duration-300"
-        leave-active-class="transition-opacity duration-300"
-        enter-from-class="opacity-0"
-        leave-to-class="opacity-0"
-      >
-        <div
-          v-if="selectedPhoto"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
-          @click.self="closeLightbox"
-        >
-          <!-- Close Button -->
-          <Button
-            variant="ghost"
-            size="icon"
-            class="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full z-10"
-            @click="closeLightbox"
-          >
-            <X class="h-6 w-6" />
-          </Button>
-
-          <!-- Navigation -->
-          <Button
-            v-if="selectedIndex > 0"
-            variant="ghost"
-            size="icon"
-            class="absolute left-4 text-white hover:bg-white/20 rounded-full z-10"
-            @click.stop="prevPhoto"
-          >
-            <ChevronLeft class="h-8 w-8" />
-          </Button>
-
-          <Button
-            v-if="selectedIndex < photos.length - 1"
-            variant="ghost"
-            size="icon"
-            class="absolute right-4 text-white hover:bg-white/20 rounded-full z-10"
-            @click.stop="nextPhoto"
-          >
-            <ChevronRight class="h-8 w-8" />
-          </Button>
-
-          <!-- Image -->
-          <div
-            v-motion
-            :initial="{ opacity: 0, scale: 0.9 }"
-            :enter="{ opacity: 1, scale: 1, transition: { duration: 300 } }"
-            class="max-w-4xl max-h-[80vh] mx-4"
-          >
-            <img
-              :src="selectedPhoto.image_url"
-              :alt="`Photo ${selectedIndex + 1}`"
-              class="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl"
-            />
-          </div>
-
-          <!-- Counter -->
-          <div
-            class="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/80 text-sm font-medium px-4 py-2 rounded-full bg-black/50 backdrop-blur-sm"
-          >
-            {{ selectedIndex + 1 }} / {{ photos.length }}
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
+    <!-- Lightbox -->
+    <Lightbox
+      v-model:open="lightboxOpen"
+      v-model:current-index="selectedIndex"
+      :images="imageUrls"
+    />
   </div>
 </template>

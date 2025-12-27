@@ -17,6 +17,7 @@ class MediaService {
   private readonly BUCKET_POST_IMAGES = "post-images";
   private readonly BUCKET_REVIEW_IMAGES = "review-images";
   private readonly BUCKET_PLACE_IMAGES = "place-images";
+  private readonly BUCKET_AVATAR_IMAGES = "avatar-images";
 
   private readonly MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB (Supabase default)
   private readonly ALLOWED_IMAGE_TYPES = [
@@ -36,7 +37,6 @@ class MediaService {
   ): Promise<IUploadResult> {
     const {
       bucket = this.BUCKET_POST_IMAGES,
-      folder = "",
       maxSizeInMB = 50,
       allowedTypes = this.ALLOWED_IMAGE_TYPES,
     } = options;
@@ -76,9 +76,7 @@ class MediaService {
     
     // CRITICAL: Path must start with user ID to match RLS policy
     // Policy requires: (storage.foldername(name))[1] = auth.uid()::text
-    const filePath = folder 
-      ? `${userId}/${folder}/${fileName}`  // e.g., "user-id/avatars/image.jpg"
-      : `${userId}/${fileName}`;            // e.g., "user-id/image.jpg"
+    const filePath = `${userId}/${fileName}`;            // e.g., "user-id/image.jpg"
 
     console.log("Uploading to:", filePath);
     console.log("First folder (must match user ID):", userId);
@@ -117,10 +115,9 @@ class MediaService {
   /**
    * Upload forum post image
    */
-  async uploadPostImage(file: File, folder: string = ""): Promise<IUploadResult> {
+  async uploadPostImage(file: File): Promise<IUploadResult> {
     return this.uploadFile(file, {
       bucket: this.BUCKET_POST_IMAGES,
-      folder,
       maxSizeInMB: 10,
     });
   }
@@ -128,10 +125,9 @@ class MediaService {
   /**
    * Upload review image
    */
-  async uploadReviewImage(file: File, folder: string = ""): Promise<IUploadResult> {
+  async uploadReviewImage(file: File): Promise<IUploadResult> {
     return this.uploadFile(file, {
       bucket: this.BUCKET_REVIEW_IMAGES,
-      folder,
       maxSizeInMB: 10,
     });
   }
@@ -139,10 +135,9 @@ class MediaService {
   /**
    * Upload place image
    */
-  async uploadPlaceImage(file: File, folder: string = ""): Promise<IUploadResult> {
+  async uploadPlaceImage(file: File): Promise<IUploadResult> {
     return this.uploadFile(file, {
       bucket: this.BUCKET_PLACE_IMAGES,
-      folder,
       maxSizeInMB: 10,
     });
   }
@@ -152,8 +147,7 @@ class MediaService {
    */
   async uploadAvatar(file: File): Promise<IUploadResult> {
     return this.uploadFile(file, {
-      bucket: this.BUCKET_POST_IMAGES,
-      folder: "avatars",
+      bucket: this.BUCKET_AVATAR_IMAGES,
       maxSizeInMB: 2,
     });
   }
@@ -163,8 +157,7 @@ class MediaService {
    */
   async uploadProfileImage(file: File): Promise<IUploadResult> {
     return this.uploadFile(file, {
-      bucket: this.BUCKET_POST_IMAGES,
-      folder: "profiles",
+      bucket: this.BUCKET_AVATAR_IMAGES,
       maxSizeInMB: 5,
     });
   }
@@ -183,24 +176,24 @@ class MediaService {
   /**
    * Upload multiple post images
    */
-  async uploadMultiplePostImages(files: File[], folder: string = ""): Promise<IUploadResult[]> {
-    const uploadPromises = files.map((file) => this.uploadPostImage(file, folder));
+  async uploadMultiplePostImages(files: File[]): Promise<IUploadResult[]> {
+    const uploadPromises = files.map((file) => this.uploadPostImage(file));
     return Promise.all(uploadPromises);
   }
 
   /**
    * Upload multiple review images
    */
-  async uploadMultipleReviewImages(files: File[], folder: string = ""): Promise<IUploadResult[]> {
-    const uploadPromises = files.map((file) => this.uploadReviewImage(file, folder));
+  async uploadMultipleReviewImages(files: File[]): Promise<IUploadResult[]> {
+    const uploadPromises = files.map((file) => this.uploadReviewImage(file));
     return Promise.all(uploadPromises);
   }
 
   /**
    * Upload multiple place images
    */
-  async uploadMultiplePlaceImages(files: File[], folder: string = ""): Promise<IUploadResult[]> {
-    const uploadPromises = files.map((file) => this.uploadPlaceImage(file, folder));
+  async uploadMultiplePlaceImages(files: File[]): Promise<IUploadResult[]> {
+    const uploadPromises = files.map((file) => this.uploadPlaceImage(file));
     return Promise.all(uploadPromises);
   }
 

@@ -6,6 +6,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import GoogleMap from "@/components/common/GoogleMap.vue";
 import BookmarkButton from "@/components/common/BookmarkButton.vue";
+import WriteReviewModal from "@/components/common/WriteReviewModal.vue";
+import ReviewCard from "@/components/common/ReviewCard.vue";
+import Lightbox from "@/components/common/Lightbox.vue";
+import { PlacesService } from "@/services";
+import type { IReviewSchema } from "@/utils/interfaces";
 import {
   MapPinIcon,
   StarIcon,
@@ -14,8 +19,9 @@ import {
   TagIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  Loader2,
 } from "lucide-vue-next";
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed, watch } from "vue";
 
 const {
   place,
@@ -31,11 +37,84 @@ const {
   openingHours,
 } = usePlaceDetails();
 
-onMounted(() => {
-  console.log(place.value?.opening_hours)
+const showAllHours = ref(false);
+const showWriteReviewModal = ref(false);
+const lightboxOpen = ref(false);
+const lightboxIndex = ref(0);
+const reviews = ref<IReviewSchema[]>([]);
+const reviewsLoading = ref(false);
+const reviewsError = ref<string | null>(null);
+const totalReviews = ref(0);
+
+const averageRating = computed(() => {
+  if (reviews.value.length === 0) return 0;
+  const sum = reviews.value.reduce((acc, review) => acc + review.rating, 0);
+  return (sum / reviews.value.length).toFixed(1);
 });
 
-const showAllHours = ref(false);
+const allImages = computed(() => {
+  const images: string[] = [];
+  
+  // Add main image first
+  if (place.value?.main_image_url || heroImage.value) {
+    images.push((place.value?.main_image_url || heroImage.value) as string);
+  }
+  
+  // Add gallery images
+  if (galleryImages.value.length > 0) {
+    images.push(...galleryImages.value);
+  }
+  
+  return images;
+});
+
+const openLightbox = (index: number) => {
+  lightboxIndex.value = index;
+  lightboxOpen.value = true;
+};
+
+const fetchReviews = async () => {
+  if (!place.value?.id) return;
+  
+  reviewsLoading.value = true;
+  reviewsError.value = null;
+  
+  try {
+    const response = await PlacesService.getReviewsForPlace(place.value.id, {
+      page: 1,
+      limit: 10,
+    });
+    console.log("Reviews response:", response);
+    console.log("Reviews data:", response.data);
+    if (response.data.length > 0) {
+      console.log("First review:", response.data[0]);
+    }
+    reviews.value = response.data;
+    totalReviews.value = response.meta?.total_items || response.data.length;
+  } catch (error: any) {
+    console.error("Failed to fetch reviews:", error);
+    reviewsError.value = "Failed to load reviews";
+  } finally {
+    reviewsLoading.value = false;
+  }
+};
+
+const handleReviewSubmitted = async () => {
+  // Refresh reviews after a new review is submitted
+  showWriteReviewModal.value = false;
+  await fetchReviews();
+};
+
+// Watch for place to be loaded, then fetch reviews
+watch(() => place.value?.id, (newId) => {
+  if (newId) {
+    fetchReviews();
+  }
+}, { immediate: true });
+
+onMounted(() => {
+  console.log(place.value?.opening_hours);
+});
 </script>
 
 <template>
@@ -74,36 +153,50 @@ const showAllHours = ref(false);
         class="grid grid-cols-1 gap-4 md:grid-cols-4 md:grid-rows-2 h-[400px] md:h-[500px]"
       >
         <div
-          class="relative col-span-1 md:col-span-4 md:row-span-2 overflow-hidden rounded-3xl"
+          class="relative col-span-1 md:col-span-4 md:row-span-2 overflow-hidden rounded-3xl cursor-pointer group"
+          @click="openLightbox(0)"
         >
           <img
-
-            v-if ="place?.main_image_url || heroImage" 
+            v-if="place?.main_image_url || heroImage" 
             :src="place?.main_image_url || heroImage"
             :alt="place?.name"
-            class="h-full w-full object-cover"
+            class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
-          <div class="absolute right-4 top-4">
+          <div class="absolute right-4 top-4 z-10">
             <BookmarkButton v-if="place && place.average_rating !== undefined" :place="place as any" variant="icon" size="lg" />
           </div>
+          <!-- Overlay on hover -->
+          <div
+            class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300"
+          ></div>
         </div>
       </div>
 
       <!-- Additional Images Row -->
-      <div v-if="galleryImages.length > 1" class="grid grid-cols-4 gap-4">
+      <div v-if="galleryImages.length > 0" class="grid grid-cols-4 gap-4">
         <div
           v-for="(img, index) in galleryImages.slice(0, 4)"
           :key="index"
           v-motion
           :initial="{ opacity: 0, y: 20 }"
           :enter="{ opacity: 1, y: 0, transition: { delay: index * 50 } }"
-          class="aspect-[4/3] overflow-hidden rounded-2xl cursor-pointer hover:opacity-90 transition-opacity"
+          class="aspect-[4/3] overflow-hidden rounded-2xl cursor-pointer hover:opacity-80 transition-all duration-300 group relative"
+          @click="openLightbox(index + 1)"
         >
           <img
             :src="img"
             :alt="place?.name"
-            class="h-full w-full object-cover"
+            class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
           />
+          <!-- Show "+X more" overlay on last image if there are more images -->
+          <div
+            v-if="index === 3 && galleryImages.length > 4"
+            class="absolute inset-0 bg-black/60 flex items-center justify-center"
+          >
+            <span class="text-white text-2xl font-semibold">
+              +{{ galleryImages.length - 4 }}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -118,9 +211,11 @@ const showAllHours = ref(false);
             <div class="flex items-center gap-4 text-muted-foreground">
               <div class="flex items-center gap-1 text-yellow-500">
                 <StarIcon class="size-5 fill-current" />
-                <span class="font-semibold text-foreground">N/A</span>
+                <span class="font-semibold text-foreground">
+                  {{ totalReviews > 0 ? averageRating : 'N/A' }}
+                </span>
                 <span class="text-muted-foreground"
-                  >(0 reviews)</span
+                  >({{ totalReviews }} review{{ totalReviews !== 1 ? 's' : '' }})</span
                 >
               </div>
               <div class="flex items-center gap-1">
@@ -198,10 +293,26 @@ const showAllHours = ref(false);
               <Button
                 variant="default"
                 class="bg-orange-500 hover:bg-orange-600 text-white rounded-full"
+                @click="showWriteReviewModal = true"
                 >Write a Review</Button
               >
             </div>
+            <!-- Loading State -->
+            <div v-if="reviewsLoading" class="flex items-center justify-center py-8">
+              <Loader2 class="h-8 w-8 animate-spin text-coral" />
+            </div>
+
+            <!-- Error State -->
             <div
+              v-else-if="reviewsError"
+              class="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-destructive"
+            >
+              <p class="font-medium">{{ reviewsError }}</p>
+            </div>
+
+            <!-- Empty State -->
+            <div
+              v-else-if="reviews.length === 0"
               class="rounded-2xl border border-dashed border-border/60 p-6 text-muted-foreground"
             >
               <p class="font-medium text-foreground">No reviews yet</p>
@@ -209,6 +320,15 @@ const showAllHours = ref(false);
                 Be the first to share your experience at
                 {{ place.name }}.
               </p>
+            </div>
+
+            <!-- Reviews List -->
+            <div v-else class="space-y-6">
+              <ReviewCard
+                v-for="review in reviews"
+                :key="review.id"
+                :review="review"
+              />
             </div>
           </section>
         </div>
@@ -326,11 +446,13 @@ const showAllHours = ref(false);
                   </div>
                 </div>
 
+                <!--
                 <Button
                   class="w-full rounded-full bg-orange-500 hover:bg-orange-600 text-white font-semibold h-12 text-lg shadow-lg shadow-orange-500/20"
                 >
                   Book Now
                 </Button>
+                -->
               </CardContent>
             </Card>
           </div>
@@ -338,6 +460,22 @@ const showAllHours = ref(false);
       </div>
     </div>
   </div>
+
+  <!-- Write Review Modal -->
+  <WriteReviewModal
+    v-if="place"
+    v-model:open="showWriteReviewModal"
+    :place-id="place.id"
+    :place-name="place.name"
+    @success="handleReviewSubmitted"
+  />
+
+  <!-- Image Lightbox -->
+  <Lightbox
+    v-model:open="lightboxOpen"
+    v-model:current-index="lightboxIndex"
+    :images="allImages"
+  />
 </template>
 
 <style scoped></style>

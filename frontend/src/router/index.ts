@@ -45,7 +45,7 @@ router.beforeEach(async (to, _from, next) => {
 
   // Redirect authenticated users away from login/signup pages
   if (isAuthenticated && (to.name === "login" || to.name === "signup")) {
-    next({ name: "home" });
+    next({ name: "auth-callback" });
     return;
   }
 

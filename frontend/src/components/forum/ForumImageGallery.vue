@@ -1,9 +1,18 @@
 <script setup lang="ts">
+import { ref } from "vue";
+import Lightbox from "@/components/common/Lightbox.vue";
+
 defineProps<{
   images: string[];
 }>();
 
-// Simple lightbox state (could be expanded for full gallery)
+const lightboxOpen = ref(false);
+const lightboxIndex = ref(0);
+
+const openLightbox = (index: number) => {
+  lightboxIndex.value = index;
+  lightboxOpen.value = true;
+};
 </script>
 
 <template>
@@ -30,6 +39,7 @@ defineProps<{
         :src="images[0]"
         alt="Post image 1"
         class="absolute inset-0 size-full object-cover hover:scale-105 transition-transform duration-500 cursor-pointer"
+        @click="openLightbox(0)"
       />
     </div>
 
@@ -47,6 +57,7 @@ defineProps<{
           :src="images[1]"
           alt="Post image 2"
           class="absolute inset-0 size-full object-cover hover:scale-105 transition-transform duration-500 cursor-pointer"
+          @click="openLightbox(1)"
         />
       </div>
 
@@ -58,12 +69,14 @@ defineProps<{
           :src="images[2]"
           alt="Post image 3"
           class="absolute inset-0 size-full object-cover hover:scale-105 transition-transform duration-500 cursor-pointer"
+          @click="openLightbox(2)"
         />
 
         <!-- More images overlay -->
         <div
           v-if="images.length > 3"
           class="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center cursor-pointer hover:bg-black/50 transition-colors"
+          @click="openLightbox(2)"
         >
           <span class="text-white text-xl font-bold">
             +{{ images.length - 3 }}
@@ -72,4 +85,11 @@ defineProps<{
       </div>
     </div>
   </div>
+
+  <!-- Lightbox -->
+  <Lightbox
+    v-model:open="lightboxOpen"
+    v-model:current-index="lightboxIndex"
+    :images="images"
+  />
 </template>

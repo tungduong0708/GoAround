@@ -83,15 +83,6 @@ const {
       </NavigationMenu>
 
       <div class="ml-auto flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          class="hidden rounded-full px-4 font-semibold lg:inline-flex"
-          :as-child="true"
-        >
-          <RouterLink :to="{ name: 'search' }"> Search </RouterLink>
-        </Button>
-
         <div class="hidden h-6 w-px bg-border/60 lg:block" />
 
         <ThemeToggle />

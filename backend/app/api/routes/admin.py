@@ -5,14 +5,14 @@ from typing import List
 
 from fastapi import APIRouter, HTTPException, status
 
-from app.api.deps import SessionDep, CurrentUserDep
+from app.api.deps import CurrentUserDep, SessionDep
 from app.schemas import (
     APIResponse,
     BusinessVerificationDetail,
     HTTPError,
     Message,
-    ModerationCaseSummary,
     ModerationCaseDetail,
+    ModerationCaseSummary,
     ResolveCaseRequest,
     VerifyBusinessRequest,
 )
@@ -37,10 +37,10 @@ async def get_moderation_cases(
 ):
     """
     Get all moderation cases for admin review.
-    
+
     Returns a list of moderation cases (tickets) with aggregated report counts.
     Must join ModerationTarget and ContentReport to calculate report_count.
-    
+
     **Admin only**
     """
     # Check admin permission
@@ -78,10 +78,10 @@ async def get_case_detail(
 ):
     """
     Get detailed information about a specific moderation case.
-    
+
     Fetches the ModerationTarget, associated ContentReports, and uses
     a placeholder function fetch_content(type, id) to populate content_snapshot.
-    
+
     **Admin only**
     """
     # Check admin permission
@@ -137,7 +137,7 @@ async def resolve_case(
 
     Returns:
     - Success message
-    
+
     **Admin only**
     """
     # Check admin permission
@@ -183,7 +183,6 @@ async def resolve_case(
 @router.get(
     "/businesses/unverified",
     response_model=APIResponse[List[BusinessVerificationDetail]],
-    status_code=status.HTTP_501_NOT_IMPLEMENTED,
     responses={
         403: {"model": HTTPError},
     },
@@ -196,17 +195,34 @@ async def get_unverified_businesses(
 ):
     """
     Get all unverified business accounts with verification details.
+
+    Returns a paginated list of pending business verification requests.
+    Each entry includes user information, business details, and verification status.
+
+    **Admin only**
     """
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Get unverified businesses endpoint not yet implemented",
+    # Check admin permission
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+
+    verifications, total_count = await admin_service.get_unverified_businesses(
+        session=session,
+        page=page,
+        limit=limit,
+    )
+
+    return APIResponse(
+        data=verifications,
+        meta={"page": page, "limit": limit, "total_items": total_count},
     )
 
 
 @router.post(
     "/businesses/{user_id}/verify",
     response_model=APIResponse[Message],
-    status_code=status.HTTP_501_NOT_IMPLEMENTED,
     responses={
         403: {"model": HTTPError},
         404: {"model": HTTPError},
@@ -220,8 +236,41 @@ async def verify_business(
 ):
     """
     Approve or reject a business verification request.
+
+    Path Parameters:
+    - user_id: UUID of the user profile requesting verification
+
+    Request Body:
+    - action: Action to take (approve or reject)
+    - notes: Optional notes about the decision (currently not persisted)
+
+    Actions:
+    - "approve": Sets is_verified_business=True, role="business", status="approved"
+    - "reject": Sets status="rejected", user remains in current role
+
+    **Admin only**
     """
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Verify business endpoint not yet implemented",
+    # Check admin permission
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+
+    success = await admin_service.verify_business(
+        session=session,
+        user_id=user_id,
+        action=data.action,
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No pending verification request found for this user",
+        )
+
+    return APIResponse(
+        data=Message(
+            message=f"Business verification request {'approved' if data.action == 'approve' else 'rejected'} successfully"
+        )
     )

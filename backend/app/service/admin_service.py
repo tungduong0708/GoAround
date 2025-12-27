@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import (
+    BusinessVerificationRequest,
     ContentReport,
     ForumPost,
     ModerationTarget,
@@ -16,6 +17,7 @@ from app.models import (
     Profile,
 )
 from app.schemas import (
+    BusinessVerificationDetail,
     ForumAuthorSchema,
     ForumCommentSchema,
     ForumCommentUserSchema,
@@ -25,6 +27,8 @@ from app.schemas import (
     ModerationCaseDetail,
     ModerationCaseSummary,
     ReportDetail,
+    UserPublic,
+    UserStats,
 )
 
 
@@ -355,3 +359,138 @@ async def _ban_content_author(
         if profile:
             ban_until = datetime.utcnow() + timedelta(days=ban_duration_days)
             profile.ban_until = ban_until
+
+
+async def get_unverified_businesses(
+    session: AsyncSession,
+    page: int = 1,
+    limit: int = 20,
+) -> tuple[list[BusinessVerificationDetail], int]:
+    """
+    Get all pending business verification requests.
+
+    Returns:
+        Tuple of (verification_list, total_count)
+    """
+    # Count total pending requests
+    count_stmt = (
+        select(func.count())
+        .select_from(BusinessVerificationRequest)
+        .where(BusinessVerificationRequest.status == "pending")
+    )
+    total_res = await session.execute(count_stmt)
+    total = int(total_res.scalar() or 0)
+
+    # Fetch pending requests with profile information
+    stmt = (
+        select(BusinessVerificationRequest)
+        .options(
+            selectinload(BusinessVerificationRequest.profile).selectinload(
+                Profile.posts
+            ),
+            selectinload(BusinessVerificationRequest.profile).selectinload(
+                Profile.replies
+            ),
+            selectinload(BusinessVerificationRequest.profile).selectinload(
+                Profile.reviews
+            ),
+            selectinload(BusinessVerificationRequest.profile).selectinload(
+                Profile.trips
+            ),
+        )
+        .where(BusinessVerificationRequest.status == "pending")
+        .order_by(BusinessVerificationRequest.created_at.asc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+    )
+
+    result = await session.execute(stmt)
+    requests = result.scalars().all()
+
+    # Convert to response schema
+    verification_list = []
+    for req in requests:
+        # Get user stats
+        posts_count = len(req.profile.posts) if req.profile.posts else 0
+        replies_count = len(req.profile.replies) if req.profile.replies else 0
+        reviews_count = len(req.profile.reviews) if req.profile.reviews else 0
+        trips_count = (
+            len([t for t in req.profile.trips if t.is_public])
+            if req.profile.trips
+            else 0
+        )
+
+        user_public = UserPublic(
+            id=req.profile.id,
+            username=req.profile.username,
+            full_name=req.profile.full_name,
+            avatar_url=req.profile.avatar_url,
+            role=req.profile.role,
+            is_verified_business=req.profile.is_verified_business,
+            stats=UserStats(
+                reviews_count=reviews_count,
+                posts_count=posts_count,
+                photos_count=0,  # Not tracking individual photos
+                public_trips_count=trips_count,
+                replies_count=replies_count,
+            ),
+            created_at=req.profile.updated_at,  # Using updated_at as created_at proxy
+        )
+
+        verification_list.append(
+            BusinessVerificationDetail(
+                user=user_public,
+                verification_id=req.id,
+                business_image_url=req.business_image_url,
+                business_description=req.business_description,
+                status=req.status,
+                created_at=req.created_at,
+                reviewed_at=req.reviewed_at,
+            )
+        )
+
+    return verification_list, total
+
+
+async def verify_business(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    action: Literal["approve", "reject"],
+) -> bool:
+    """
+    Approve or reject a business verification request.
+
+    Args:
+        user_id: UUID of the user profile
+        action: Action to take (approve or reject)
+
+    Returns:
+        True if successful, False if request not found
+    """
+    # Find the pending verification request for this user
+    stmt = (
+        select(BusinessVerificationRequest)
+        .options(selectinload(BusinessVerificationRequest.profile))
+        .where(
+            BusinessVerificationRequest.profile_id == user_id,
+            BusinessVerificationRequest.status == "pending",
+        )
+    )
+
+    result = await session.execute(stmt)
+    verification_request = result.scalars().first()
+
+    if not verification_request:
+        return False
+
+    # Update verification request status
+    verification_request.status = "approved" if action == "approve" else "rejected"
+    verification_request.reviewed_at = datetime.utcnow()
+
+    # If approved, update the profile
+    if action == "approve":
+        verification_request.profile.is_verified_business = True
+        verification_request.profile.role = "business"
+
+    await session.commit()
+    return True

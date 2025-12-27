@@ -1,7 +1,7 @@
 import uuid
-from typing import Any, List
+from typing import Annotated, Any, List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app import crud
 from app.api.deps import CurrentUserDep, SessionDep
@@ -36,7 +36,7 @@ router = APIRouter(tags=["places"], prefix="/places")
 )
 async def search_places(
     session: SessionDep,
-    filter_params: PlaceSearchFilter = Depends(),
+    filter_params: Annotated[PlaceSearchFilter, Query()],
 ) -> Any:
     """
     Search places by keyword, tags, price, or location (radius).

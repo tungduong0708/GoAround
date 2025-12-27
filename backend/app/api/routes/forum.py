@@ -1,7 +1,7 @@
 import uuid
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.deps import CurrentUserDep, OptionalCurrentUserDep, SessionDep
 from app.schemas import (
@@ -49,8 +49,8 @@ router = APIRouter(tags=["forum"], prefix="/forum")
 )
 async def search_forum_posts(
     session: SessionDep,
-    current_user: OptionalCurrentUserDep = None,
-    filter_params: ForumSearchFilter = Depends(),
+    filter_params: Annotated[ForumSearchFilter, Query()],
+    current_user: OptionalCurrentUserDep,
 ) -> Any:
     """
     Search and list forum threads.
@@ -75,7 +75,7 @@ async def search_forum_posts(
 async def get_forum_post_detail(
     session: SessionDep,
     id: uuid.UUID,
-    current_user: OptionalCurrentUserDep = None,
+    current_user: OptionalCurrentUserDep,
 ) -> Any:
     """
     Get thread details and replies.

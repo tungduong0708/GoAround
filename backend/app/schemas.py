@@ -657,3 +657,10 @@ class ForumSearchFilter(BaseModel):
     sort: Literal["newest", "oldest", "popular"] = "newest"
     page: int = 1
     limit: int = 20
+
+
+class TripGenerateRequest(BaseModel):
+    destination: str
+    start_date: date
+    end_date: date
+    # Removed interests and budget to match UI

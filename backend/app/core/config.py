@@ -58,6 +58,8 @@ class Settings(BaseSettings):
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,
         )
+    
+    GEMINI_API_KEY: str | None = None
 
 
 settings = Settings()  # type: ignore

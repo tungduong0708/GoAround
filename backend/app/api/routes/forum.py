@@ -7,7 +7,6 @@ from app.api.deps import CurrentUserDep, SessionDep
 from app.schemas import (
     APIResponse,
     ContentReportCreate,
-    ContentReportResponse,
     ForumCommentSchema,
     ForumPostCreate,
     ForumPostDetail,

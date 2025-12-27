@@ -613,18 +613,56 @@ class ContentReportCreate(BaseModel):
     reason: str = Field(..., min_length=1)
 
 
-class ContentReportResponse(BaseModel):
+# --- Moderation (Ticketing Architecture) Schemas ---
+
+
+class ReportDetail(BaseModel):
+    """Individual user complaint within a moderation case."""
+
     id: uuid.UUID
     reporter_id: uuid.UUID
-    target_type: str
-    target_id: uuid.UUID
     reason: str
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class ResolveReportRequest(BaseModel):
+class ModerationCaseSummary(BaseModel):
+    """Summary view of a moderation case (ticket) for list display."""
+
+    id: uuid.UUID
+    target_type: Literal["post", "reply"]
+    target_id: uuid.UUID
+    status: Literal["pending", "approved", "rejected"]
+    created_at: datetime
+    report_count: int = Field(..., description="Number of reports in this case")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ModerationCaseDetail(ModerationCaseSummary):
+    """Detailed view of a moderation case with reports and content snapshot."""
+
+    reason: str | None = None
+    resolved_at: datetime | None = None
+    content_snapshot: ForumPostDetail | ForumCommentSchema | None = Field(
+        None, description="Fetched title/body/image of reported content"
+    )
+    reports: list[ReportDetail] = Field(
+        default_factory=list, description="All user complaints for this case"
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ResolveCaseRequest(BaseModel):
+    """Request to resolve a moderation case.
+
+    Action Mapping:
+    - 'dismiss' -> Status 'approved' (Content is safe)
+    - 'remove_content' / 'ban_user' -> Status 'rejected' (Content is removed)
+    """
+
     action: Literal["dismiss", "remove_content", "ban_user"]
     notes: str | None = None
     ban_duration_days: int | None = Field(

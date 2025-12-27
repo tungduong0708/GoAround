@@ -444,13 +444,17 @@ class ContentReport(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     reporter_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profiles.id"))
-    target_type: Mapped[str] = mapped_column(String(20))
-    target_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    moderation_target_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("moderation_targets.id", ondelete="CASCADE")
+    )
     reason: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()
     )
     reporter: Mapped["Profile"] = relationship("Profile", back_populates="reports")
+    moderation_target: Mapped["ModerationTarget"] = relationship(
+        "ModerationTarget", back_populates="reports"
+    )
 
 
 class ModerationTarget(Base):
@@ -468,6 +472,10 @@ class ModerationTarget(Base):
         TIMESTAMP(timezone=True), server_default=func.now()
     )
     resolved_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
+
+    reports: Mapped[list["ContentReport"]] = relationship(
+        "ContentReport", back_populates="moderation_target", cascade="all, delete-orphan"
+    )
 
 
 class BusinessVerificationRequest(Base):

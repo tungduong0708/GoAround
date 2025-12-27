@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 from app.models import (
     ContentReport,
     ForumPost,
+    ModerationTarget,
     PostImage,
     PostReply,
     Profile,
@@ -17,7 +18,6 @@ from app.models import (
 )
 from app.schemas import (
     ContentReportCreate,
-    ContentReportResponse,
     ForumAuthorSchema,
     ForumCommentSchema,
     ForumCommentUserSchema,
@@ -31,6 +31,41 @@ from app.schemas import (
     ForumTagSchema,
 )
 from app.service.utils import is_user_banned
+
+
+async def _get_or_create_moderation_target(
+    session: AsyncSession,
+    target_type: str,
+    target_id: uuid.UUID,
+) -> ModerationTarget:
+    """
+    Find an existing pending moderation target or create a new one.
+    
+    This implements the ticketing architecture where multiple reports
+    can be associated with a single moderation case.
+    """
+    # Check if there's an existing pending case for this content
+    stmt = select(ModerationTarget).where(
+        ModerationTarget.target_type == target_type,
+        ModerationTarget.target_id == target_id,
+        ModerationTarget.status == "pending",
+    )
+    result = await session.execute(stmt)
+    existing_target = result.scalars().first()
+    
+    if existing_target:
+        return existing_target
+    
+    # Create a new moderation target (case/ticket)
+    new_target = ModerationTarget(
+        target_type=target_type,
+        target_id=target_id,
+        status="pending",
+    )
+    session.add(new_target)
+    await session.flush()  # Get the ID without committing
+    
+    return new_target
 
 
 def _sanitize_author(author: Profile) -> ForumAuthorSchema:
@@ -380,32 +415,28 @@ async def report_forum_post(
     post_id: uuid.UUID,
     user_id: uuid.UUID,
     data: ContentReportCreate,
-) -> ContentReportResponse:
-    """Report a forum post."""
+) -> None:
+    """Report a forum post for moderation."""
     # Verify post exists
     post = await session.get(ForumPost, post_id)
     if not post:
         raise ValueError("Post not found")
 
-    # Create the report
-    report = ContentReport(
-        reporter_id=user_id,
+    # Get or create moderation target (ticket)
+    moderation_target = await _get_or_create_moderation_target(
+        session=session,
         target_type="post",
         target_id=post_id,
+    )
+
+    # Create the report linked to the moderation target
+    report = ContentReport(
+        reporter_id=user_id,
+        moderation_target_id=moderation_target.id,
         reason=data.reason,
     )
     session.add(report)
     await session.commit()
-    await session.refresh(report)
-
-    return ContentReportResponse(
-        id=report.id,
-        reporter_id=report.reporter_id,
-        target_type=report.target_type,
-        target_id=report.target_id,
-        reason=report.reason,
-        created_at=report.created_at,
-    )
 
 
 async def report_forum_reply(
@@ -414,8 +445,8 @@ async def report_forum_reply(
     reply_id: uuid.UUID,
     user_id: uuid.UUID,
     data: ContentReportCreate,
-) -> ContentReportResponse:
-    """Report a forum reply."""
+) -> None:
+    """Report a forum reply for moderation."""
     # Verify reply exists and belongs to the post
     res = await session.execute(
         select(PostReply).where(
@@ -427,22 +458,18 @@ async def report_forum_reply(
     if not reply:
         raise ValueError("Reply not found")
 
-    # Create the report
-    report = ContentReport(
-        reporter_id=user_id,
+    # Get or create moderation target (ticket)
+    moderation_target = await _get_or_create_moderation_target(
+        session=session,
         target_type="reply",
         target_id=reply_id,
+    )
+
+    # Create the report linked to the moderation target
+    report = ContentReport(
+        reporter_id=user_id,
+        moderation_target_id=moderation_target.id,
         reason=data.reason,
     )
     session.add(report)
     await session.commit()
-    await session.refresh(report)
-
-    return ContentReportResponse(
-        id=report.id,
-        reporter_id=report.reporter_id,
-        target_type=report.target_type,
-        target_id=report.target_id,
-        reason=report.reason,
-        created_at=report.created_at,
-    )

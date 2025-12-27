@@ -61,11 +61,11 @@ export interface IPlaceCreate {
   location?: ILocation | null;
 
   description?: string | null;
-  opening_hours?: string | null;
+  opening_hours?: Record<string, unknown> | null;
   place_type: "hotel" | "restaurant" | "landmark" | "cafe";
   main_image_url?: string | null;
-  images?: string[] | null;
-  tags?: string[] | null;
+  images?: string[];
+  tags?: string[];
 
   // Optional fields
   hotel_class?: number | null;
@@ -76,7 +76,7 @@ export interface IPlaceCreate {
   price_range?: string | null;
 
   ticket_price?: number | null;
-  coffee_specialities?: string | null;
+  coffee_specialties?: string | null;
 
   // Temporary commented out older fields
   // place_type: PlaceType;
@@ -127,7 +127,7 @@ export interface IPlaceDetail {
   cuisine_type?: string | null;
   ticket_price?: number | null;
 
-  coffee_specialities?: string | null;
+  coffee_specialties?: string | null;
   amenities?: string[] | null;
 
   images?: IPlaceImageSchema[] | null;
@@ -160,7 +160,7 @@ export interface IPlaceUpdate {
   price_range?: string | null;
 
   ticket_price?: number | null;
-  coffee_specialities?: string | null;
+  coffee_specialties?: string | null;
 
   // Commented out fields to be check later
   // name: string;

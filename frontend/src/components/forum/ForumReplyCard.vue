@@ -7,7 +7,9 @@ import {
   FlagIcon,
   MessageCircleIcon,
   BadgeCheckIcon,
+  PencilIcon,
 } from "lucide-vue-next";
+import { computed } from "vue";
 
 const props = defineProps<{
   reply: IForumCommentSchema;
@@ -15,13 +17,19 @@ const props = defineProps<{
   formatNumber: (num: number) => string;
   isAuthenticated: boolean;
   isLiked?: boolean;
+  currentUserId?: string;
 }>();
 
 const emit = defineEmits<{
   (e: "report", replyId: string): void;
   (e: "reply", replyId: string): void;
   (e: "like", replyId: string): void;
+  (e: "edit", replyId: string): void;
 }>();
+
+const isAuthor = computed(() => {
+  return props.currentUserId && props.reply.user.id === props.currentUserId;
+});
 
 const getInitials = (username: string) => {
   return username
@@ -39,34 +47,40 @@ const getInitials = (username: string) => {
   >
     <!-- Avatar -->
     <div class="flex-shrink-0">
-      <Avatar class="size-10 border-2 border-background shadow-sm">
-        <AvatarImage
-          :src="
-            reply.user.avatar_url ||
-            `https://api.dicebear.com/7.x/avataaars/svg?seed=${reply.user.username}`
-          "
-          :alt="reply.user.username"
-        />
-        <AvatarFallback class="bg-primary/10 text-primary text-xs font-medium">
-          {{ getInitials(reply.user.username || 'User') }}
-        </AvatarFallback>
-      </Avatar>
+      <RouterLink :to="`/users/${reply.user.id}`">
+        <Avatar class="size-10 border-2 border-background shadow-sm hover:opacity-80 transition-opacity cursor-pointer">
+          <AvatarImage
+            :src="
+              reply.user.avatar_url ||
+              `https://api.dicebear.com/7.x/avataaars/svg?seed=${reply.user.username}`
+            "
+            :alt="reply.user.username"
+          />
+          <AvatarFallback class="bg-primary/10 text-primary text-xs font-medium">
+            {{ getInitials(reply.user.username || 'User') }}
+          </AvatarFallback>
+        </Avatar>
+      </RouterLink>
     </div>
 
     <!-- Content -->
     <div class="flex-1 min-w-0 space-y-2">
       <!-- Header -->
       <div class="flex items-center flex-wrap gap-x-2 gap-y-1">
-        <span class="font-semibold text-foreground text-sm">
-          {{ reply.user.username }}
-        </span>
+        <RouterLink :to="`/users/${reply.user.id}`" class="hover:underline">
+          <span class="font-semibold text-foreground text-sm">
+            {{ reply.user.username }}
+          </span>
+        </RouterLink>
         <BadgeCheckIcon
           v-if="reply.like_count && reply.like_count > 50"
           class="size-4 text-blue-500 fill-blue-500/10"
         />
-        <span class="text-xs text-muted-foreground">
-          @{{ reply.user.username }}
-        </span>
+        <RouterLink :to="`/users/${reply.user.id}`" class="hover:underline">
+          <span class="text-xs text-muted-foreground">
+            @{{ reply.user.username }}
+          </span>
+        </RouterLink>
         <span class="text-muted-foreground text-xs">•</span>
         <span class="text-xs text-muted-foreground">
           {{ formatDate(reply.created_at) }}
@@ -107,6 +121,18 @@ const getInitials = (username: string) => {
         >
           <MessageCircleIcon class="size-4 mr-1.5" />
           <span class="text-xs font-medium">Reply</span>
+        </Button>
+
+        <!-- Edit Button (only for author, shows on hover) -->
+        <Button
+          v-if="isAuthor"
+          variant="ghost"
+          size="sm"
+          class="h-auto px-3 py-1.5 rounded-full text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-colors opacity-0 group-hover:opacity-100"
+          @click="emit('edit', reply.id)"
+        >
+          <PencilIcon class="size-4 mr-1.5" />
+          <span class="text-xs font-medium">Edit</span>
         </Button>
 
         <!-- Report Button -->

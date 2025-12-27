@@ -194,6 +194,17 @@ class ForumService {
       throw error;
     }
   }
+
+  async getTags(): Promise<string[]> {
+    try {
+      const response = await commonInstance.get("/forum/tags");
+      const data = (response.data as IApiResponse<Array<{ id: string; name: string }>>).data;
+      return data.map(tag => tag.name);
+    } catch (error: any) {
+      console.error(error);
+      throw error;
+    }
+  }
 }
 
 export default ForumService.getInstance();

@@ -39,6 +39,7 @@ const {
   timeUntilCanReply,
   isLiked,
   isLiking,
+  user,
 
   // Reply editor
   isReplyEditorOpen,
@@ -69,6 +70,13 @@ const {
   toggleReplyLike,
   likedReplies,
   flushPendingLikes,
+  
+  // Edit reply
+  editingReplyId,
+  editReplyContent,
+  startEditingReply,
+  cancelEditingReply,
+  saveEditReply,
 } = useForumPost();
 
 // Navigate to edit page
@@ -76,6 +84,7 @@ const navigateToEdit = () => {
   const postId = route.params.postId as string;
   router.push(`/forums/${postId}/edit`);
 };
+
 // Ensure likes are saved before navigating away
 onBeforeRouteLeave(async () => {
   if (flushPendingLikes) {
@@ -141,29 +150,33 @@ onBeforeRouteLeave(async () => {
             <!-- Author Header -->
             <div class="flex items-start justify-between">
               <div class="flex items-center gap-3">
-                <Avatar class="size-12 border-2 border-background shadow-sm">
-                  <AvatarImage
-                    :src="
-                      post.author.avatar_url ||
-                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author.username}`
-                    "
-                    :alt="post.author.username"
-                  />
-                  <AvatarFallback
-                    class="bg-primary/10 text-primary font-medium"
-                  >
-                    {{
-                      post?.author.username
-                        ? post.author.username.slice(0, 2).toUpperCase()
-                        : ""
-                    }}
-                  </AvatarFallback>
-                </Avatar>
+                <RouterLink :to="`/users/${post.author.id}`">
+                  <Avatar class="size-12 border-2 border-background shadow-sm hover:opacity-80 transition-opacity cursor-pointer">
+                    <AvatarImage
+                      :src="
+                        post.author.avatar_url ||
+                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author.username}`
+                      "
+                      :alt="post.author.username"
+                    />
+                    <AvatarFallback
+                      class="bg-primary/10 text-primary font-medium"
+                    >
+                      {{
+                        post?.author.username
+                          ? post.author.username.slice(0, 2).toUpperCase()
+                          : ""
+                      }}
+                    </AvatarFallback>
+                  </Avatar>
+                </RouterLink>
                 <div>
                   <div class="flex items-center gap-2">
-                    <span class="font-bold text-foreground">
-                      {{ post.author.username }}
-                    </span>
+                    <RouterLink :to="`/users/${post.author.id}`" class="hover:underline">
+                      <span class="font-bold text-foreground">
+                        {{ post.author.username }}
+                      </span>
+                    </RouterLink>
                     <BadgeCheckIcon
                       class="size-4 text-blue-500 fill-blue-500/10"
                     />
@@ -171,7 +184,9 @@ onBeforeRouteLeave(async () => {
                   <div
                     class="flex items-center gap-2 text-sm text-muted-foreground"
                   >
-                    <span>@{{ post.author.username }}</span>
+                    <RouterLink :to="`/users/${post.author.id}`" class="hover:underline">
+                      <span>@{{ post.author.username }}</span>
+                    </RouterLink>
                     <span>•</span>
                     <span>{{ formatDate(post.created_at) }}</span>
                   </div>
@@ -308,15 +323,51 @@ onBeforeRouteLeave(async () => {
                 :key="reply.id"
               >
                 <!-- Top-level reply -->
+                <div v-if="editingReplyId === reply.id" class="p-4 rounded-2xl bg-card border-2 border-orange-500 shadow-lg">
+                  <!-- Editing Mode -->
+                  <div class="space-y-3">
+                    <div class="flex items-center gap-2 text-sm font-medium text-orange-600">
+                      <PencilIcon class="size-4" />
+                      Editing reply
+                    </div>
+                    <textarea
+                      v-model="editReplyContent"
+                      class="w-full min-h-[100px] p-3 rounded-xl border border-border bg-background text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      placeholder="Edit your reply..."
+                    />
+                    <div class="flex items-center justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        class="rounded-xl"
+                        @click="cancelEditingReply"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        class="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white"
+                        @click="saveEditReply"
+                        :disabled="!editReplyContent.trim()"
+                      >
+                        <PencilIcon class="size-4 mr-1.5" />
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                </div>
                 <ForumReplyCard
+                  v-else
                   :reply="reply"
                   :format-date="formatDate"
                   :format-number="formatNumber"
                   :is-authenticated="isAuthenticated"
                   :is-liked="likedReplies.has(reply.id)"
+                  :current-user-id="user?.id"
                   @report="openReportDialog('comment', $event)"
                   @reply="openReplyEditor"
                   @like="toggleReplyLike"
+                  @edit="startEditingReply"
                 />
 
                 <!-- Nested replies -->
@@ -326,20 +377,59 @@ onBeforeRouteLeave(async () => {
                   "
                   class="ml-8 space-y-2 border-l-2 border-border/50 pl-4"
                 >
-                  <ForumReplyCard
+                  <template
                     v-for="nestedReply in replies.filter(
                       (r) => r.parent_id === reply.id
                     )"
                     :key="nestedReply.id"
-                    :reply="nestedReply"
-                    :format-date="formatDate"
-                    :format-number="formatNumber"
-                    :is-authenticated="isAuthenticated"
-                    :is-liked="likedReplies.has(nestedReply.id)"
-                    @report="openReportDialog('comment', $event)"
-                    @reply="openReplyEditor"
-                    @like="toggleReplyLike"
-                  />
+                  >
+                    <div v-if="editingReplyId === nestedReply.id" class="p-4 rounded-2xl bg-card border-2 border-orange-500 shadow-lg">
+                      <!-- Editing Mode -->
+                      <div class="space-y-3">
+                        <div class="flex items-center gap-2 text-sm font-medium text-orange-600">
+                          <PencilIcon class="size-4" />
+                          Editing reply
+                        </div>
+                        <textarea
+                          v-model="editReplyContent"
+                          class="w-full min-h-[100px] p-3 rounded-xl border border-border bg-background text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          placeholder="Edit your reply..."
+                        />
+                        <div class="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            class="rounded-xl"
+                            @click="cancelEditingReply"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            class="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white"
+                            @click="saveEditReply"
+                            :disabled="!editReplyContent.trim()"
+                          >
+                            <PencilIcon class="size-4 mr-1.5" />
+                            Save
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    <ForumReplyCard
+                      v-else
+                      :reply="nestedReply"
+                      :format-date="formatDate"
+                      :format-number="formatNumber"
+                      :is-authenticated="isAuthenticated"
+                      :is-liked="likedReplies.has(nestedReply.id)"
+                      :current-user-id="user?.id"
+                      @report="openReportDialog('comment', $event)"
+                      @reply="openReplyEditor"
+                      @like="toggleReplyLike"
+                      @edit="startEditingReply"
+                    />
+                  </template>
                 </div>
               </template>
             </div>

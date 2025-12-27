@@ -732,3 +732,10 @@ async def check_user_liked_reply(
         )
     )
     return res.scalars().first() is not None
+
+
+async def get_all_tags(session: AsyncSession) -> list[ForumTagSchema]:
+    """Get all available tags from the database."""
+    result = await session.execute(select(Tag).order_by(Tag.name))
+    tags = result.scalars().all()
+    return [ForumTagSchema(id=tag.id, name=tag.name) for tag in tags]

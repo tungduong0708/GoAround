@@ -5,6 +5,7 @@ import type {
   IForumCommentSchema,
   IPaginationMeta,
   IForumReplyCreate,
+  IForumReplyUpdate,
 } from "@/utils/interfaces";
 import ForumService from "@/services/ForumService";
 
@@ -108,6 +109,35 @@ export const useForumPostStore = defineStore("forumPost", () => {
     }
   };
 
+  const updateReply = async (
+    postId: string,
+    replyId: string,
+    content: string
+  ) => {
+    try {
+      const payload: IForumReplyUpdate = { content };
+      const updatedReply = await ForumService.updateReply(
+        postId,
+        replyId,
+        payload
+      );
+      
+      // Update the reply in local state
+      const replyIndex = replies.value.findIndex(r => r.id === replyId);
+      if (replyIndex !== -1) {
+        replies.value[replyIndex] = {
+          ...replies.value[replyIndex],
+          ...updatedReply,
+        };
+      }
+      
+      return updatedReply;
+    } catch (err) {
+      console.error("Failed to update reply:", err);
+      throw err;
+    }
+  };
+
   const clearPost = () => {
     post.value = null;
     replies.value = [];
@@ -129,6 +159,7 @@ export const useForumPostStore = defineStore("forumPost", () => {
     addReply,
     reportPost,
     reportReply,
+    updateReply,
     clearPost,
   };
 });

@@ -15,6 +15,7 @@ from app.schemas import (
     ForumReplyCreate,
     ForumReplyUpdate,
     ForumSearchFilter,
+    ForumTagSchema,
     HTTPError,
     Message,
     MetaData,
@@ -26,6 +27,7 @@ from app.service.forum_service import (
     create_forum_reply,
     delete_forum_post,
     delete_forum_reply,
+    get_all_tags,
     get_forum_post,
     list_forum_posts,
     report_forum_post,
@@ -86,6 +88,21 @@ async def get_forum_post_detail(
         raise HTTPException(status_code=404, detail="Post not found")
 
     return APIResponse(data=post)
+
+
+@router.get(
+    "/tags",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[list[ForumTagSchema]],
+)
+async def get_tags(
+    session: SessionDep,
+) -> Any:
+    """
+    Get all available forum tags.
+    """
+    tags = await get_all_tags(session)
+    return APIResponse(data=tags)
 
 
 # --- Protected Endpoints ---

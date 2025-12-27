@@ -32,6 +32,7 @@ import { toast } from "vue-sonner";
 import TagInput from "@/components/forum/TagInput.vue";
 import ImageUpload from "@/components/common/ImageUpload.vue";
 import type { IForumPostCreate } from "@/utils/interfaces";
+import ForumService from "@/services/ForumService";
 
 const route = useRoute();
 const router = useRouter();
@@ -47,15 +48,7 @@ const postId = computed(() => route.params.postId as string);
 // State
 const showCancelDialog = ref(false);
 const showLoginModal = ref(false);
-const tagSuggestions = [
-  "Japan",
-  "Food",
-  "Budget",
-  "Solo Travel",
-  "Photography",
-  "Nature",
-  "Hiking",
-];
+const tagSuggestions = ref<string[]>([]);
 
 // Validation Schema
 const formSchema = toTypedSchema(
@@ -89,16 +82,26 @@ onMounted(async () => {
     showLoginModal.value = true;
   }
 
+  // Load available tags
+  try {
+    tagSuggestions.value = await ForumService.getTags();
+  } catch (error) {
+    console.error("Failed to load tags:", error);
+    // Use default suggestions if API fails
+    tagSuggestions.value = ["Japan", "Food", "Budget", "Solo Travel", "Photography", "Nature", "Hiking"];
+  }
+
   if (isEditMode.value && postId.value) {
     try {
       const post = await store.getPostById(postId.value);
       if (post) {
+        const imageUrls = post.images?.map((img) => img.image_url) || [];
+        console.log('Loading post images:', imageUrls);
         setValues({
           title: post.title,
           content: post.content,
           tags: post.tags?.map((t) => t.name) || [],
-          // Load existing images - extract URLs from the image objects
-          images: post.images?.map((img) => img.image_url) || [],
+          images: imageUrls,
         });
       }
     } catch (e) {
@@ -289,7 +292,7 @@ const confirmCancel = () => {
           <AlertDialogCancel>Keep Editing</AlertDialogCancel>
           <AlertDialogAction
             @click="confirmCancel"
-            class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            class="bg-destructive text-white hover:bg-destructive/90"
           >
             Discard
           </AlertDialogAction>

@@ -109,6 +109,7 @@ async def get_case_detail(
     "/cases/{case_id}/resolve",
     response_model=APIResponse[Message],
     responses={
+        400: {"model": HTTPError},
         403: {"model": HTTPError},
         404: {"model": HTTPError},
     },

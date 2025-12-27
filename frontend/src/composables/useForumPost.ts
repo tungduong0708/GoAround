@@ -31,6 +31,10 @@ export function useForumPost() {
   const isLiking = ref(false);
   let likeTimeout: ReturnType<typeof setTimeout> | null = null;
   let pendingLikeAction: { postId: string; originalCount: number; originalLiked: boolean } | null = null;
+  
+  // Editing state
+  const editingReplyId = ref<string | null>(null);
+  const editReplyContent = ref<string>("");
 
   // Computed
   const postId = computed(() => route.params.postId as string);
@@ -219,6 +223,36 @@ export function useForumPost() {
 
   const goBack = () => {
     router.push("/forums");
+  };
+
+  const startEditingReply = (replyId: string) => {
+    const reply = replies.value.find(r => r.id === replyId);
+    if (reply) {
+      editingReplyId.value = replyId;
+      editReplyContent.value = reply.content;
+    }
+  };
+
+  const cancelEditingReply = () => {
+    editingReplyId.value = null;
+    editReplyContent.value = "";
+  };
+
+  const saveEditReply = async () => {
+    if (!editingReplyId.value || !editReplyContent.value.trim()) return;
+    
+    try {
+      await postStore.updateReply(
+        postId.value,
+        editingReplyId.value,
+        editReplyContent.value
+      );
+      editingReplyId.value = null;
+      editReplyContent.value = "";
+    } catch (err) {
+      console.error("Failed to update reply:", err);
+      alert("Failed to update reply. Please try again.");
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -472,6 +506,7 @@ export function useForumPost() {
     timeUntilCanReply,
     isLiked,
     isLiking,
+    user,
 
     // Reply editor
     isReplyEditorOpen,
@@ -503,6 +538,13 @@ export function useForumPost() {
     toggleLike,
     toggleReplyLike,
     likedReplies,
+    
+    // Edit reply
+    editingReplyId,
+    editReplyContent,
+    startEditingReply,
+    cancelEditingReply,
+    saveEditReply,
     
     // Flush functions for navigation guards
     flushPendingLikes: async () => {

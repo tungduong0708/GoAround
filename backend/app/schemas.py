@@ -705,6 +705,17 @@ class VerifyBusinessRequest(BaseModel):
     notes: str | None = None
 
 
+class BusinessVerificationSubmission(BaseModel):
+    """Schema for business owners to submit/resubmit verification request."""
+
+    business_image_url: str = Field(
+        ..., description="URL to business verification image"
+    )
+    business_description: str = Field(
+        ..., min_length=10, max_length=1000, description="Description of the business"
+    )
+
+
 class ForumSearchFilter(BaseModel):
     q: str | None = None
     tags: list[str] | None = None

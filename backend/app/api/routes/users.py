@@ -6,7 +6,9 @@ from fastapi import APIRouter, HTTPException, status
 from app.api.deps import CurrentUserIdDep, SessionDep
 from app.schemas import (
     APIResponse,
+    BusinessVerificationSubmission,
     HTTPError,
+    Message,
     MetaData,
     TripListSchema,
     UserCreate,
@@ -18,7 +20,7 @@ from app.schemas import (
     UserReviewResponse,
     UserUpdate,
 )
-from app.service import user_service, trip_service
+from app.service import trip_service, user_service
 
 router = APIRouter(tags=["users"], prefix="/users")
 
@@ -245,4 +247,40 @@ async def get_user_replies(
     raise HTTPException(
         status_code=501,
         detail="User replies endpoint not yet implemented",
+    )
+
+
+@router.post(
+    "/me/verify-business",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[Message],
+    responses={
+        400: {"model": HTTPError},
+    },
+)
+async def submit_business_verification(
+    session: SessionDep,
+    user_id: CurrentUserIdDep,
+    submission: BusinessVerificationSubmission,
+):
+    """
+    Submit or resubmit a business verification request.
+
+    - First time: Creates a new verification request
+    - After rejection: Updates existing request with new information
+
+    The verification request will be set to "pending" status and will appear
+    in the admin dashboard for review.
+
+    Authentication required.
+    """
+    await user_service.submit_business_verification(
+        session=session,
+        user_id=user_id,
+        business_image_url=submission.business_image_url,
+        business_description=submission.business_description,
+    )
+
+    return APIResponse(
+        data=Message(message="Business verification request submitted successfully")
     )

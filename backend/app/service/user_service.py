@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime
+from datetime import datetime
 from typing import Sequence
 
 from sqlalchemy import func, select
@@ -199,25 +199,24 @@ async def create_user(
 
     session.add(profile)
 
-    # If business account, create verification request
-    if (
-        role == "business"
-        and user_create.business_image_url
-        and user_create.business_description
-    ):
-        verification_request = BusinessVerificationRequest(
-            profile_id=user_id,
-            business_image_url=user_create.business_image_url,
-            business_description=user_create.business_description,
-            status="pending",
-        )
-        session.add(verification_request)
-
     try:
         await session.commit()
     except IntegrityError:
         await session.rollback()
         raise RuntimeError("Profile already exists")
+
+    # If business account, submit verification request using shared logic
+    if (
+        role == "business"
+        and user_create.business_image_url
+        and user_create.business_description
+    ):
+        await submit_business_verification(
+            session=session,
+            user_id=user_id,
+            business_image_url=user_create.business_image_url,
+            business_description=user_create.business_description,
+        )
 
     email = await _get_email(session, user_id)
 
@@ -457,3 +456,50 @@ async def get_user_photos(
     ]
 
     return photos, total
+
+
+async def submit_business_verification(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    business_image_url: str,
+    business_description: str,
+) -> BusinessVerificationRequest:
+    """
+    Submit or resubmit a business verification request.
+
+    If a verification request already exists for this user, it will be updated
+    with the new information and status reset to "pending".
+    Otherwise, a new request is created.
+
+    This supports the re-verification workflow where rejected businesses
+    can update their information and resubmit.
+    """
+    # Check if verification request already exists
+    stmt = select(BusinessVerificationRequest).where(
+        BusinessVerificationRequest.profile_id == user_id
+    )
+    result = await session.execute(stmt)
+    existing_request = result.scalars().first()
+
+    if existing_request:
+        # Update existing request (for re-verification)
+        existing_request.business_image_url = business_image_url
+        existing_request.business_description = business_description
+        existing_request.status = "pending"
+        existing_request.created_at = datetime.utcnow()
+        existing_request.reviewed_at = None
+        verification_request = existing_request
+    else:
+        # Create new request (first time submission)
+        verification_request = BusinessVerificationRequest(
+            profile_id=user_id,
+            business_image_url=business_image_url,
+            business_description=business_description,
+            status="pending",
+        )
+        session.add(verification_request)
+
+    await session.commit()
+    await session.refresh(verification_request)
+
+    return verification_request

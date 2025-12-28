@@ -43,7 +43,7 @@ const days = computed((): DayItinerary[] => {
   for (let i = 0; i < dayCount; i++) {
     const date = new Date(start);
     date.setDate(start.getDate() + i);
-    const dateString = date.toISOString().split("T")[0];
+    const dateString = date.toISOString().split("T")[0] || "";
 
     // Filter stops that belong to this day based on arrival_time
     const dayStops = (props.stops || []).filter(stop => {

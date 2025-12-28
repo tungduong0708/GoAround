@@ -203,7 +203,7 @@ const formatLocation = (place: IPlacePublic) => {
                           {{ place.name }}
                         </h4>
                         <div class="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
-                          <MapPin :size="12} />
+                          <MapPin :size="12" />
                           <span class="truncate">{{ formatLocation(place) }}</span>
                         </div>
                         <div class="flex items-center gap-1.5">
@@ -288,7 +288,7 @@ const formatLocation = (place: IPlacePublic) => {
                         {{ place.name }}
                       </h4>
                       <div class="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
-                        <MapPin :size="12} />
+                        <MapPin :size="12" />
                         <span class="truncate">{{ formatLocation(place) }}</span>
                       </div>
                       <div class="flex items-center gap-1.5">

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import { RouterLink, useRouter } from "vue-router";
+import { computed, ref, onMounted } from "vue";
+import { RouterLink, useRouter, useRoute } from "vue-router";
 import type { ITripListSchema } from "@/utils/interfaces";
 import { useTrips, usePlanTrip, useGenerateTrip } from "@/composables";
 import { useAuthGuard } from "@/composables/useAuthGuard";
@@ -36,6 +36,7 @@ import {
 type TripFilter = "all" | "upcoming" | "completed";
 
 const router = useRouter();
+const route = useRoute();
 const filters: TripFilter[] = ["all", "upcoming", "completed"];
 
 const {
@@ -52,7 +53,13 @@ const {
   formatTripDateRange,
   formatTripPlaceCount,
   deleteTrip,
-} = useTrips({ autoLoad: true });
+  loadTrips,
+} = useTrips({ autoLoad: false }); // Changed to false to manually control loading
+
+// Always reload trips when component mounts to ensure fresh data
+onMounted(() => {
+  loadTrips(true);
+});
 
 const { showPlanTripModal, openPlanTripModal, handleTripSubmit } = usePlanTrip();
 const { 

@@ -100,7 +100,7 @@ const handlePlacesSelected = (places: any[], dayIndex?: number) => {
     id: `temp-${Date.now()}-${index}`, // Temporary ID
     place_id: place.id,
     place: place,
-    stop_order: localStops.value.length + index,
+    stop_order: localStops.value.length + index + 1, // stop_order starts from 1
     arrival_time: arrivalTime,
     notes: '',
     trip_id: trip.value!.id,
@@ -308,10 +308,10 @@ const saveEditedDetails = async () => {
   if (!trip.value) return;
   
   try {
-    // Prepare stops payload with updated order
+    // Prepare stops payload with updated order (stop_order starts from 1)
     const stopsPayload = localStops.value.map((stop, idx) => ({
       place_id: stop.place?.id || '',
-      stop_order: idx,
+      stop_order: idx + 1,
       arrival_time: stop.arrival_time || '',
       notes: stop.notes || ''
     }));

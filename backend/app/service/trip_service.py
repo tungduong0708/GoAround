@@ -176,21 +176,29 @@ async def update_trip(
     session: AsyncSession, user_id: uuid.UUID, trip_id: uuid.UUID, data: TripUpdate
 ) -> TripSchema:
     """Update an existing trip."""
-    trip = await session.get(Trip, trip_id)
+    # Eagerly load stops to avoid lazy loading in async context
+    result = await session.execute(
+        select(Trip)
+        .options(selectinload(Trip.stops))
+        .where(Trip.id == trip_id)
+    )
+    trip = result.scalars().first()
     if not trip:
         raise ValueError("Trip not found")
     if trip.user_id != user_id:
         raise PermissionError("Not authorized to update this trip")
-    upd = data.model_dump(exclude_unset=True)
+    
+    # Extract stops and tags before converting to dict
+    stops_data = data.stops if hasattr(data, 'stops') and data.stops is not None else None
+    tags = data.tags if hasattr(data, 'tags') and data.tags is not None else None
+    
+    upd = data.model_dump(exclude_unset=True, exclude={'stops', 'tags'})
 
     # Validate dates if both are being updated
     start_date = upd.get("start_date", trip.start_date)
     end_date = upd.get("end_date", trip.end_date)
     if start_date and end_date and end_date < start_date:
         raise ValueError("End date cannot be before start date")
-
-    tags = upd.pop("tags", None)
-    stops_data = upd.pop("stops", None)
 
     for k, v in upd.items():
         setattr(trip, k, v)

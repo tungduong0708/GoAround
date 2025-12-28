@@ -6,6 +6,7 @@ import { AuthenticationService } from "@/services";
 import { UserRole } from "@/utils/types/UserRole";
 import { useUserProfileStore } from "./userProfileStore";
 import { useCitiesStore } from "./citiesStore";
+import AxiosService from "@/config/axios/axios";
 
 export const useAuthStore = defineStore("auth", () => {
   const session = ref<Session | null>(null);
@@ -37,6 +38,10 @@ export const useAuthStore = defineStore("auth", () => {
   const initialize = async () => {
     isLoading.value = true;
     error.value = null;
+    
+    // Initialize axios with token caching before any API calls
+    await AxiosService.initialize();
+    
     await initSession();
 
     supabase.auth.onAuthStateChange(async (event, currentSession) => {
@@ -58,6 +63,7 @@ export const useAuthStore = defineStore("auth", () => {
       
       // Clear profile and cities when user signs out
       if (event === 'SIGNED_OUT') {
+        AxiosService.clearCachedToken()
         const userProfileStore = useUserProfileStore()
         const citiesStore = useCitiesStore()
         userProfileStore.clearProfile()
@@ -102,6 +108,7 @@ export const useAuthStore = defineStore("auth", () => {
       
       // Clear profile and cities when user signs out
       if (event === 'SIGNED_OUT') {
+        AxiosService.clearCachedToken()
         const userProfileStore = useUserProfileStore()
         const citiesStore = useCitiesStore()
         userProfileStore.clearProfile()
@@ -190,6 +197,9 @@ export const useAuthStore = defineStore("auth", () => {
       user.value = null;
       role.value = null;
 
+      // Clear cached axios token immediately
+      AxiosService.clearCachedToken();
+
       // Clear profile and cities stores
       const userProfileStore = useUserProfileStore();
       const citiesStore = useCitiesStore();
@@ -202,6 +212,9 @@ export const useAuthStore = defineStore("auth", () => {
       session.value = null;
       user.value = null;
       role.value = null;
+
+      // Clear cached axios token immediately
+      AxiosService.clearCachedToken();
 
       const userProfileStore = useUserProfileStore();
       const citiesStore = useCitiesStore();

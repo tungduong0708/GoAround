@@ -52,17 +52,21 @@ class AxiosService {
    * Initialize auth state listener to cache access token
    * This eliminates the need for async getSession() calls on every request
    */
-  private static setupAuthListener() {
+  private static async setupAuthListener() {
     if (this.isListenerSetup) return;
     
-    // Get initial session synchronously if available
-    supabase.auth.getSession().then(({ data }) => {
-      this.cachedAccessToken = data.session?.access_token ?? null;
-    });
+    // Get initial session and wait for it to ensure token is cached before any API calls
+    const { data } = await supabase.auth.getSession();
+    this.cachedAccessToken = data.session?.access_token ?? null;
 
     // Listen for auth state changes to keep token fresh
-    supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange((event, session) => {
       this.cachedAccessToken = session?.access_token ?? null;
+      
+      // Explicitly clear token on sign out to prevent stale token issues
+      if (event === 'SIGNED_OUT') {
+        this.cachedAccessToken = null;
+      }
     });
 
     this.isListenerSetup = true;
@@ -75,17 +79,40 @@ class AxiosService {
     return this.cachedAccessToken;
   }
 
+  /**
+   * Manually clear cached access token (used on sign out)
+   */
+  public static clearCachedToken(): void {
+    this.cachedAccessToken = null;
+  }
+
+  /**
+   * Initialize axios instances with proper token caching
+   * Should be called during app initialization before any API calls
+   */
+  public static async initialize(): Promise<void> {
+    await this.setupAuthListener();
+    // Ensure both instances are created after token is cached
+    if (!this.authInstance) {
+      await this.createAuthInstance();
+    }
+    if (!this.commonInstance) {
+      await this.createCommonInstance();
+    }
+  }
+
   public static getAuthInstance(): AxiosInstance {
     if (!AxiosService.authInstance) {
+      // Create synchronously but setup listener will handle token caching
       AxiosService.createAuthInstance();
     }
 
     return AxiosService.authInstance!;
   }
 
-  public static createAuthInstance() {
-    // Setup listener on first creation
-    this.setupAuthListener();
+  public static async createAuthInstance() {
+    // Setup listener on first creation and wait for initial token
+    await this.setupAuthListener();
 
     // Clear old interceptors if instance exists
     if (AxiosService.authInstance) {
@@ -132,9 +159,9 @@ class AxiosService {
     return AxiosService.commonInstance!;
   }
 
-  public static createCommonInstance() {
-    // Setup listener on first creation
-    this.setupAuthListener();
+  public static async createCommonInstance() {
+    // Setup listener on first creation and wait for initial token
+    await this.setupAuthListener();
 
     // Clear old interceptors if instance exists
     if (AxiosService.commonInstance) {

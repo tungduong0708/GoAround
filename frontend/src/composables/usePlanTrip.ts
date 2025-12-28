@@ -9,6 +9,7 @@ export interface PlanTripFormData {
   startDate: string;
   endDate: string;
   places: IPlacePublic[];
+  isPublic?: boolean;
 }
 
 export function usePlanTrip() {
@@ -51,6 +52,7 @@ export function usePlanTrip() {
         trip_name: formData.tripName,
         start_date: formData.startDate || null,
         end_date: formData.endDate || null,
+        public: formData.isPublic ?? false,
         stops: stops.length > 0 ? stops : undefined,
       });
 

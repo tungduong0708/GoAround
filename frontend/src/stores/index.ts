@@ -8,4 +8,5 @@ export { useForumStore } from "./forumStore";
 export { useForumPostStore } from "./forumPostStore";
 export { useListPlaceStore } from "./listPlaceStore";
 export { useUserProfileStore } from "./userProfileStore";
+export { useCitiesStore } from "./citiesStore";
 export { useRecommendationStore } from "./recommendationStore";

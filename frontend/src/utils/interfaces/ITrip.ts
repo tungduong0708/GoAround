@@ -25,6 +25,7 @@ export interface ITripUpdate{
 export interface ITripStopWithPlace {
   id: string;
   trip_id: string;
+  place_id?: string;
   stop_order: number; 
   arrival_time?: string | null;
   notes?: string | null;
@@ -46,6 +47,7 @@ export interface ITripListSchema {
   end_date: string;
   public?: boolean;
   stop_count?: number;
+  preview_image_url?: string | null;
 }
 // export interface ITripStopUpdate {
 //   order_index?: number;

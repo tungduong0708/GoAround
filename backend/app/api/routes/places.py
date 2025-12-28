@@ -315,3 +315,17 @@ async def transfer_ownership(
     return APIResponse(
         data=Message(message=f"Ownership transferred to {username_display}"),
     )
+
+
+@router.get(
+    "/cities/list",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[list[str]],
+)
+async def get_cities(session: SessionDep) -> Any:
+    """
+    Get a list of unique 'city, country' combinations from places in the database.
+    Used for destination autocomplete in trip generation.
+    """
+    cities = await crud.get_unique_cities(session)
+    return APIResponse(data=cities)

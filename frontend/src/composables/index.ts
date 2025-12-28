@@ -12,6 +12,8 @@ export { useSavedLists } from "./useSavedLists";
 export * from "./usePlaceDetails";
 export * from "./useReportedContent";
 export * from "./useTripDetails";
+export * from "./useTrips";
+export * from "./useGenerateTrip";
 
 export * from "./useForumMain";
 export * from "./useForumPost";

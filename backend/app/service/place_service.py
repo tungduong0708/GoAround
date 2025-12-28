@@ -354,3 +354,22 @@ async def get_profile_by_email(session: AsyncSession, email: str) -> Profile | N
     )
     result = await session.execute(stmt)
     return result.scalars().first()
+
+
+async def get_unique_cities(session: AsyncSession) -> list[str]:
+    """
+    Get unique 'city, country' combinations from places.
+    Returns a list of strings formatted as 'City, Country'.
+    Only returns places where both city and country are not null.
+    """
+    stmt = (
+        select(Place.city, Place.country)
+        .where(Place.city.isnot(None), Place.country.isnot(None))
+        .distinct()
+        .order_by(Place.city, Place.country)
+    )
+    result = await session.execute(stmt)
+    rows = result.all()
+    
+    # Format as "City, Country"
+    return [f"{row[0]}, {row[1]}" for row in rows]

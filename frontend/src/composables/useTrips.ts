@@ -29,6 +29,10 @@ export function useTrips(options: UseTripOptions = {}) {
     tripCount,
     hasTrips,
     sortedTrips,
+    deletingTripId,
+    upcomingTrips,
+    pastTrips,
+    tripStats,
   } = storeToRefs(store);
 
   // Computed property for authentication status
@@ -69,6 +73,10 @@ export function useTrips(options: UseTripOptions = {}) {
     return store.getTripById(id);
   };
 
+  const deleteTrip = async (id: string) => {
+    await store.deleteTrip(id);
+  };
+
   const handleTripSelect = (trip: ITripListSchema) => {
     console.log(`Trip ${trip.id} was selected`);
     router.push({ name: "trip-details", params: { tripId: trip.id } });
@@ -99,6 +107,20 @@ export function useTrips(options: UseTripOptions = {}) {
       : 'No destinations yet';
   };
 
+  const getTripPreviewImage = (trip: ITripSchema): string | null => {
+    // Get the first place's image from trip stops
+    if (!trip.stops || trip.stops.length === 0) return null;
+    
+    // Find the first stop with a place that has an image
+    for (const stop of trip.stops) {
+      if (stop.place?.main_image_url) {
+        return stop.place.main_image_url;
+      }
+    }
+    
+    return null;
+  };
+
   // Initialize
   if (autoLoad) {
     onMounted(async () => {
@@ -116,6 +138,10 @@ export function useTrips(options: UseTripOptions = {}) {
     tripCount,
     hasTrips,
     sortedTrips,
+    deletingTripId,
+    upcomingTrips,
+    pastTrips,
+    tripStats,
 
     // Actions
     loadTrips,
@@ -124,6 +150,7 @@ export function useTrips(options: UseTripOptions = {}) {
     addPlaceToTrip,
     removePlaceFromTrip,
     getTripById,
+    deleteTrip,
     handleTripSelect,
     clearError,
 
@@ -132,5 +159,6 @@ export function useTrips(options: UseTripOptions = {}) {
     formatTripDateRange,
     formatTripPlaceCount,
     formatTripLocation,
+    getTripPreviewImage,
   };
 }

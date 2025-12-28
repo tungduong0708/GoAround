@@ -1,30 +1,33 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import { useRoute } from "vue-router";
+import { onMounted, ref, computed, watch, nextTick } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useTripDetails } from "@/composables";
+import TripService from "@/services/TripService";
 import Button from "@/components/ui/button/Button.vue";
 import Card from "@/components/ui/card/Card.vue";
 import Badge from "@/components/ui/badge/Badge.vue";
 import Separator from "@/components/ui/separator/Separator.vue";
-import Collapsible from "@/components/ui/collapsible/Collapsible.vue";
-import CollapsibleTrigger from "@/components/ui/collapsible/CollapsibleTrigger.vue";
-import CollapsibleContent from "@/components/ui/collapsible/CollapsibleContent.vue";
+import Input from "@/components/ui/input/Input.vue";
+import Label from "@/components/ui/label/Label.vue";
 import SavedPlacesModal from "@/components/trip/SavedPlacesModal.vue";
+import TripItinerary from "@/components/trip/TripItinerary.vue";
+import TripMap from "@/components/trip/TripMap.vue";
+import AddPlaceToTripModal from "@/components/trip/AddPlaceToTripModal.vue";
 import {
   MapPin,
   Calendar,
-  ChevronDown,
-  Star,
   ArrowLeft,
   Plus,
-  Trash2,
-  Clock,
   AlertCircle,
   Bookmark,
+  Save,
+  Globe,
+  Lock,
 } from "lucide-vue-next";
 
 const route = useRoute();
-const tripId = route.params.tripId as string;
+const router = useRouter();
+const tripId = route.params.id as string;
 
 const {
   trip,
@@ -39,29 +42,327 @@ const {
   removeStop,
   navigateToPlace,
   navigateBack,
-  navigateToAddPlace,
-  formatArrivalTime,
   clearErrors,
 } = useTripDetails({ tripId, autoLoad: true });
 
 const showSavedPlacesModal = ref(false);
+const showAddPlaceModal = ref(false);
+const selectedDayForPlace = ref<number>(0);
+const selectedDayForSavedList = ref<number | undefined>(undefined);
+const isEditingDetails = ref(true);
+const selectedDayIndex = ref<number>(0);
 
-const handleAddFromSavedPlaces = () => {
+// Editable trip details
+const editableTripName = ref("");
+const editableStartDate = ref("");
+const editableEndDate = ref("");
+
+// Local stops state for reordering (only synced on save)
+const localStops = ref<any[]>([]);
+
+// Computed to add logging when stops change
+const stopsForItinerary = computed(() => {
+  console.log('[TripPage] stopsForItinerary computed:', localStops.value.length);
+  return localStops.value;
+});
+
+const handleAddFromSavedPlaces = (dayIndex?: number) => {
+  selectedDayForSavedList.value = dayIndex;
   showSavedPlacesModal.value = true;
+};
+
+const handlePlacesSelected = (places: any[], dayIndex?: number) => {
+  if (!trip.value?.start_date) return;
+
+  // Calculate arrival time based on selected day
+  let arrivalTime = new Date().toISOString();
+  
+  if (dayIndex !== undefined && trip.value.start_date) {
+    const startDate = new Date(trip.value.start_date);
+    const targetDate = new Date(startDate);
+    targetDate.setDate(startDate.getDate() + dayIndex);
+    targetDate.setHours(9, 0, 0, 0);
+    arrivalTime = targetDate.toISOString();
+  }
+
+  // Create new stops from selected places
+  const newStops = places.map((place, index) => ({
+    id: `temp-${Date.now()}-${index}`, // Temporary ID
+    place_id: place.id,
+    place: place,
+    stop_order: localStops.value.length + index + 1, // stop_order starts from 1
+    arrival_time: arrivalTime,
+    notes: '',
+    trip_id: trip.value!.id,
+  }));
+
+  // Add to local stops
+  localStops.value = [...localStops.value, ...newStops];
 };
 
 const handlePlaceAdded = async () => {
   // Reload trip to show newly added place
   await loadTrip(true);
+  // Sync local stops with updated trip data
+  if (trip.value?.stops) {
+    localStops.value = [...trip.value.stops];
+  }
 };
 
 const handleRemoveStop = async (stopId: string) => {
   if (confirm("Are you sure you want to remove this place from your trip?")) {
-    try {
-      await removeStop(stopId);
-    } catch (err) {
-      // Error is handled by composable
-      console.error("Failed to remove stop:", err);
+    console.log('[TripPage] Removing stop locally:', stopId);
+    console.log('[TripPage] Before removal - localStops count:', localStops.value.length);
+    
+    // Remove from localStops only - no API call
+    localStops.value = localStops.value.filter(stop => stop.id !== stopId);
+    
+    console.log('[TripPage] After removal - localStops count:', localStops.value.length);
+  }
+};
+
+const handleReorderStop = (fromIndex: number, toIndex: number, dayIndex: number) => {
+  console.log('[TripPage] handleReorderStop called:', { fromIndex, toIndex, dayIndex });
+  console.log('[TripPage] Current localStops length:', localStops.value.length);
+  
+  if (!localStops.value.length || !trip.value?.start_date || !trip.value?.end_date) {
+    console.warn('[TripPage] Missing data - cannot reorder');
+    return;
+  }
+  
+  // Calculate the date for the specific day
+  const start = new Date(trip.value.start_date);
+  const targetDate = new Date(start);
+  targetDate.setDate(start.getDate() + dayIndex);
+  const dateString = targetDate.toISOString().split("T")[0];
+  
+  // Get stops for the specific day with their indices in the full array
+  const dayStopsWithIndices = localStops.value
+    .map((stop, idx) => ({ stop, originalIndex: idx }))
+    .filter(({ stop }) => {
+      if (!stop.arrival_time) return false;
+      const stopDate = new Date(stop.arrival_time).toISOString().split("T")[0];
+      return stopDate === dateString;
+    });
+  
+  console.log('[TripPage] Day stops:', dayStopsWithIndices.map((item, i) => ({
+    dayIndex: i,
+    fullArrayIndex: item.originalIndex,
+    name: item.stop.place?.name
+  })));
+  
+  if (fromIndex >= dayStopsWithIndices.length || toIndex > dayStopsWithIndices.length) return;
+  if (fromIndex === toIndex) return;
+  
+  const movedItem = dayStopsWithIndices[fromIndex];
+  if (!movedItem) return;
+  
+  // Simple approach: reorder within the day's subset, then rebuild full array
+  const reorderedDayStops = [...dayStopsWithIndices];
+  const [removed] = reorderedDayStops.splice(fromIndex, 1);
+  reorderedDayStops.splice(toIndex, 0, removed);
+  
+  console.log('[TripPage] Reordered day stops:', reorderedDayStops.map((item, i) => ({
+    newDayIndex: i,
+    name: item.stop.place?.name
+  })));
+  
+  // Rebuild the full stops array with the reordered day
+  const updatedStops = [...localStops.value];
+  
+  // Replace all stops for this day with the reordered ones
+  // First, remove all day stops from full array
+  for (let i = dayStopsWithIndices.length - 1; i >= 0; i--) {
+    updatedStops.splice(dayStopsWithIndices[i].originalIndex, 1);
+  }
+  
+  // Then insert all reordered stops at the position where the first one was
+  const insertPosition = dayStopsWithIndices[0].originalIndex;
+  for (let i = 0; i < reorderedDayStops.length; i++) {
+    updatedStops.splice(insertPosition + i, 0, reorderedDayStops[i].stop);
+  }
+  
+  console.log('[TripPage] Reorder complete:', {
+    oldLength: localStops.value.length,
+    newLength: updatedStops.length,
+    movedStopName: movedItem.stop.place?.name,
+    updatedStops: updatedStops.map(s => s.place?.name)
+  });
+  
+  // Update local state - create completely new reference to trigger reactivity
+  localStops.value = [...updatedStops];
+  
+  // Force Vue to process the update
+  nextTick(() => {
+    console.log('[TripPage] nextTick - localStops should be rendered:', localStops.value.length);
+  });
+};
+
+const handleMoveStopBetweenDays = (
+  stopId: string, 
+  fromDayIndex: number, 
+  toDayIndex: number, 
+  toPosition: number
+) => {
+  if (!localStops.value.length || !trip.value?.start_date) return;
+  
+  const updatedStops = [...localStops.value];
+  const stopToMove = updatedStops.find(s => s.id === stopId);
+  if (!stopToMove) return;
+  
+  // Calculate new arrival_time based on target day
+  const startDate = new Date(trip.value.start_date);
+  const newArrivalDate = new Date(startDate);
+  newArrivalDate.setDate(startDate.getDate() + toDayIndex);
+  const newArrivalTime = newArrivalDate.toISOString();
+  
+  // Remove stop from original position
+  const originalIndex = updatedStops.indexOf(stopToMove);
+  updatedStops.splice(originalIndex, 1);
+  
+  // Find target position in the full array
+  const targetDayStops = updatedStops.filter(stop => {
+    if (!stop.arrival_time) return false;
+    const stopDate = new Date(stop.arrival_time);
+    const daysDiff = Math.floor((stopDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    return daysDiff === toDayIndex;
+  });
+  
+  let insertIndex = updatedStops.length;
+  if (toPosition < targetDayStops.length && targetDayStops[toPosition]) {
+    insertIndex = updatedStops.indexOf(targetDayStops[toPosition]);
+  } else if (targetDayStops.length > 0) {
+    insertIndex = updatedStops.indexOf(targetDayStops[targetDayStops.length - 1]) + 1;
+  }
+  
+  // Update stop with new arrival time
+  stopToMove.arrival_time = newArrivalTime;
+  
+  // Insert at new position
+  updatedStops.splice(insertIndex, 0, stopToMove);
+  
+  // Update local state only
+  localStops.value = updatedStops;
+};
+
+const saveStopsOrder = async () => {
+  if (!trip.value) return;
+  
+  try {
+    // Prepare stops payload with updated order
+    const stopsPayload = localStops.value.map((stop, idx) => ({
+      place_id: stop.place?.id || '',
+      stop_order: idx,
+      arrival_time: stop.arrival_time || '',
+      notes: stop.notes || ''
+    }));
+    
+    // Update trip with new stops order
+    await TripService.updateTrip(trip.value.id, {
+      stops: stopsPayload
+    });
+    
+    console.log('[TripPage] Stops order saved successfully');
+  } catch (error) {
+    console.error('[TripPage] Failed to save stops order:', error);
+  }
+};
+
+const handleAddPlaceToDay = (dayIndex: number) => {
+  selectedDayForPlace.value = dayIndex;
+  showAddPlaceModal.value = true;
+};
+
+const handleAddPlace = (place: any) => {
+  if (!trip.value?.start_date) return;
+
+  // Calculate arrival time based on selected day
+  const startDate = new Date(trip.value.start_date);
+  const targetDate = new Date(startDate);
+  targetDate.setDate(startDate.getDate() + selectedDayForPlace.value);
+  targetDate.setHours(9, 0, 0, 0);
+  const arrivalTime = targetDate.toISOString();
+
+  // Create new stop
+  const newStop = {
+    id: `temp-${Date.now()}`,
+    place_id: place.id,
+    place: place,
+    stop_order: localStops.value.length + 1,
+    arrival_time: arrivalTime,
+    notes: '',
+    trip_id: trip.value.id,
+  };
+
+  // Add to local stops
+  localStops.value = [...localStops.value, newStop];
+  
+  console.log("Place added to day", selectedDayForPlace.value + 1, place.name);
+  showAddPlaceModal.value = false;
+};
+
+const handleDaySelected = (dayIndex: number) => {
+  selectedDayIndex.value = dayIndex;
+};
+
+const startEditingDetails = () => {
+  if (trip.value) {
+    editableTripName.value = trip.value.trip_name;
+    editableStartDate.value = trip.value.start_date || "";
+    editableEndDate.value = trip.value.end_date || "";
+    isEditingDetails.value = true;
+  }
+};
+
+const saveEditedDetails = async () => {
+  if (!trip.value) return;
+  
+  try {
+    // Prepare stops payload with updated order (stop_order starts from 1)
+    const stopsPayload = localStops.value.map((stop, idx) => ({
+      place_id: stop.place?.id || '',
+      stop_order: idx + 1,
+      arrival_time: stop.arrival_time || '',
+      notes: stop.notes || ''
+    }));
+    
+    // Update trip with new details and stops order
+    await TripService.updateTrip(trip.value.id, {
+      trip_name: editableTripName.value,
+      start_date: editableStartDate.value,
+      end_date: editableEndDate.value,
+      stops: stopsPayload
+    });
+    
+    await loadTrip(true);
+  } catch (error) {
+    console.error('Failed to save trip:', error);
+  }
+};
+
+const cancelEditingDetails = () => {
+  isEditingDetails.value = false;
+};
+
+const togglePublic = async () => {
+  if (!trip.value) return;
+  
+  try {
+    // Optimistically update the UI
+    const newPublicValue = !trip.value.public;
+    trip.value.public = newPublicValue;
+    
+    // Update on the backend
+    await TripService.updateTrip(trip.value.id, {
+      public: newPublicValue
+    });
+    
+    console.log(`Trip is now ${newPublicValue ? 'public' : 'private'}`);
+  } catch (error) {
+    console.error('Failed to toggle public/private:', error);
+    // Revert the optimistic update on error
+    if (trip.value) {
+      trip.value.public = !trip.value.public;
     }
   }
 };
@@ -69,25 +370,74 @@ const handleRemoveStop = async (stopId: string) => {
 onMounted(async () => {
   console.log("Mounted");
   await loadTrip(true);
+  
+  // Initialize editable fields and local stops
+  if (trip.value) {
+    editableTripName.value = trip.value.trip_name;
+    editableStartDate.value = trip.value.start_date || "";
+    editableEndDate.value = trip.value.end_date || "";
+    localStops.value = trip.value.stops ? [...trip.value.stops] : [];
+  }
 });
+
+// Watch for changes in trip.value.stops and sync to localStops
+watch(
+  () => trip.value?.stops,
+  (newStops) => {
+    console.log('[TripPage] Watch triggered - trip.stops changed');
+    if (newStops) {
+      console.log('[TripPage] Syncing localStops with trip.stops:', newStops.length, 'items');
+      localStops.value = [...newStops];
+    }
+  },
+  { deep: true }
+);
 </script>
 
 <template>
-  <div>
-    <div class="flex w-full flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
-      <!-- Header Section -->
-      <section v-motion-slide-visible-once-top class="mx-auto w-full max-w-6xl">
-        <Button
-          variant="ghost"
-          class="mb-4 -ml-2 group hover:bg-coral-light transition-colors duration-200"
-          @click="navigateBack"
-        >
-          <ArrowLeft
-            :size="20"
-            class="mr-2 transition-transform group-hover:-translate-x-1"
-          />
-          Back to Trips
-        </Button>
+  <div class="flex flex-col bg-background">
+    <!-- Header Section -->
+    <div class="bg-card border-b border-border/50 flex-shrink-0">
+      <div class="max-w-full px-6 py-4">
+        <div class="flex items-center justify-between mb-4">
+          <Button
+            variant="ghost"
+            class="group hover:bg-coral-light transition-colors duration-200"
+            @click="navigateBack"
+          >
+            <ArrowLeft
+              :size="20"
+              class="mr-2 transition-transform group-hover:-translate-x-1"
+            />
+            Back to My Trips
+          </Button>
+
+          <div class="flex items-center gap-3">
+            <Button
+              size="sm"
+              variant="outline"
+              :class="[
+                'flex items-center gap-2 transition-all',
+                trip?.public
+                  ? 'bg-green-100 text-green-800 hover:bg-green-200 border-green-300'
+                  : 'border-2 hover:bg-muted/50'
+              ]"
+              @click="togglePublic"
+            >
+              <component :is="trip?.public ? Globe : Lock" :size="16" />
+              {{ trip?.public ? 'Public' : 'Private' }}
+            </Button>
+
+            <Button
+              size="sm"
+              class="bg-coral text-white hover:bg-coral-dark flex items-center gap-2"
+              @click="saveEditedDetails"
+            >
+              <Save :size="16" />
+              Save Trip
+            </Button>
+          </div>
+        </div>
 
         <!-- Loading State -->
         <div v-if="loading" class="flex items-center justify-center py-16">
@@ -131,245 +481,135 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Trip Header -->
-        <div v-else-if="trip && tripInfo" class="space-y-6">
-          <div class="flex items-start justify-between gap-6 flex-wrap">
-            <div class="flex-1 min-w-0 space-y-2">
-              <h1
-                class="text-4xl sm:text-5xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text break-words"
-              >
-                {{ tripInfo.name }}
-              </h1>
-              <p class="text-muted-foreground text-lg max-w-2xl">
-                Organize places into collections for your trips
-              </p>
-            </div>
-            <div class="flex gap-3 shrink-0">
-              <Button
-                variant="outline"
-                class="inline-flex items-center gap-2 px-5 py-3 border-2 border-coral text-coral font-semibold rounded-xl hover:bg-coral hover:text-white transition-all duration-200"
-                @click="handleAddFromSavedPlaces"
-              >
-                <Bookmark :size="20" />
-                From Saved
-              </Button>
-              <Button
-                class="inline-flex items-center gap-2 px-6 py-3 bg-coral text-white font-semibold rounded-xl shadow-lg shadow-coral/25 hover:bg-coral-dark hover:-translate-y-0.5 hover:shadow-xl hover:shadow-coral/30 active:translate-y-0 transition-all duration-200"
-                @click="navigateToAddPlace"
-              >
-                <Plus :size="20" />
-                Add Place
-              </Button>
-            </div>
+        <!-- Trip Details Form -->
+        <div v-else-if="trip" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <Label class="block text-sm mb-2 text-muted-foreground">Trip Name</Label>
+            <Input
+              v-if="isEditingDetails"
+              v-model="editableTripName"
+              placeholder="e.g., Summer in Da Nang"
+              class="h-11 rounded-xl"
+            />
+            <p v-else class="text-xl font-bold text-foreground">
+              {{ trip.trip_name }}
+            </p>
           </div>
 
-          <!-- Trip Info -->
-          <div class="flex flex-wrap gap-4 items-center">
-            <div
-              v-if="tripInfo.hasDateRange"
-              class="flex items-center gap-2.5 text-muted-foreground bg-muted/50 px-4 py-2 rounded-full"
-            >
-              <Calendar :size="18" class="text-coral shrink-0" />
-              <span class="font-medium">{{ tripInfo.dateRange }}</span>
-            </div>
-            <Badge
-              variant="secondary"
-              class="px-4 py-1.5 text-sm font-semibold bg-coral/10 text-coral border-0"
-            >
-              {{ tripInfo.placeCount }}
-            </Badge>
+          <div>
+            <Label class="block text-sm mb-2 text-muted-foreground">Start Date</Label>
+            <Input
+              v-if="isEditingDetails"
+              v-model="editableStartDate"
+              type="date"
+              class="h-11 rounded-xl"
+            />
+            <p v-else class="text-lg text-foreground">
+              {{ trip.start_date ? new Date(trip.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set' }}
+            </p>
           </div>
 
-          <!-- Remove Error Alert -->
-          <div
-            v-if="removeError"
-            class="rounded-xl border border-destructive/30 bg-destructive/5 p-4 animate-in fade-in slide-in-from-top-2 duration-300"
-          >
-            <div class="flex items-center gap-3">
-              <AlertCircle :size="20" class="text-destructive shrink-0" />
-              <p class="text-sm text-destructive flex-1">
-                {{ removeError }}
-              </p>
-              <Button
-                variant="ghost"
-                size="sm"
-                class="text-destructive hover:bg-destructive/10"
-                @click="clearErrors"
-              >
-                Dismiss
-              </Button>
-            </div>
+          <div>
+            <Label class="block text-sm mb-2 text-muted-foreground">End Date</Label>
+            <Input
+              v-if="isEditingDetails"
+              v-model="editableEndDate"
+              type="date"
+              class="h-11 rounded-xl"
+            />
+            <p v-else class="text-lg text-foreground">
+              {{ trip.end_date ? new Date(trip.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set' }}
+            </p>
           </div>
         </div>
-      </section>
 
-      <Separator class="mx-auto w-full max-w-6xl" />
-
-      <!-- Stops Section -->
-      <section
-        v-if="trip && !loading"
-        class="mx-auto w-full max-w-6xl space-y-4"
-      >
-        <!-- Empty State -->
+        <!-- Remove Error Alert -->
         <div
-          v-if="!hasStops"
-          v-motion-pop-visible-once
-          class="text-center py-16"
+          v-if="removeError"
+          class="rounded-xl border border-destructive/30 bg-destructive/5 p-4 animate-in fade-in slide-in-from-top-2 duration-300 mt-4"
         >
-          <div
-            class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-coral/20 to-coral/5 mb-6"
-          >
-            <MapPin :size="40" class="text-coral" />
-          </div>
-          <h3 class="text-2xl font-bold mb-3">No places yet</h3>
-          <p class="text-muted-foreground mb-8 max-w-md mx-auto">
-            Start adding places to your trip and make it unforgettable!
-          </p>
-          <Button
-            class="inline-flex items-center gap-2 px-8 py-3 bg-coral text-white font-semibold rounded-xl shadow-lg shadow-coral/25 hover:bg-coral-dark hover:-translate-y-0.5 hover:shadow-xl hover:shadow-coral/30 transition-all duration-200"
-            @click="navigateToAddPlace"
-          >
-            <Plus :size="20" />
-            Add Your First Place
-          </Button>
-        </div>
-
-        <!-- Stop Groups -->
-        <div v-else class="space-y-4">
-          <Collapsible
-            v-for="(group, index) in stopGroups"
-            :key="group.id"
-            :default-open="true"
-            v-motion
-            :initial="{ opacity: 0, y: 50 }"
-            :enter="{ opacity: 1, y: 0, transition: { delay: index * 100 } }"
-            class="rounded-2xl bg-card border border-border/80 overflow-hidden shadow-sm hover:shadow-md hover:border-border transition-all duration-200"
-          >
-            <CollapsibleTrigger
-              class="w-full px-5 py-4 bg-muted/30 hover:bg-muted/50 transition-colors duration-200 flex items-center justify-between cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          <div class="flex items-center gap-3">
+            <AlertCircle :size="20" class="text-destructive shrink-0" />
+            <p class="text-sm text-destructive flex-1">
+              {{ removeError }}
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              class="text-destructive hover:bg-destructive/10"
+              @click="clearErrors"
             >
-              <div class="flex items-center gap-4">
-                <span class="font-semibold text-foreground text-lg">
-                  {{ group.title }}
-                </span>
-                <Badge variant="outline" class="text-xs font-medium">
-                  {{ group.stops.length }} places
-                </Badge>
-              </div>
-              <ChevronDown
-                :size="20"
-                class="text-muted-foreground shrink-0 transition-transform duration-300 group-data-[state=open]:rotate-180"
-              />
-            </CollapsibleTrigger>
-
-            <CollapsibleContent class="px-3 pb-3 pt-2">
-              <div class="space-y-2">
-                <Card
-                  v-for="stop in group.stops"
-                  :key="stop.id"
-                  class="cursor-pointer p-0 overflow-hidden transition-all duration-200 hover:shadow-lg hover:translate-x-1 hover:border-coral/50 group/card"
-                  @click="stop?.place && navigateToPlace(stop.place.id)"
-                >
-                  <div class="flex items-center gap-4 p-3 sm:p-4">
-                    <!-- Place Image -->
-                    <img
-                      v-if="stop.place?.main_image_url != null"
-                      :src="stop.place.main_image_url"
-                      :alt="stop.place.name"
-                      class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover shrink-0 bg-muted ring-1 ring-border/50 group-hover/card:ring-coral/30 transition-all duration-200"
-                      loading="lazy"
-                    />
-
-                    <!-- Place Info -->
-                    <div class="flex-1 min-w-0 flex flex-col gap-1.5">
-                      <div
-                        class="flex items-start sm:items-center justify-between gap-2 flex-col sm:flex-row"
-                      >
-                        <h3
-                          class="font-semibold text-foreground text-base sm:text-lg truncate max-w-[200px] sm:max-w-none"
-                          :title="stop.place?.name"
-                        >
-                          {{ stop.place?.name }}
-                        </h3>
-                        <div
-                          class="flex items-center gap-1 text-sm font-medium shrink-0"
-                        >
-                          <Star :size="16" class="text-amber fill-amber" />
-                          <span>{{
-                            stop.place?.average_rating.toFixed(1)
-                          }}</span>
-                        </div>
-                      </div>
-
-                      <div
-                        class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm text-muted-foreground"
-                      >
-                        <div class="flex items-center gap-1.5">
-                          <MapPin :size="14" class="shrink-0 text-coral" />
-                          <span class="truncate">
-                            {{ stop.place?.city }},
-                            {{ stop.place?.country }}
-                          </span>
-                        </div>
-                        <span class="hidden sm:inline text-muted-foreground/50"
-                          >•</span
-                        >
-                        <span class="text-muted-foreground">
-                          {{ stop.place?.review_count }}
-                          reviews
-                        </span>
-                      </div>
-
-                      <!-- Stop Info -->
-                      <div
-                        v-if="stop.arrival_time || stop.notes"
-                        class="flex flex-col gap-1 pt-1 border-t border-border/50 mt-1"
-                      >
-                        <div
-                          v-if="stop.arrival_time"
-                          class="flex items-center gap-1.5 text-xs text-muted-foreground"
-                        >
-                          <Clock :size="12" class="shrink-0" />
-                          <span>{{
-                            formatArrivalTime(stop.arrival_time)
-                          }}</span>
-                        </div>
-                        <p
-                          v-if="stop.notes"
-                          class="text-xs text-muted-foreground line-clamp-2"
-                          :title="stop.notes"
-                        >
-                          {{ stop.notes }}
-                        </p>
-                      </div>
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="flex items-center shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        class="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                        :disabled="isRemoving"
-                        @click.stop="handleRemoveStop(stop.id)"
-                      >
-                        <Trash2 :size="18" />
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+              Dismiss
+            </Button>
+          </div>
         </div>
-      </section>
+      </div>
+    </div>
+
+    <!-- Main Content: Two-Column Layout -->
+    <div v-if="!loading && !error && trip" class="flex" style="min-height: 700px;">
+      <!-- Left Panel: Timeline/Itinerary -->
+      <div class="w-[400px] bg-card border-r border-border/50 overflow-y-auto flex-shrink-0 pb-20">
+        <TripItinerary
+          :start-date="trip.start_date"
+          :end-date="trip.end_date"
+          :stops="stopsForItinerary"
+          @add-place="handleAddPlaceToDay"
+          @add-from-saved-list="handleAddFromSavedPlaces"
+          @remove-stop="handleRemoveStop"
+          @reorder-stop="handleReorderStop"
+          @move-stop-between-days="handleMoveStopBetweenDays"
+          @day-selected="handleDaySelected"
+        />
+      </div>
+
+      <!-- Right Panel: Map Placeholder -->
+      <div class="flex-1 relative bg-muted/20 overflow-hidden sticky top-0 pt-4 pr-4 pb-24 pl-4" style="z-index: 1; height: 100vh; box-sizing: border-box;">
+        <div class="h-full w-full">
+          <TripMap v-if="trip && localStops.length > 0" :stops="localStops" :selected-day-index="selectedDayIndex" />
+          <div v-else class="relative w-full h-full rounded-3xl overflow-hidden">
+            <img
+              src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&h=800&fit=crop"
+              alt="Map"
+              class="w-full h-full object-cover"
+            />
+            <div class="absolute inset-0 bg-black/10 flex items-center justify-center">
+              <div class="bg-card/95 backdrop-blur-sm rounded-2xl p-8 text-center shadow-2xl border border-border/50 max-w-md">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-coral/10 mb-4">
+                  <MapPin :size="32" class="text-coral" />
+                </div>
+                <h3 class="text-2xl font-bold mb-2 text-foreground">Interactive Map View</h3>
+                <p class="text-muted-foreground mb-4">
+                  {{ hasStops 
+                    ? 'Map will display markers and routes for your trip'
+                    : 'Add places to see them on the map'
+                  }}
+                </p>
+                <div class="text-sm text-muted-foreground">
+                  {{ trip?.stops?.length || 0 }} stop{{ (trip?.stops?.length || 0) !== 1 ? 's' : '' }} in this trip
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Saved Places Modal -->
     <SavedPlacesModal
       v-model:open="showSavedPlacesModal"
       :trip-id="tripId"
+      :selected-day-index="selectedDayForSavedList"
+      :trip-start-date="trip?.start_date"
+      @places-selected="handlePlacesSelected"
       @success="handlePlaceAdded"
+    />
+
+    <!-- Add Place to Trip Modal -->
+    <AddPlaceToTripModal
+      v-model:open="showAddPlaceModal"
+      :day-number="selectedDayForPlace + 1"
+      @add-place="handleAddPlace"
     />
   </div>
 </template>

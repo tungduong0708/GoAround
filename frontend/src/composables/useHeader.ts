@@ -74,6 +74,11 @@ export function useHeader() {
     router.push({ name: "manage-places" });
   }
 
+  function handleAdmin() {
+    showDropdown.value = false;
+    router.push({ name: "admin" });
+  }
+
   async function handleLogout() {
     showDropdown.value = false;
     try {
@@ -100,6 +105,7 @@ export function useHeader() {
     accountType,
     handleProfile,
     handleManagePlaces,
+    handleAdmin,
     handleLogout,
   };
 }

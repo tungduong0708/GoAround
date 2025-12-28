@@ -7,3 +7,4 @@ export { default as PlacesService } from "./PlacesService";
 export { default as ReviewsService } from "./ReviewsService";
 export { default as TripService } from "./TripService";
 export { default as UserService } from "./UserService";
+export { default as AdminService } from "./AdminService";

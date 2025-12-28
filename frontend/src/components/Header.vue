@@ -30,6 +30,7 @@ const {
   accountType,
   handleProfile,
   handleManagePlaces,
+  handleAdmin,
   handleLogout,
 } = useHeader();
 
@@ -138,6 +139,14 @@ const {
                     @click="handleManagePlaces"
                   >
                     Manage Places
+                  </button>
+                </li>
+                <li v-if="accountType === 'admin'">
+                  <button
+                    class="w-full text-left px-4 py-2 hover:bg-accent hover:text-accent-foreground text-sm"
+                    @click="handleAdmin"
+                  >
+                    Admin
                   </button>
                 </li>
                 <li>

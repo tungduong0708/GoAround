@@ -460,6 +460,24 @@ async def get_user_photos(
     return photos, total
 
 
+async def has_pending_verification_request(
+    session: AsyncSession, user_id: uuid.UUID
+) -> bool:
+    """
+    Check if a user has a pending business verification request.
+
+    Returns:
+        True if a pending verification request exists, False otherwise.
+    """
+    stmt = select(BusinessVerificationRequest).where(
+        BusinessVerificationRequest.profile_id == user_id,
+        BusinessVerificationRequest.status == "pending",
+    )
+    result = await session.execute(stmt)
+    existing_request = result.scalars().first()
+    return existing_request is not None
+
+
 async def submit_business_verification(
     session: AsyncSession,
     user_id: uuid.UUID,
@@ -469,12 +487,14 @@ async def submit_business_verification(
     """
     Submit or resubmit a business verification request.
 
-    If a verification request already exists for this user, it will be updated
+    If a verification request already exists, it will be updated
     with the new information and status reset to "pending".
     Otherwise, a new request is created.
 
     This supports the re-verification workflow where rejected businesses
     can update their information and resubmit.
+
+    Note: The caller should check for pending requests before calling this function.
     """
     # Check if verification request already exists
     stmt = select(BusinessVerificationRequest).where(

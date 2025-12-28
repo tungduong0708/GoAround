@@ -275,6 +275,17 @@ async def submit_business_verification(
 
     Authentication required.
     """
+    # Check if there's already a pending verification request
+    has_pending = await user_service.has_pending_verification_request(
+        session=session, user_id=user_id
+    )
+
+    if has_pending:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A verification request is already pending. Please wait for admin review.",
+        )
+
     await user_service.submit_business_verification(
         session=session,
         user_id=user_id,

@@ -49,10 +49,6 @@ const searchResults = computed((): IPlacePublic[] => {
   return [];
 });
 
-const filteredPlaces = computed(() => {
-  return activeTab.value === "saved" ? savedPlaces.value : searchResults.value;
-});
-
 const handleOpenChange = async (value: boolean) => {
   emit("update:open", value);
   
@@ -85,7 +81,9 @@ const handleSelectList = async (listId: string) => {
   }
 };
 
-const handleAddPlace = (place: IPlacePublic) => {
+const handleAddPlace = (item: { place: IPlacePublic; saved_at: string } | IPlacePublic) => {
+  // Extract place from nested structure if needed
+  const place = 'place' in item ? item.place : item;
   emit("add-place", place);
   emit("update:open", false);
 };
@@ -185,32 +183,32 @@ const formatLocation = (place: IPlacePublic) => {
             <ScrollArea class="flex-1 px-6 pb-6">
               <div class="space-y-3 py-4">
                 <Card
-                  v-for="place in savedPlaces"
-                  :key="place.id"
+                  v-for="item in savedPlaces"
+                  :key="item.place.id"
                   class="cursor-pointer transition-all hover:border-coral/50 hover:shadow-md group"
-                  @click="handleAddPlace(place)"
+                  @click="handleAddPlace(item)"
                 >
                   <div class="p-3">
                     <div class="flex gap-3">
                       <img
-                        v-if="place.main_image_url"
-                        :src="place.main_image_url"
-                        :alt="place.name"
+                        v-if="item.place.main_image_url"
+                        :src="item.place.main_image_url"
+                        :alt="item.place.name"
                         class="w-20 h-20 rounded-lg object-cover shrink-0 bg-muted"
                       />
                       <div class="flex-1 min-w-0">
                         <h4 class="font-semibold text-foreground mb-1 truncate">
-                          {{ place.name }}
+                          {{ item.place.name }}
                         </h4>
                         <div class="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
                           <MapPin :size="12" />
-                          <span class="truncate">{{ formatLocation(place) }}</span>
+                          <span class="truncate">{{ formatLocation(item.place) }}</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                           <Star :size="12" class="text-amber fill-amber" />
-                          <span class="text-xs font-semibold">{{ place.average_rating }}</span>
+                          <span class="text-xs font-semibold">{{ item.place.average_rating }}</span>
                           <span class="text-xs text-muted-foreground">
-                            ({{ place.review_count }} reviews)
+                            ({{ item.place.review_count }} reviews)
                           </span>
                         </div>
                       </div>

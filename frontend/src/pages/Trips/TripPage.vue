@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useTripDetails, useGenerateTrip } from "@/composables";
+import { useTripDetails } from "@/composables";
 import TripService from "@/services/TripService";
 import Button from "@/components/ui/button/Button.vue";
 import Card from "@/components/ui/card/Card.vue";
@@ -13,7 +13,6 @@ import SavedPlacesModal from "@/components/trip/SavedPlacesModal.vue";
 import TripItinerary from "@/components/trip/TripItinerary.vue";
 import TripMap from "@/components/trip/TripMap.vue";
 import AddPlaceToTripModal from "@/components/trip/AddPlaceToTripModal.vue";
-import GenerateTripModal from "@/components/trip/GenerateTripModal.vue";
 import {
   MapPin,
   Calendar,
@@ -24,7 +23,6 @@ import {
   Save,
   Globe,
   Lock,
-  Sparkles,
 } from "lucide-vue-next";
 
 const route = useRoute();
@@ -53,14 +51,6 @@ const selectedDayForPlace = ref<number>(0);
 const selectedDayForSavedList = ref<number | undefined>(undefined);
 const isEditingDetails = ref(true);
 const selectedDayIndex = ref<number>(0);
-
-const { 
-  showGenerateTripModal, 
-  openGenerateTripModal, 
-  handleGenerateSubmit,
-  aiGenerating,
-  error: generateError
-} = useGenerateTrip();
 
 // Editable trip details
 const editableTripName = ref("");
@@ -359,10 +349,6 @@ const togglePublic = () => {
   console.log("Toggle public/private");
 };
 
-const handleAIGenerate = () => {
-  openGenerateTripModal();
-};
-
 onMounted(async () => {
   console.log("Mounted");
   await loadTrip(true);
@@ -409,18 +395,6 @@ watch(
           </Button>
 
           <div class="flex items-center gap-3">
-            <Button
-              size="sm"
-              variant="outline"
-              class="flex items-center gap-2 border-2 hover:bg-gradient-to-r hover:from-purple-50 hover:to-coral-light transition-all"
-              @click="handleAIGenerate"
-            >
-              <Sparkles :size="16" class="text-purple-600" />
-              <span class="text-sm font-semibold bg-gradient-to-r from-purple-600 to-coral bg-clip-text text-transparent">
-                AI Generate
-              </span>
-            </Button>
-            
             <Button
               size="sm"
               variant="outline"
@@ -618,14 +592,6 @@ watch(
       v-model:open="showAddPlaceModal"
       :day-number="selectedDayForPlace + 1"
       @add-place="handleAddPlace"
-    />
-
-    <!-- Generate Trip Modal -->
-    <GenerateTripModal
-      v-model:open="showGenerateTripModal"
-      :loading="aiGenerating"
-      :error="generateError"
-      @submit="handleGenerateSubmit"
     />
   </div>
 </template>

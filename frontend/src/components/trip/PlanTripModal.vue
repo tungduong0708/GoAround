@@ -277,36 +277,22 @@ onBeforeUnmount(() => {
       />
 
       <DialogHeader class="px-6 pt-5 pb-2">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div
-              class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-coral/20 to-coral/5"
-            >
-              <Sparkles :size="20" class="text-coral" />
-            </div>
-            <div>
-              <DialogTitle
-                class="text-xl font-bold text-foreground tracking-tight"
-              >
-                Plan a New Trip
-              </DialogTitle>
-              <p class="text-sm text-muted-foreground mt-0.5">
-                Create and organize your perfect itinerary
-              </p>
-            </div>
-          </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            class="flex items-center gap-2 border-2 hover:bg-gradient-to-r hover:from-purple-50 hover:to-coral-light transition-all"
-            @click="handleAIGenerate"
+        <div class="flex items-center gap-3">
+          <div
+            class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-coral/20 to-coral/5"
           >
-            <Sparkles :size="16" class="text-purple-600" />
-            <span class="text-sm font-semibold bg-gradient-to-r from-purple-600 to-coral bg-clip-text text-transparent">
-              AI Generate
-            </span>
-          </Button>
+            <Sparkles :size="20" class="text-coral" />
+          </div>
+          <div>
+            <DialogTitle
+              class="text-xl font-bold text-foreground tracking-tight"
+            >
+              Plan a New Trip
+            </DialogTitle>
+            <p class="text-sm text-muted-foreground mt-0.5">
+              Create and organize your perfect itinerary
+            </p>
+          </div>
         </div>
       </DialogHeader>
 

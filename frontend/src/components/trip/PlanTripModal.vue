@@ -12,6 +12,8 @@ import Label from "@/components/ui/label/Label.vue";
 import { MapPin, Calendar, Trash2, Star, Sparkles, Globe, Lock, Search, Loader2 } from "lucide-vue-next";
 import type { IPlacePublic } from "@/utils/interfaces";
 import { PlacesService } from "@/services";
+import { useCitiesStore } from '@/stores';
+import { storeToRefs } from 'pinia';
 
 interface PlanTripModalProps {
   open?: boolean;
@@ -37,6 +39,10 @@ const props = withDefaults(defineProps<PlanTripModalProps>(), {
 
 const emit = defineEmits<PlanTripModalEmits>();
 
+// Cities store
+const citiesStore = useCitiesStore();
+const { cities } = storeToRefs(citiesStore);
+
 // Form data
 const tripName = ref("");
 const destination = ref("");
@@ -45,6 +51,10 @@ const endDate = ref("");
 const isPublic = ref(false);
 const places = ref<IPlacePublic[]>([]);
 const newPlaceInput = ref("");
+
+// Destination autocomplete
+const filteredCities = ref<string[]>([]);
+const showCitiesDropdown = ref(false);
 
 // Search suggestions
 const searchSuggestions = ref<IPlacePublic[]>([]);
@@ -58,6 +68,33 @@ const dropdownPosition = ref({ top: 0, left: 0, width: 0 });
 const isFormValid = computed(() => {
   return tripName.value.trim() !== "" && destination.value.trim() !== "";
 });
+
+// Filter cities based on destination input
+const filterCities = () => {
+  const query = destination.value.toLowerCase().trim();
+  if (!query) {
+    filteredCities.value = cities.value;
+  } else {
+    filteredCities.value = cities.value.filter(city =>
+      city.toLowerCase().includes(query)
+    );
+  }
+};
+
+const handleDestinationInput = () => {
+  filterCities();
+  showCitiesDropdown.value = true;
+};
+
+const handleDestinationFocus = () => {
+  filterCities();
+  showCitiesDropdown.value = true;
+};
+
+const selectCity = (city: string) => {
+  destination.value = city;
+  showCitiesDropdown.value = false;
+};
 
 // Calculate dropdown position relative to input
 const updateDropdownPosition = async () => {
@@ -171,6 +208,7 @@ const handleCancel = () => {
   newPlaceInput.value = "";
   searchSuggestions.value = [];
   showSuggestions.value = false;
+  showCitiesDropdown.value = false;
   emit("update:open", false);
 };
 
@@ -220,10 +258,6 @@ const togglePublic = () => {
   isPublic.value = !isPublic.value;
 };
 
-const handleAIGenerate = () => {
-  // TODO: Implement AI generation
-};
-
 // Handle clicks outside to close dropdown
 const handleClickOutside = (e: MouseEvent) => {
   const dropdown = dropdownRef.value;
@@ -244,6 +278,12 @@ const handleClickOutside = (e: MouseEvent) => {
     !input.contains(e.target as Node)
   ) {
     showSuggestions.value = false;
+  }
+  
+  // Close cities dropdown if clicking outside
+  const target = e.target as HTMLElement;
+  if (!target.closest('.destination-autocomplete')) {
+    showCitiesDropdown.value = false;
   }
 };
 
@@ -312,7 +352,7 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- Destination -->
-        <div class="flex flex-col gap-2">
+        <div class="flex flex-col gap-2 relative destination-autocomplete">
           <Label
             for="destination"
             class="text-sm font-semibold text-foreground flex items-center gap-2"
@@ -324,9 +364,27 @@ onBeforeUnmount(() => {
             id="destination"
             v-model="destination"
             type="text"
-            placeholder="Where are you going?"
+            placeholder="e.g., Nha Trang, Vietnam"
             class="h-11 text-sm rounded-xl border-border/80 focus:border-coral focus:ring-coral/20"
+            autocomplete="off"
+            @input="handleDestinationInput"
+            @focus="handleDestinationFocus"
           />
+          
+          <!-- Cities Dropdown -->
+          <div
+            v-if="showCitiesDropdown && filteredCities.length > 0"
+            class="absolute z-50 w-full mt-1 top-full bg-background border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto"
+          >
+            <div
+              v-for="city in filteredCities"
+              :key="city"
+              class="px-4 py-2 hover:bg-accent cursor-pointer transition-colors"
+              @click="selectCity(city)"
+            >
+              {{ city }}
+            </div>
+          </div>
         </div>
 
         <!-- Dates -->

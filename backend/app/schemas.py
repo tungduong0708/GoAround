@@ -461,8 +461,8 @@ class TripSchema(BaseModel):
 class TripListSchema(BaseModel):
     id: uuid.UUID
     trip_name: str
-    start_date: date
-    end_date: date
+    start_date: date | None
+    end_date: date | None
     public: bool = False
     stop_count: int = 0
 

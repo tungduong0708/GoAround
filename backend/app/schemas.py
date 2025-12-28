@@ -184,6 +184,7 @@ class UserPublic(UserBase):
 class UserDetail(UserPublic):
     email: EmailStr | None
     ban_until: datetime | None
+    ban_reason: str | None
 
 
 # --- Place Data Schemas ---

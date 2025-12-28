@@ -2,16 +2,18 @@ import { authInstance } from "@/config";
 import type {
   IApiResponse,
   IMessage,
+  IModerationCaseDetail,
   IPaginatedResponse,
   IReportQuery,
 } from "@/utils/interfaces";
 import type {
-  IContentReportResponse,
-  IResolveReportRequest,
+  IModerationCaseSummary,
+  IResolveCaseRequest,
 } from "@/utils/interfaces";
-import type { 
-  IBussinessVerificationDetail,
-  IVerifyBusinessRequest } from "@/utils/interfaces";
+import type {
+  IBusinessVerificationDetail,
+  IVerifyBusinessRequest,
+} from "@/utils/interfaces";
 
 class AdminService {
   private static instance: AdminService;
@@ -26,14 +28,14 @@ class AdminService {
     return AdminService.instance;
   }
 
-  async getAdminReports(
-    query?: IReportQuery,
-  ): Promise<IPaginatedResponse<IContentReportResponse[]>> {
+  async getModerationCases(
+    query?: IReportQuery
+  ): Promise<IPaginatedResponse<IModerationCaseSummary[]>> {
     try {
-      const response = await authInstance.get("/admin/reports", {
+      const response = await authInstance.get("/admin/cases", {
         params: query,
       });
-      return response.data as IPaginatedResponse<IContentReportResponse[]>;
+      return response.data as IPaginatedResponse<IModerationCaseSummary[]>;
     } catch (error: any) {
       // Handle error
       if (error.response && error.response.status === 403) {
@@ -46,23 +48,49 @@ class AdminService {
       throw error;
     }
   }
-  async resolveReport(
-    reportId: string,
-    reportRequest: IResolveReportRequest,
-  ): Promise<IApiResponse<IMessage>> {
+
+  async getCaseDetail(
+    caseId: string
+  ): Promise<IApiResponse<IModerationCaseDetail>> {
     try {
-      const response = await authInstance.post(
-        `/admin/reports/${reportId}/resolve`,
-        reportRequest,
-      );
-      return response.data as IApiResponse<IMessage>;
+      const response = await authInstance.get(`/admin/cases/${caseId}`);
+      return response.data as IApiResponse<IModerationCaseDetail>;
     } catch (error: any) {
       // Handle error
       if (error.response && error.response.status === 403) {
         console.error("Access Forbidden: ", error.response.data.detail);
         // Handle specific logic here (e.g., redirect to home, show a toast)
       } else if (error.response && error.response.status === 404) {
-        console.error("Report Not Found: ", error.response.data.detail);
+        console.error("Case Not Found: ", error.response.data.detail);
+        // Handle specific logic here (e.g., show validation messages)
+      } else if (error.response && error.response.status === 422) {
+        console.error("Validation Error: ", error.response.data.detail);
+        // Handle specific logic here (e.g., show validation messages)
+      }
+      throw error;
+    }
+  }
+
+  async resolveCase(
+    caseId: string,
+    reportRequest: IResolveCaseRequest
+  ): Promise<IApiResponse<IMessage>> {
+    try {
+      const response = await authInstance.post(
+        `/admin/cases/${caseId}/resolve`,
+        reportRequest
+      );
+      return response.data as IApiResponse<IMessage>;
+    } catch (error: any) {
+      // Handle error
+      if (error.response && error.response.status === 400) {
+        console.error("Bad Request: ", error.response.data.detail);
+        // Handle specific logic here (e.g., redirect to home, show a toast)
+      } else if (error.response && error.response.status === 403) {
+        console.error("Access Forbidden: ", error.response.data.detail);
+        // Handle specific logic here (e.g., redirect to home, show a toast)
+      } else if (error.response && error.response.status === 404) {
+        console.error("Case Not Found: ", error.response.data.detail);
         // Handle specific logic here (e.g., show not found message)
       } else if (error.response && error.response.status === 422) {
         console.error("Validation Error: ", error.response.data.detail);
@@ -71,15 +99,16 @@ class AdminService {
       throw error;
     }
   }
-  async getUnverifiedBussinesses(
+  
+  async getUnverifiedBusinesses(
     page: number,
-    limit: number,
-  ): Promise<IApiResponse<IBussinessVerificationDetail>> {
+    limit: number
+  ): Promise<IPaginatedResponse<IBusinessVerificationDetail[]>> {
     try {
       const response = await authInstance.get(
-        `/admin/businesses/unverified?page=${page}&limit=${limit}`,
+        `/admin/businesses/unverified?page=${page}&limit=${limit}`
       );
-      return response.data as IApiResponse<IBussinessVerificationDetail>;
+      return response.data as IPaginatedResponse<IBusinessVerificationDetail[]>;
     } catch (error: any) {
       // Handle error
       if (error.response && error.response.status === 403) {
@@ -97,12 +126,12 @@ class AdminService {
   }
   async verifyBusiness(
     id: string,
-    input: IVerifyBusinessRequest,
+    input: IVerifyBusinessRequest
   ): Promise<IMessage> {
     try {
       const response = await authInstance.post(
         `/admin/businesses/${id}/verify`,
-        input,
+        input
       );
       return (response.data as IApiResponse<IMessage>).data;
     } catch (error: any) {

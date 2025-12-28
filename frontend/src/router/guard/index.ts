@@ -99,6 +99,16 @@ const guardRoutes: RouteRecordRaw[] = [
           authRequired: false,
         },
       },
+      // Not Found
+      {
+        path: ":catchAll(.*)",
+        name: "not-found",
+        component: () => import("@/pages/NotFound.vue"),
+        meta: {
+          title: "Not Found",
+          authRequired: false,
+        },
+      },
     ],
   },
 ];

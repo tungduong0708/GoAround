@@ -9,15 +9,17 @@ from sqlalchemy.orm import selectinload
 from app.models import (
     ContentReport,
     ForumPost,
+    ModerationTarget,
     PostImage,
+    PostLike,
     PostReply,
     Profile,
+    ReplyLike,
     Tag,
     post_tags,
 )
 from app.schemas import (
     ContentReportCreate,
-    ContentReportResponse,
     ForumAuthorSchema,
     ForumCommentSchema,
     ForumCommentUserSchema,
@@ -27,10 +29,46 @@ from app.schemas import (
     ForumPostListItem,
     ForumPostUpdate,
     ForumReplyCreate,
+    ForumReplyUpdate,
     ForumSearchFilter,
     ForumTagSchema,
 )
 from app.service.utils import is_user_banned
+
+
+async def _get_or_create_moderation_target(
+    session: AsyncSession,
+    target_type: str,
+    target_id: uuid.UUID,
+) -> ModerationTarget:
+    """
+    Find an existing pending moderation target or create a new one.
+
+    This implements the ticketing architecture where multiple reports
+    can be associated with a single moderation case.
+    """
+    # Check if there's an existing pending case for this content
+    stmt = select(ModerationTarget).where(
+        ModerationTarget.target_type == target_type,
+        ModerationTarget.target_id == target_id,
+        ModerationTarget.status == "pending",
+    )
+    result = await session.execute(stmt)
+    existing_target = result.scalars().first()
+
+    if existing_target:
+        return existing_target
+
+    # Create a new moderation target (case/ticket)
+    new_target = ModerationTarget(
+        target_type=target_type,
+        target_id=target_id,
+        status="pending",
+    )
+    session.add(new_target)
+    await session.flush()  # Get the ID without committing
+
+    return new_target
 
 
 def _sanitize_author(author: Profile) -> ForumAuthorSchema:
@@ -52,11 +90,18 @@ def _sanitize_comment_user(user: Profile) -> ForumCommentUserSchema:
 
 
 async def list_forum_posts(
-    session: AsyncSession, filter_params: ForumSearchFilter
+    session: AsyncSession,
+    filter_params: ForumSearchFilter,
+    current_user_id: uuid.UUID | None = None,
 ) -> tuple[list[ForumPostListItem], int]:
     """Search and list forum posts with filtering and pagination."""
-    # Base query
-    base_query = select(ForumPost.id)
+    # Base query - visible posts OR posts authored by current user
+    if current_user_id:
+        base_query = select(ForumPost.id).where(
+            or_(ForumPost.visible.is_(True), ForumPost.author_id == current_user_id)
+        )
+    else:
+        base_query = select(ForumPost.id).where(ForumPost.visible.is_(True))
 
     # Apply search filter
     if filter_params.q:
@@ -81,9 +126,14 @@ async def list_forum_posts(
     total = int(total_res.scalar() or 0)
 
     # Build main query using cached reply_count from database
-    main_query = select(ForumPost).options(
-        selectinload(ForumPost.author),
-        selectinload(ForumPost.tags),
+    main_query = (
+        select(ForumPost)
+        .options(
+            selectinload(ForumPost.author),
+            selectinload(ForumPost.tags),
+            selectinload(ForumPost.images),
+        )
+        .where(ForumPost.visible.is_(True))
     )
 
     # Apply search filter to main query
@@ -123,6 +173,11 @@ async def list_forum_posts(
             post.content[:200] + "..." if len(post.content) > 200 else post.content
         )
 
+        # Check if current user liked this post
+        is_liked = False
+        if current_user_id:
+            is_liked = await check_user_liked_post(session, post.id, current_user_id)
+
         posts.append(
             ForumPostListItem(
                 id=post.id,
@@ -130,8 +185,15 @@ async def list_forum_posts(
                 content_snippet=content_snippet,
                 author=_sanitize_author(post.author),
                 tags=[ForumTagSchema(id=tag.id, name=tag.name) for tag in post.tags],
+                images=[
+                    ForumPostImageSchema(id=img.id, image_url=img.image_url)
+                    for img in post.images
+                ],
                 reply_count=post.reply_count,
+                like_count=post.like_count,
+                view_count=post.view_count,
                 created_at=post.created_at,
+                is_liked=is_liked,
             )
         )
 
@@ -139,9 +201,12 @@ async def list_forum_posts(
 
 
 async def get_forum_post(
-    session: AsyncSession, post_id: uuid.UUID
+    session: AsyncSession, post_id: uuid.UUID, current_user_id: uuid.UUID | None = None
 ) -> ForumPostDetail | None:
-    """Get a forum post with all its details including replies."""
+    """
+    Get a forum post with all its details including replies.
+    Only visible posts and replies are shown on forum routes.
+    """
     res = await session.execute(
         select(ForumPost)
         .options(
@@ -150,11 +215,47 @@ async def get_forum_post(
             selectinload(ForumPost.tags),
             selectinload(ForumPost.replies).selectinload(PostReply.user),
         )
-        .where(ForumPost.id == post_id)
+        .where(ForumPost.id == post_id, ForumPost.visible.is_(True))
     )
     post = res.scalars().first()
     if not post:
         return None
+
+    # Increment view count
+    post.view_count += 1
+    await session.commit()
+
+    # Check if current user liked this post
+    is_liked = False
+    if current_user_id:
+        is_liked = await check_user_liked_post(session, post.id, current_user_id)
+
+    # Check which replies are liked by current user
+    replies_data = []
+    for comment in post.replies:
+        if not comment.visible:
+            continue
+
+        is_reply_liked = False
+        if current_user_id:
+            is_reply_liked = await check_user_liked_reply(
+                session, comment.id, current_user_id
+            )
+
+        # Calculate like count for reply
+        reply_like_count = await get_reply_like_count(session, comment.id)
+
+        replies_data.append(
+            ForumCommentSchema(
+                id=comment.id,
+                content=comment.content,
+                user=_sanitize_comment_user(comment.user),
+                created_at=comment.created_at,
+                parent_id=comment.parent_id,
+                like_count=reply_like_count,
+                is_liked=is_reply_liked,
+            )
+        )
 
     return ForumPostDetail(
         id=post.id,
@@ -166,17 +267,12 @@ async def get_forum_post(
             for img in post.images
         ],
         tags=[ForumTagSchema(id=tag.id, name=tag.name) for tag in post.tags],
-        replies=[
-            ForumCommentSchema(
-                id=comment.id,
-                content=comment.content,
-                user=_sanitize_comment_user(comment.user),
-                created_at=comment.created_at,
-                parent_id=comment.parent_id,
-            )
-            for comment in post.replies
-        ],
+        replies=replies_data,
+        reply_count=post.reply_count,
+        like_count=post.like_count,
+        view_count=post.view_count,
         created_at=post.created_at,
+        is_liked=is_liked,
     )
 
 
@@ -255,9 +351,13 @@ async def create_forum_reply(
         parent_id=data.parent_reply_id,
     )
     session.add(comment)
+    await session.flush()
 
-    # Increment reply_count on the post
-    post.reply_count += 1
+    # Recount replies for the post
+    count_res = await session.execute(
+        select(func.count()).select_from(PostReply).where(PostReply.post_id == post_id)
+    )
+    post.reply_count = int(count_res.scalar() or 0)
 
     await session.commit()
 
@@ -352,6 +452,42 @@ async def update_forum_post(
     return result
 
 
+async def update_forum_reply(
+    session: AsyncSession,
+    post_id: uuid.UUID,
+    reply_id: uuid.UUID,
+    user_id: uuid.UUID,
+    data: "ForumReplyUpdate",
+) -> ForumCommentSchema:
+    """Update a forum reply."""
+    # Get the reply with user info
+    result = await session.execute(
+        select(PostReply)
+        .options(selectinload(PostReply.user))
+        .where(PostReply.id == reply_id, PostReply.post_id == post_id)
+    )
+    reply = result.scalar_one_or_none()
+
+    if not reply:
+        raise ValueError("Reply not found")
+
+    if reply.user_id != user_id:
+        raise PermissionError("You can only edit your own replies")
+
+    # Update the content
+    reply.content = data.content
+    await session.commit()
+    await session.refresh(reply)
+
+    return ForumCommentSchema(
+        id=reply.id,
+        content=reply.content,
+        user=_sanitize_comment_user(reply.user),
+        created_at=reply.created_at,
+        parent_id=reply.parent_id,
+    )
+
+
 async def delete_forum_post(
     session: AsyncSession, post_id: uuid.UUID, user_id: uuid.UUID
 ) -> None:
@@ -375,37 +511,69 @@ async def delete_forum_post(
     await session.commit()
 
 
+async def delete_forum_reply(
+    session: AsyncSession, post_id: uuid.UUID, reply_id: uuid.UUID, user_id: uuid.UUID
+) -> None:
+    """Delete a forum reply."""
+    # Get the reply
+    res = await session.execute(
+        select(PostReply).where(
+            PostReply.id == reply_id,
+            PostReply.post_id == post_id,
+        )
+    )
+    reply = res.scalars().first()
+    if not reply:
+        raise ValueError("Reply not found")
+
+    # Check ownership
+    if reply.user_id != user_id:
+        raise PermissionError("You can only delete your own replies")
+
+    # Delete the reply (cascading deletes will handle child replies)
+    await session.delete(reply)
+    await session.flush()
+
+    # Recount replies for the post
+    post = await session.get(ForumPost, post_id)
+    if post:
+        count_res = await session.execute(
+            select(func.count())
+            .select_from(PostReply)
+            .where(PostReply.post_id == post_id)
+        )
+        post.reply_count = int(count_res.scalar() or 0)
+
+    await session.commit()
+
+
 async def report_forum_post(
     session: AsyncSession,
     post_id: uuid.UUID,
     user_id: uuid.UUID,
     data: ContentReportCreate,
-) -> ContentReportResponse:
-    """Report a forum post."""
+) -> None:
+    """Report a forum post for moderation."""
     # Verify post exists
     post = await session.get(ForumPost, post_id)
     if not post:
         raise ValueError("Post not found")
 
-    # Create the report
-    report = ContentReport(
-        reporter_id=user_id,
+    # Get or create moderation target (ticket)
+    moderation_target = await _get_or_create_moderation_target(
+        session=session,
         target_type="post",
         target_id=post_id,
+    )
+
+    # Create the report linked to the moderation target
+    report = ContentReport(
+        reporter_id=user_id,
+        moderation_target_id=moderation_target.id,
         reason=data.reason,
     )
     session.add(report)
     await session.commit()
-    await session.refresh(report)
-
-    return ContentReportResponse(
-        id=report.id,
-        reporter_id=report.reporter_id,
-        target_type=report.target_type,
-        target_id=report.target_id,
-        reason=report.reason,
-        created_at=report.created_at,
-    )
 
 
 async def report_forum_reply(
@@ -414,8 +582,8 @@ async def report_forum_reply(
     reply_id: uuid.UUID,
     user_id: uuid.UUID,
     data: ContentReportCreate,
-) -> ContentReportResponse:
-    """Report a forum reply."""
+) -> None:
+    """Report a forum reply for moderation."""
     # Verify reply exists and belongs to the post
     res = await session.execute(
         select(PostReply).where(
@@ -427,22 +595,147 @@ async def report_forum_reply(
     if not reply:
         raise ValueError("Reply not found")
 
-    # Create the report
-    report = ContentReport(
-        reporter_id=user_id,
+    # Get or create moderation target (ticket)
+    moderation_target = await _get_or_create_moderation_target(
+        session=session,
         target_type="reply",
         target_id=reply_id,
+    )
+
+    # Create the report linked to the moderation target
+    report = ContentReport(
+        reporter_id=user_id,
+        moderation_target_id=moderation_target.id,
         reason=data.reason,
     )
     session.add(report)
     await session.commit()
-    await session.refresh(report)
 
-    return ContentReportResponse(
-        id=report.id,
-        reporter_id=report.reporter_id,
-        target_type=report.target_type,
-        target_id=report.target_id,
-        reason=report.reason,
-        created_at=report.created_at,
+
+async def get_post_like_count(session: AsyncSession, post_id: uuid.UUID) -> int:
+    """Get the total number of likes for a post."""
+    count_res = await session.execute(
+        select(func.count(PostLike.id)).where(PostLike.post_id == post_id)
     )
+    return count_res.scalar() or 0
+
+
+async def get_reply_like_count(session: AsyncSession, reply_id: uuid.UUID) -> int:
+    """Get the total number of likes for a reply."""
+    count_res = await session.execute(
+        select(func.count(ReplyLike.id)).where(ReplyLike.reply_id == reply_id)
+    )
+    return count_res.scalar() or 0
+
+
+async def toggle_forum_post_like(
+    session: AsyncSession,
+    post_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> dict[str, any]:
+    """
+    Toggle like on a forum post.
+    Returns dict with like_count and is_liked status.
+    """
+    # Check if post exists
+    res = await session.execute(select(ForumPost).where(ForumPost.id == post_id))
+    post = res.scalars().first()
+    if not post:
+        raise ValueError("Post not found")
+
+    # Check if user already liked this post
+    like_res = await session.execute(
+        select(PostLike).where(PostLike.post_id == post_id, PostLike.user_id == user_id)
+    )
+    existing_like = like_res.scalars().first()
+
+    if existing_like:
+        # Unlike: remove the like
+        await session.delete(existing_like)
+        post.like_count = max(0, post.like_count - 1)
+        is_liked = False
+    else:
+        # Like: create new like
+        new_like = PostLike(post_id=post_id, user_id=user_id)
+        session.add(new_like)
+        post.like_count += 1
+        is_liked = True
+
+    await session.commit()
+    await session.refresh(post)
+
+    return {"like_count": post.like_count, "is_liked": is_liked}
+
+
+async def check_user_liked_post(
+    session: AsyncSession,
+    post_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> bool:
+    """Check if user has liked a specific post."""
+    res = await session.execute(
+        select(PostLike).where(PostLike.post_id == post_id, PostLike.user_id == user_id)
+    )
+    return res.scalars().first() is not None
+
+
+async def toggle_reply_like(
+    session: AsyncSession,
+    reply_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> dict[str, any]:
+    """
+    Toggle like on a forum reply.
+    Returns dict with like_count and is_liked status.
+    """
+    # Check if reply exists
+    res = await session.execute(select(PostReply).where(PostReply.id == reply_id))
+    reply = res.scalars().first()
+    if not reply:
+        raise ValueError("Reply not found")
+
+    # Check if user already liked this reply
+    like_res = await session.execute(
+        select(ReplyLike).where(
+            ReplyLike.reply_id == reply_id, ReplyLike.user_id == user_id
+        )
+    )
+    existing_like = like_res.scalars().first()
+
+    if existing_like:
+        # Unlike: remove the like
+        await session.delete(existing_like)
+        is_liked = False
+    else:
+        # Like: create new like
+        new_like = ReplyLike(reply_id=reply_id, user_id=user_id)
+        session.add(new_like)
+        is_liked = True
+
+    await session.commit()
+
+    # Count total likes for this reply
+    like_count = await get_reply_like_count(session, reply_id)
+
+    return {"like_count": like_count, "is_liked": is_liked}
+
+
+async def check_user_liked_reply(
+    session: AsyncSession,
+    reply_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> bool:
+    """Check if user has liked a specific reply."""
+    res = await session.execute(
+        select(ReplyLike).where(
+            ReplyLike.reply_id == reply_id, ReplyLike.user_id == user_id
+        )
+    )
+    return res.scalars().first() is not None
+
+
+async def get_all_tags(session: AsyncSession) -> list[ForumTagSchema]:
+    """Get all available tags from the database."""
+    result = await session.execute(select(Tag).order_by(Tag.name))
+    tags = result.scalars().all()
+    return [ForumTagSchema(id=tag.id, name=tag.name) for tag in tags]

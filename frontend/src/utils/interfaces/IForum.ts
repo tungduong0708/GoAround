@@ -18,11 +18,17 @@ export interface IForumCommentSchema {
   user: IForumCommentUserSchema;
   created_at: string;
   parent_id?: string | null;
+  like_count?: number;
+  is_liked?: boolean;
 }
 
 export interface IForumReplyCreate {
   content: string;
   parent_reply_id?: string | null;
+}
+
+export interface IForumReplyUpdate {
+  content: string;
 }
 // Deprecated, using IForumCommentSchema
 // export interface IForumReply {
@@ -45,8 +51,12 @@ export interface IForumPostListItem {
   content_snippet: string; // For list view
   author: IForumAuthorSchema;
   tags: IForumTagSchema[];
+  images?: IForumPostImageSchema[];
   reply_count?: number;
+  like_count?: number;
+  view_count?: number;
   created_at: string;
+  is_liked?: boolean;
 }
 
 export interface IForumPostDetail {
@@ -57,7 +67,11 @@ export interface IForumPostDetail {
   images?: IForumPostImageSchema[];
   tags?: IForumTagSchema[];
   replies?: IForumCommentSchema[];
+  reply_count?: number;
+  like_count?: number;
+  view_count?: number;
   created_at: string;
+  is_liked?: boolean;
 }
 
 export interface IForumPostCreate {

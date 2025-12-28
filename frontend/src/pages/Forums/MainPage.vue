@@ -5,6 +5,7 @@ import ForumFilterBar from "@/components/forum/ForumFilterBar.vue";
 import ForumPostCard from "@/components/forum/ForumPostCard.vue";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { onBeforeRouteLeave } from "vue-router";
 
 const {
   searchQuery,
@@ -23,7 +24,19 @@ const {
   currentPage,
   nextPage,
   previousPage,
+  isAuthenticated,
+  likedPosts,
+  toggleLike,
+  flushPendingLikes,
 } = useForumMain();
+
+// Ensure likes are saved before navigating away
+onBeforeRouteLeave(async () => {
+  if (flushPendingLikes) {
+    await flushPendingLikes();
+  }
+  return true;
+});
 </script>
 
 <template>
@@ -85,6 +98,9 @@ const {
             v-for="(post, index) in posts"
             :key="post.id"
             :post="post"
+            :is-liked="likedPosts.has(post.id)"
+            :is-authenticated="isAuthenticated"
+            @toggle-like="toggleLike"
             v-motion
             :initial="{ opacity: 0, y: 50 }"
             :enter="{ opacity: 1, y: 0, transition: { delay: index * 50 } }"

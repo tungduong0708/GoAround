@@ -378,6 +378,7 @@ class ForumPost(Base):
     view_count: Mapped[int] = mapped_column(Integer, default=0)
     like_count: Mapped[int] = mapped_column(Integer, default=0)
     reply_count: Mapped[int] = mapped_column(Integer, default=0)
+    visible: Mapped[bool] = mapped_column(Boolean, default=True)
 
     author: Mapped["Profile"] = relationship("Profile", back_populates="posts")
     images: Mapped[list["PostImage"]] = relationship(
@@ -428,6 +429,7 @@ class PostReply(Base):
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()
     )
+    visible: Mapped[bool] = mapped_column(Boolean, default=True)
     post: Mapped["ForumPost"] = relationship("ForumPost", back_populates="replies")
     user: Mapped["Profile"] = relationship("Profile", back_populates="replies")
     parent: Mapped["PostReply | None"] = relationship(
@@ -438,19 +440,61 @@ class PostReply(Base):
     )
 
 
+class PostLike(Base):
+    __tablename__ = "post_likes"
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    post_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("forum_posts.id", ondelete="CASCADE")
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("profiles.id", ondelete="CASCADE")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now()
+    )
+
+    post: Mapped["ForumPost"] = relationship("ForumPost")
+    user: Mapped["Profile"] = relationship("Profile")
+
+
+class ReplyLike(Base):
+    __tablename__ = "reply_likes"
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    reply_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("post_replies.id", ondelete="CASCADE")
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("profiles.id", ondelete="CASCADE")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now()
+    )
+
+    reply: Mapped["PostReply"] = relationship("PostReply")
+    user: Mapped["Profile"] = relationship("Profile")
+
+
 class ContentReport(Base):
     __tablename__ = "content_reports"
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     reporter_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profiles.id"))
-    target_type: Mapped[str] = mapped_column(String(20))
-    target_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    moderation_target_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("moderation_targets.id", ondelete="CASCADE")
+    )
     reason: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()
     )
     reporter: Mapped["Profile"] = relationship("Profile", back_populates="reports")
+    moderation_target: Mapped["ModerationTarget"] = relationship(
+        "ModerationTarget", back_populates="reports"
+    )
 
 
 class ModerationTarget(Base):
@@ -468,6 +512,12 @@ class ModerationTarget(Base):
         TIMESTAMP(timezone=True), server_default=func.now()
     )
     resolved_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
+
+    reports: Mapped[list["ContentReport"]] = relationship(
+        "ContentReport",
+        back_populates="moderation_target",
+        cascade="all, delete-orphan",
+    )
 
 
 class BusinessVerificationRequest(Base):

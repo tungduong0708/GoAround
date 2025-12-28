@@ -5,6 +5,7 @@ import type {
   IForumSearchQuery,
   IPaginationMeta,
   IForumPostCreate,
+  IForumReplyUpdate,
 } from "@/utils/interfaces";
 import ForumService from "@/services/ForumService";
 
@@ -75,6 +76,26 @@ export const useForumStore = defineStore("forum", () => {
     }
   };
 
+  const updateReply = async (
+    postId: string,
+    replyId: string,
+    content: string
+  ) => {
+    try {
+      const payload: IForumReplyUpdate = { content };
+      const updatedReply = await ForumService.updateReply(
+        postId,
+        replyId,
+        payload
+      );
+      return updatedReply;
+    } catch (err) {
+      error.value =
+        err instanceof Error ? err.message : "Failed to update reply";
+      throw err;
+    }
+  };
+
   return {
     posts,
     pagination,
@@ -84,5 +105,6 @@ export const useForumStore = defineStore("forum", () => {
     createPost,
     updatePost,
     getPostById,
+    updateReply,
   };
 });

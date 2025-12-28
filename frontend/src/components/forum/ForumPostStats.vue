@@ -6,6 +6,13 @@ defineProps<{
   likeCount: number;
   viewCount: number;
   formatNumber: (num: number) => string;
+  isLiked?: boolean;
+  isLiking?: boolean;
+  isAuthenticated?: boolean;
+}>();
+
+const emit = defineEmits<{
+  toggleLike: [];
 }>();
 </script>
 
@@ -28,14 +35,24 @@ defineProps<{
     </div>
 
     <!-- Likes -->
-    <div class="flex items-center gap-2 group cursor-pointer">
+    <div 
+      class="flex items-center gap-2 group cursor-pointer"
+      :class="{ 'opacity-50 cursor-not-allowed': isLiking }"
+      @click="isAuthenticated && !isLiking ? emit('toggleLike') : null"
+    >
       <div class="p-2 rounded-full group-hover:bg-red-500/10 transition-colors">
         <HeartIcon
-          class="size-5 text-muted-foreground group-hover:text-red-500"
+          :class="[
+            'size-5 transition-colors',
+            isLiked ? 'fill-red-500 text-red-500' : 'text-muted-foreground group-hover:text-red-500'
+          ]"
         />
       </div>
       <span
-        class="text-sm font-medium text-muted-foreground group-hover:text-red-500"
+        :class="[
+          'text-sm font-medium transition-colors',
+          isLiked ? 'text-red-500' : 'text-muted-foreground group-hover:text-red-500'
+        ]"
       >
         {{ formatNumber(likeCount) }}
       </span>

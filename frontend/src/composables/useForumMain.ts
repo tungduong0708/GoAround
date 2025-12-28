@@ -1,16 +1,23 @@
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, computed, watch, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
-import { useForumStore } from "@/stores";
+import { useForumStore, useAuthStore } from "@/stores";
+import ForumService from "@/services/ForumService";
 
 export function useForumMain() {
   const store = useForumStore();
+  const authStore = useAuthStore();
   const { posts, pagination, loading, error } = storeToRefs(store);
+  const { isAuthenticated } = storeToRefs(authStore);
 
   const searchQuery = ref("");
   const activeSort = ref<("newest" | "popular" | "oldest")>("newest");
   const activeTags = ref<string[]>([]);
   const activeTimeFilter = ref("All Time");
   const currentPage = ref(1);
+  
+  // Like functionality
+  const likedPosts = ref<Set<string>>(new Set());
+  const pendingLikes = ref<Map<string, { timeout: ReturnType<typeof setTimeout> }>>(new Map());
 
   const sortOptions = ["newest", "popular", "oldest"];
   const tagOptions = [
@@ -25,14 +32,24 @@ export function useForumMain() {
   ];
   const timeOptions = ["All Time", "Last 7 Days", "Last 30 Days"];
 
-  const fetchPosts = () => {
-    store.fetchPosts({
+  const fetchPosts = async () => {
+    await store.fetchPosts({
       q: searchQuery.value,
       sort: activeSort.value,
       page: currentPage.value,
       limit: 5, // 5 per page for easier testing of pagination
       tags: activeTags.value,
     });
+    
+    // Initialize likedPosts from the is_liked field in posts
+    if (isAuthenticated.value) {
+      likedPosts.value.clear();
+      posts.value.forEach(post => {
+        if ((post as any).is_liked) {
+          likedPosts.value.add(post.id);
+        }
+      });
+    }
   };
 
   // Initial fetch
@@ -93,6 +110,81 @@ export function useForumMain() {
     }
   };
 
+  // Like functionality
+  const sendLikeRequest = async (postId: string) => {
+    try {
+      const result = await ForumService.likePost(postId);
+      
+      // Update the post's like count and liked status
+      const post = posts.value.find(p => p.id === postId);
+      if (post) {
+        post.like_count = result.like_count;
+      }
+      
+      // Update liked posts set
+      if (result.is_liked) {
+        likedPosts.value.add(postId);
+      } else {
+        likedPosts.value.delete(postId);
+      }
+    } catch (error) {
+      console.error(`Error toggling like for post:`, error);
+    }
+  };
+
+  const toggleLike = (postId: string) => {
+    if (!isAuthenticated.value) return;
+
+    // Find the post and update UI immediately
+    const post = posts.value.find(p => p.id === postId);
+    if (!post) return;
+
+    const isCurrentlyLiked = likedPosts.value.has(postId);
+
+    // Update UI optimistically
+    if (isCurrentlyLiked) {
+      likedPosts.value.delete(postId);
+      post.like_count = Math.max(0, (post.like_count || 0) - 1);
+    } else {
+      likedPosts.value.add(postId);
+      post.like_count = (post.like_count || 0) + 1;
+    }
+
+    // Clear existing timeout if any
+    const existing = pendingLikes.value.get(postId);
+    if (existing) {
+      clearTimeout(existing.timeout);
+    }
+
+    // Schedule API call after 5 seconds
+    const timeout = setTimeout(() => {
+      sendLikeRequest(postId);
+      pendingLikes.value.delete(postId);
+    }, 5000);
+
+    pendingLikes.value.set(postId, { timeout });
+  };
+
+  // Send all pending likes before unmounting
+  const flushPendingLikes = async () => {
+    const promises: Promise<void>[] = [];
+    pendingLikes.value.forEach(({ timeout }, postId) => {
+      clearTimeout(timeout);
+      promises.push(sendLikeRequest(postId));
+    });
+    pendingLikes.value.clear();
+    await Promise.all(promises);
+  };
+
+  onUnmounted(() => {
+    flushPendingLikes();
+  });
+
+  // Watch for route changes and flush pending likes
+  watch([searchQuery, activeSort, activeTags, activeTimeFilter, currentPage], () => {
+    flushPendingLikes();
+  });
+
   return {
     // State
     searchQuery,
@@ -101,6 +193,8 @@ export function useForumMain() {
     activeTimeFilter,
     currentPage,
     pagination,
+    isAuthenticated,
+    likedPosts,
 
     // Data
     posts: displayedPosts,
@@ -120,5 +214,7 @@ export function useForumMain() {
     setPage,
     nextPage,
     previousPage,
+    toggleLike,
+    flushPendingLikes,
   };
 }

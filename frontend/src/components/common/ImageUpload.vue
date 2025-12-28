@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { Upload, X, Image as ImageIcon, Loader2 } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import MediaService from "@/services/MediaService";
@@ -40,6 +40,17 @@ const previewUrls = ref<string[]>(
 const uploading = ref(false);
 const error = ref<string | null>(null);
 const isDragging = ref(false);
+
+// Watch for external changes to modelValue (e.g., when loading existing images in edit mode)
+watch(() => props.modelValue, (newValue) => {
+  if (newValue) {
+    previewUrls.value = props.multiple 
+      ? (Array.isArray(newValue) ? newValue : [])
+      : (newValue ? [newValue as string] : []);
+  } else {
+    previewUrls.value = [];
+  }
+}, { immediate: true });
 
 const hasImages = computed(() => previewUrls.value.length > 0);
 

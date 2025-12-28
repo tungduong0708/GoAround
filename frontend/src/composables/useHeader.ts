@@ -17,7 +17,7 @@ export function useHeader() {
 
   const displayName = computed(() => {
     return (
-      user.value?.user_metadata?.full_name ||
+      profile.value?.full_name ||
       user.value?.email?.split("@")[0] ||
       "Guest"
     );
@@ -74,6 +74,11 @@ export function useHeader() {
     router.push({ name: "manage-places" });
   }
 
+  function handleAdmin() {
+    showDropdown.value = false;
+    router.push({ name: "admin" });
+  }
+
   async function handleLogout() {
     showDropdown.value = false;
     try {
@@ -82,7 +87,8 @@ export function useHeader() {
       // Log or surface sign-out errors if needed
       console.error("Failed to sign out", err);
     } finally {
-      router.push({ name: "home" });
+      // Use replace to reset navigation stack and prevent going back
+      router.replace({ name: "home" });
     }
   }
 
@@ -100,6 +106,7 @@ export function useHeader() {
     accountType,
     handleProfile,
     handleManagePlaces,
+    handleAdmin,
     handleLogout,
   };
 }

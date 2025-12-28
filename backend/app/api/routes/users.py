@@ -6,7 +6,9 @@ from fastapi import APIRouter, HTTPException, status
 from app.api.deps import CurrentUserIdDep, SessionDep
 from app.schemas import (
     APIResponse,
+    BusinessVerificationSubmission,
     HTTPError,
+    Message,
     MetaData,
     TripListSchema,
     UserCreate,
@@ -18,7 +20,7 @@ from app.schemas import (
     UserReviewResponse,
     UserUpdate,
 )
-from app.service import user_service, trip_service
+from app.service import trip_service, user_service
 
 router = APIRouter(tags=["users"], prefix="/users")
 
@@ -231,7 +233,7 @@ async def get_user_photos(
 @router.get(
     "/{user_id}/replies",
     response_model=APIResponse[List[UserReplyResponse]],
-    status_code=501,
+    status_code=status.HTTP_200_OK,
 )
 async def get_user_replies(
     session: SessionDep,
@@ -242,7 +244,55 @@ async def get_user_replies(
     """
     Get list of forum replies created by a specific user.
     """
-    raise HTTPException(
-        status_code=501,
-        detail="User replies endpoint not yet implemented",
+    replies, total = await user_service.get_user_replies(session, user_id, page, limit)
+    return APIResponse(
+        data=replies,
+        meta=MetaData(page=page, limit=limit, total_items=total),
+    )
+
+
+@router.post(
+    "/me/verify-business",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[Message],
+    responses={
+        400: {"model": HTTPError},
+    },
+)
+async def submit_business_verification(
+    session: SessionDep,
+    user_id: CurrentUserIdDep,
+    submission: BusinessVerificationSubmission,
+):
+    """
+    Submit or resubmit a business verification request.
+
+    - First time: Creates a new verification request
+    - After rejection: Updates existing request with new information
+
+    The verification request will be set to "pending" status and will appear
+    in the admin dashboard for review.
+
+    Authentication required.
+    """
+    # Check if there's already a pending verification request
+    has_pending = await user_service.has_pending_verification_request(
+        session=session, user_id=user_id
+    )
+
+    if has_pending:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A verification request is already pending. Please wait for admin review.",
+        )
+
+    await user_service.submit_business_verification(
+        session=session,
+        user_id=user_id,
+        business_image_url=submission.business_image_url,
+        business_description=submission.business_description,
+    )
+
+    return APIResponse(
+        data=Message(message="Business verification request submitted successfully")
     )

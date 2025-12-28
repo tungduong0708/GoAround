@@ -15,6 +15,7 @@ import type {
   IPagingQuery,
   ITripListSchema,
   IUserReplyResponse,
+  IMessage
 } from "@/utils/interfaces";
 
 class UserService {
@@ -136,6 +137,20 @@ class UserService {
   //   const response = await authInstance.post(`/users/${userId}/ban`, input);
   //   return (response.data as IApiResponse<IBanUserResponse>).data;
   // }
+  async verifyBusiness(input: {
+    business_image_url: string;
+    business_description: string;
+  }): Promise<IMessage> {
+    try {
+      const response = await authInstance.post(`/users/me/verify-business`, input);
+      return (response.data as IApiResponse<IMessage>).data;
+    } catch (error: any) {
+      if (error.response && error.response.status === 400) {
+        console.error("Bad Request: ", error.response.data.detail);
+      }
+      throw error;
+    }
+  }
 }
 
 export default UserService.getInstance();

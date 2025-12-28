@@ -1,6 +1,6 @@
 import type { IUserPublic } from "./IUser";
 
-export interface IBussinessVerificationDetail {
+export interface IBusinessVerificationDetail {
   user: IUserPublic;
   verification_id: string;
   business_image_url: string;

@@ -183,7 +183,7 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       // Sign out from Supabase - this clears access token from storage
       await AuthenticationService.signOut();
-
+      console.log("User signed out successfully");
       // Clear local auth state
       setAuthState(null);
       session.value = null;

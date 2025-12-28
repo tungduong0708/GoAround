@@ -5,25 +5,36 @@ import ForumFilterBar from "@/components/forum/ForumFilterBar.vue";
 import ForumPostCard from "@/components/forum/ForumPostCard.vue";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { onBeforeRouteLeave } from "vue-router";
 
 const {
   searchQuery,
   activeSort,
   activeTags,
-  activeTimeFilter,
   posts,
   loading,
   sortOptions,
   tagOptions,
-  timeOptions,
   toggleTag,
-  setTimeFilter,
   setSort,
   pagination,
   currentPage,
   nextPage,
   previousPage,
+  isAuthenticated,
+  likedPosts,
+  toggleLike,
+  flushPendingLikes,
+  triggerSearch,
 } = useForumMain();
+
+// Ensure likes are saved before navigating away
+onBeforeRouteLeave(async () => {
+  if (flushPendingLikes) {
+    await flushPendingLikes();
+  }
+  return true;
+});
 </script>
 
 <template>
@@ -33,6 +44,7 @@ const {
       <ForumSearchHeader
         v-motion-slide-visible-once-top
         v-model="searchQuery"
+        @search="triggerSearch"
       />
 
       <!-- 2. Filters -->
@@ -42,11 +54,8 @@ const {
           :active-sort="activeSort"
           :tag-options="tagOptions"
           :active-tags="activeTags"
-          :time-options="timeOptions"
-          :active-time-filter="activeTimeFilter"
           @update:sort="setSort"
           @toggle:tag="toggleTag"
-          @update:time="setTimeFilter"
         />
       </div>
 
@@ -85,6 +94,9 @@ const {
             v-for="(post, index) in posts"
             :key="post.id"
             :post="post"
+            :is-liked="likedPosts.has(post.id)"
+            :is-authenticated="isAuthenticated"
+            @toggle-like="toggleLike"
             v-motion
             :initial="{ opacity: 0, y: 50 }"
             :enter="{ opacity: 1, y: 0, transition: { delay: index * 50 } }"

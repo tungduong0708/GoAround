@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { Upload, X, Image as ImageIcon, Loader2 } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import MediaService from "@/services/MediaService";
@@ -40,6 +40,17 @@ const previewUrls = ref<string[]>(
 const uploading = ref(false);
 const error = ref<string | null>(null);
 const isDragging = ref(false);
+
+// Watch for external changes to modelValue (e.g., when loading existing images in edit mode)
+watch(() => props.modelValue, (newValue) => {
+  if (newValue) {
+    previewUrls.value = props.multiple 
+      ? (Array.isArray(newValue) ? newValue : [])
+      : (newValue ? [newValue as string] : []);
+  } else {
+    previewUrls.value = [];
+  }
+}, { immediate: true });
 
 const hasImages = computed(() => previewUrls.value.length > 0);
 
@@ -114,15 +125,16 @@ const handleFiles = async (files: File[]) => {
 
       // Upload based on type
       if (props.uploadType === "avatar") {
-        result = await MediaService.uploadAvatar(file);
+        result = await MediaService.uploadAvatar(file, props.maxSizeInMB
+        );
       } else if (props.uploadType === "profile") {
-        result = await MediaService.uploadProfileImage(file);
+        result = await MediaService.uploadProfileImage(file, props.maxSizeInMB);
       } else if (props.uploadType === "post") {
-        result = await MediaService.uploadPostImage(file);
+        result = await MediaService.uploadPostImage(file, props.maxSizeInMB);
       } else if (props.uploadType === "review") {
-        result = await MediaService.uploadReviewImage(file);
+        result = await MediaService.uploadReviewImage(file, props.maxSizeInMB);
       } else if (props.uploadType === "place") {
-        result = await MediaService.uploadPlaceImage(file);
+        result = await MediaService.uploadPlaceImage(file, props.maxSizeInMB);
       } else {
         result = await MediaService.uploadFile(file, {
           maxSizeInMB: props.maxSizeInMB,

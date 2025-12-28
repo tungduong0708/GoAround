@@ -1,37 +1,41 @@
 import { onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRecommendationStore } from '@/stores'
-import type { IPlace } from '@/utils/interfaces'
+import { useRecommendationStore, useAuthStore } from '@/stores'
+import type { IPlacePublic } from '@/utils/interfaces'
 import { useRouter } from 'vue-router'
 
 export function useRecommendations(options: { autoLoad?: boolean } = { autoLoad: true }) {
   const router = useRouter()
   const store = useRecommendationStore()
-  const { items, loading, error, hasLoaded } = storeToRefs(store)
+  const authStore = useAuthStore()
+  const { aiRecommendations, isLoadingAI: loading, aiError: error, hasLoaded } = storeToRefs(store)
 
   const loadRecommendations = async (force = false) => {
-    await store.loadRecommendations({ force })
+    // Only fetch if user is authenticated
+    if (!authStore.user) {
+      return
+    }
+    await store.fetchPersonalizedRecommendations(undefined, force)
   }
 
-  const handleRecommendationSelect = (item: IPlace) => {
+  const handleRecommendationSelect = (item: IPlacePublic) => {
     router.push({ name: 'details', params: { id: item.id } })
   }
 
   if (options.autoLoad !== false) {
     onMounted(() => {
-      if (!hasLoaded.value) {
-        loadRecommendations()
-      }
+      loadRecommendations()
     })
   }
 
   return {
-    items,
+    items: aiRecommendations,
     loading,
     error,
     hasLoaded,
     handleRecommendationSelect,
     loadRecommendations,
-    clearError: store.clearError,
+    refreshRecommendations: store.refreshRecommendations,
+    clearError: store.clearAIError,
   }
 }

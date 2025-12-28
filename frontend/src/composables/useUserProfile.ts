@@ -1,8 +1,9 @@
 import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { useUserStore, useAuthStore } from "@/stores";
+import { useUserProfileStore } from "@/stores/userProfileStore";
 import { storeToRefs } from "pinia";
-import type { IUserDetail, IUserPublic } from "@/utils/interfaces";
+import type { IUserDetail, IUserUpdate } from "@/utils/interfaces";
 
 export function useUserProfile() {
   const route = useRoute();
@@ -56,6 +57,17 @@ export function useUserProfile() {
     return user.value.stats;
   });
 
+  // Update profile handler
+  const updateProfile = async (input: IUserUpdate): Promise<IUserDetail> => {
+    const userProfileStore = useUserProfileStore();
+    const updatedUser = await store.updateProfile(input);
+
+    // Also update the userProfileStore's profile data if it exists
+    userProfileStore.updateProfile(updatedUser);
+
+    return updatedUser;
+  };
+
   return {
     user,
     loading,
@@ -67,5 +79,6 @@ export function useUserProfile() {
     role,
     stats,
     loadData,
+    updateProfile,
   };
 }

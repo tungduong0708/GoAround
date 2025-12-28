@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import type { IUserDetail, IUserPublic } from "@/utils/interfaces";
+import type { IUserDetail, IUserPublic, IUserUpdate } from "@/utils/interfaces";
 import { UserService } from "@/services";
 
 export const useUserStore = defineStore("user-profile", () => {
@@ -68,11 +68,32 @@ export const useUserStore = defineStore("user-profile", () => {
     }
   };
 
+  const updateProfile = async (input: IUserUpdate): Promise<IUserDetail> => {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      const updatedUser = await UserService.updateProfile(input);
+      // Update the local user state with the new data
+      user.value = updatedUser;
+      return updatedUser;
+    } catch (err: any) {
+      error.value =
+        err?.response?.data?.detail ||
+        err.message ||
+        "Failed to update profile";
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     user,
     loading,
     error,
     loadMe,
     loadUser,
+    updateProfile,
   };
 });

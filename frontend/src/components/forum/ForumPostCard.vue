@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router";
-import type { IForumPostDetail } from "@/utils/interfaces";
+import type { IForumPostListItem } from "@/utils/interfaces";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,7 +12,13 @@ import {
 } from "lucide-vue-next";
 
 const props = defineProps<{
-  post: IForumPostDetail;
+  post: IForumPostListItem;
+  isLiked?: boolean;
+  isAuthenticated?: boolean;
+}>();
+
+const emit = defineEmits<{
+  toggleLike: [postId: string];
 }>();
 
 // Helper to format numbers (e.g. 13.1k)
@@ -33,6 +39,14 @@ const formatDate = (dateStr: string) => {
     day: "numeric",
   }).format(date);
 };
+
+const handleLikeClick = (event: Event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  if (props.isAuthenticated) {
+    emit("toggleLike", props.post.id);
+  }
+};
 </script>
 
 <template>
@@ -48,10 +62,12 @@ const formatDate = (dateStr: string) => {
               <Avatar
                 class="size-12 border-2 border-background shadow-sm hover:opacity-80 transition-opacity"
               >
-                <AvatarImage
-                  :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author.username}`"
-                />
-                <AvatarFallback>UN</AvatarFallback>
+                <AvatarImage :src="post.author.avatar_url as string" />
+                <AvatarFallback
+                  class="text-base bg-gradient-to-br from-orange-100 to-orange-200 text-orange-600 font-bold"
+                >
+                  {{ post.author.username?.charAt(0).toUpperCase() }}
+                </AvatarFallback>
               </Avatar>
             </RouterLink>
           </div>
@@ -59,21 +75,30 @@ const formatDate = (dateStr: string) => {
           <div class="flex-1 space-y-4">
             <!-- Header -->
             <div class="flex items-center gap-2 text-sm">
-              <RouterLink :to="`/users/${post.author.id}`" @click.stop>
-                <Avatar
-                  class="sm:hidden size-8 hover:opacity-80 transition-opacity"
-                >
-                  <AvatarImage
-                    :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author.username}`"
-                  />
-                  <AvatarFallback>UN</AvatarFallback>
-                </Avatar>
+              <RouterLink
+                :to="`/users/${post.author.id}`"
+                @click.stop
+                class="hover:underline"
+              >
+                <span class="font-bold text-foreground">{{
+                  post.author.full_name
+                    ? post.author.full_name
+                    : post.author.username
+                }}</span>
               </RouterLink>
-              <span class="font-bold text-foreground">{{
-                post.author.username
-              }}</span>
-              <BadgeCheckIcon class="size-4 text-blue-500 fill-blue-500/10" />
-              <span class="text-muted-foreground">@{{ post.author.id }}</span>
+              <BadgeCheckIcon
+                v-if="post.author.is_verified_business"
+                class="size-4 text-blue-500 fill-blue-500/10"
+              />
+              <RouterLink
+                :to="`/users/${post.author.id}`"
+                @click.stop
+                class="hover:underline"
+              >
+                <span class="text-muted-foreground"
+                  >@{{ post.author.username }}</span
+                >
+              </RouterLink>
               <span class="text-muted-foreground">•</span>
               <span class="text-muted-foreground">{{
                 formatDate(post.created_at)
@@ -84,7 +109,7 @@ const formatDate = (dateStr: string) => {
             <div class="space-y-2">
               <h3 class="text-lg font-bold leading-tight">{{ post.title }}</h3>
               <p class="text-muted-foreground leading-relaxed">
-                {{ post.content }}
+                {{ post.content_snippet }}
               </p>
               <div class="flex flex-wrap gap-1">
                 <span
@@ -108,7 +133,7 @@ const formatDate = (dateStr: string) => {
                 ]"
               >
                 <img
-                  :src="post?.images[0].image_url"
+                  :src="post?.images[0]?.image_url"
                   class="absolute inset-0 size-full object-cover hover:scale-105 transition-transform duration-500"
                   alt="Post Image"
                 />
@@ -119,7 +144,7 @@ const formatDate = (dateStr: string) => {
               >
                 <div class="relative w-full h-full overflow-hidden">
                   <img
-                    :src="post.images[1].image_url"
+                    :src="post.images[1]?.image_url"
                     class="absolute inset-0 size-full object-cover hover:scale-105 transition-transform duration-500"
                     alt="Post Image"
                   />
@@ -129,7 +154,7 @@ const formatDate = (dateStr: string) => {
                   class="relative w-full h-full overflow-hidden"
                 >
                   <img
-                    :src="post.images[2].image_url"
+                    :src="post.images[2]?.image_url"
                     class="absolute inset-0 size-full object-cover hover:scale-105 transition-transform duration-500"
                     alt="Post Image"
                   />
@@ -149,20 +174,33 @@ const formatDate = (dateStr: string) => {
                 </div>
                 <span
                   class="text-sm font-medium text-muted-foreground group-hover:text-blue-500"
-                  >{{ formatNumber(post.replies?.length || 0) }}</span
+                  >{{ formatNumber(post.reply_count || 0) }}</span
                 >
               </div>
-              <div class="flex items-center gap-2 group cursor-pointer">
+              <div
+                class="flex items-center gap-2 group cursor-pointer"
+                @click="handleLikeClick"
+              >
                 <div
                   class="p-2 rounded-full group-hover:bg-red-500/10 transition-colors"
                 >
                   <HeartIcon
-                    class="size-5 text-muted-foreground group-hover:text-red-500"
+                    :class="[
+                      'size-5 transition-colors',
+                      isLiked
+                        ? 'fill-red-500 text-red-500'
+                        : 'text-muted-foreground group-hover:text-red-500',
+                    ]"
                   />
                 </div>
                 <span
-                  class="text-sm font-medium text-muted-foreground group-hover:text-red-500"
-                  >{{ formatNumber(0) }}</span
+                  :class="[
+                    'text-sm font-medium transition-colors',
+                    isLiked
+                      ? 'text-red-500'
+                      : 'text-muted-foreground group-hover:text-red-500',
+                  ]"
+                  >{{ formatNumber(post.like_count || 0) }}</span
                 >
               </div>
               <div class="flex items-center gap-2 group cursor-pointer">
@@ -175,7 +213,7 @@ const formatDate = (dateStr: string) => {
                 </div>
                 <span
                   class="text-sm font-medium text-muted-foreground group-hover:text-green-500"
-                  >{{ formatNumber(0) }}</span
+                  >{{ formatNumber(post.view_count || 0) }}</span
                 >
               </div>
 

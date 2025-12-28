@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, computed } from "vue";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -11,9 +12,16 @@ import {
   Image as ImageIcon,
   Star,
   Map,
+  ShieldCheck,
 } from "lucide-vue-next";
 import { useRouter } from "vue-router";
-import type { IUserDetail, IUserPublic, IUserStats } from "@/utils/interfaces";
+import type {
+  IUserDetail,
+  IUserPublic,
+  IUserStats,
+  IUserUpdate,
+} from "@/utils/interfaces";
+import EditProfileModal from "@/components/UserProfile/EditProfileModal.vue";
 
 interface Props {
   user: IUserDetail | IUserPublic | null;
@@ -24,14 +32,50 @@ interface Props {
 const props = defineProps<Props>();
 const router = useRouter();
 
+const emit = defineEmits<{
+  save: [data: IUserUpdate];
+  requestVerification: [];
+}>();
+
+// Edit Profile Modal state
+const showEditModal = ref(false);
+const editModalRef = ref<InstanceType<typeof EditProfileModal> | null>(null);
+
+// Computed
+const showVerificationButton = computed(() => {
+  return (
+    props.isMe &&
+    props.user?.role === "business" &&
+    !props.user?.is_verified_business
+  );
+});
+
 const goBack = () => {
   router.back();
 };
 
 const handleEditProfile = () => {
-  // TODO: Implement Edit Profile Modal or Page
-  console.log("Edit Profile clicked");
+  showEditModal.value = true;
 };
+
+const handleSaveProfile = (data: IUserUpdate) => {
+  emit("save", data);
+};
+
+const handleRequestVerification = () => {
+  emit("requestVerification");
+};
+
+// Method to close modal and stop submitting (called from parent after save completes)
+const closeEditModal = (error?: string) => {
+  if (error) {
+    editModalRef.value?.stopSubmitting(error);
+  } else {
+    showEditModal.value = false;
+  }
+};
+
+defineExpose({ closeEditModal });
 
 // Helper for stats
 const getStat = (key: keyof IUserStats) => {
@@ -144,14 +188,17 @@ const statItems = [
             <!-- Name & Type -->
             <div>
               <h1 class="text-3xl font-bold tracking-tight text-foreground">
-                {{ user.full_name || user.username }}
+                {{ user.full_name }}
               </h1>
+              <h2 class="text-base text-muted-foreground">
+                @{{ user.username }}
+              </h2>
               <div class="flex items-center gap-3 mt-2">
                 <Badge
                   variant="secondary"
                   class="px-3 py-1 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 font-medium capitalize border-orange-500/20"
                 >
-                  {{ user.role }} Account
+                  {{ user.role != "business" ? user.role : user.is_verified_business ? "Verified Business" : "Unverified Business" }} Account
                 </Badge>
               </div>
             </div>
@@ -194,24 +241,55 @@ const statItems = [
           </div>
         </div>
 
-        <!-- Edit Profile Button -->
-        <Button
+        <!-- Action Buttons -->
+        <div
           v-if="isMe"
-          v-motion
-          :initial="{ opacity: 0, scale: 0.9 }"
-          :enter="{
-            opacity: 1,
-            scale: 1,
-            transition: { delay: 400, duration: 300 },
-          }"
-          variant="outline"
-          class="gap-2 self-start rounded-full md:self-center px-6 py-5 bg-background/80 backdrop-blur-sm shadow-lg hover:shadow-xl hover:bg-orange-500 hover:text-white hover:border-orange-500 transition-all duration-300 border-border/60 group"
-          @click="handleEditProfile"
+          class="flex flex-col gap-3 self-start md:self-center"
         >
-          <Pencil class="h-4 w-4 transition-transform group-hover:rotate-12" />
-          Edit Profile
-        </Button>
+          <!-- Edit Profile Button -->
+          <Button
+            v-motion
+            :initial="{ opacity: 0, scale: 0.9 }"
+            :enter="{
+              opacity: 1,
+              scale: 1,
+              transition: { delay: 400, duration: 300 },
+            }"
+            variant="outline"
+            class="gap-2 rounded-full px-6 py-5 bg-background/80 backdrop-blur-sm shadow-lg hover:shadow-xl hover:bg-orange-500 hover:text-white hover:border-orange-500 transition-all duration-300 border-border/60 group"
+            @click="handleEditProfile"
+          >
+            <Pencil class="h-4 w-4 transition-transform group-hover:rotate-12" />
+            Edit Profile
+          </Button>
+
+          <!-- Request Verification Button (for unverified business users) -->
+          <Button
+            v-if="showVerificationButton"
+            v-motion
+            :initial="{ opacity: 0, scale: 0.9 }"
+            :enter="{
+              opacity: 1,
+              scale: 1,
+              transition: { delay: 450, duration: 300 },
+            }"
+            variant="outline"
+            class="gap-2 rounded-full px-6 py-5 bg-background/80 backdrop-blur-sm shadow-lg hover:shadow-xl hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all duration-300 border-border/60 group"
+            @click="handleRequestVerification"
+          >
+            <ShieldCheck class="h-4 w-4 transition-transform group-hover:scale-110" />
+            Request Verification
+          </Button>
+        </div>
       </div>
     </div>
+
+    <!-- Edit Profile Modal -->
+    <EditProfileModal
+      ref="editModalRef"
+      v-model:open="showEditModal"
+      :user="user"
+      @save="handleSaveProfile"
+    />
   </div>
 </template>

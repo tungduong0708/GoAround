@@ -183,6 +183,8 @@ class UserPublic(UserBase):
 
 class UserDetail(UserPublic):
     email: EmailStr | None
+    ban_until: datetime | None
+    ban_reason: str | None
 
 
 # --- Place Data Schemas ---
@@ -260,6 +262,15 @@ class PlaceSearchFilter(BaseModel):
         None, description="Filter by price range ($ to $$$$)"
     )
     rating: float | None = Field(None, ge=0, le=5, description="Minimum rating")
+    hotel_class: int | None = Field(
+        None, ge=1, le=5, description="Filter hotels by star rating (1-5)"
+    )
+    price_per_night_min: float | None = Field(
+        None, ge=0, description="Minimum price per night for hotels"
+    )
+    price_per_night_max: float | None = Field(
+        None, ge=0, description="Maximum price per night for hotels"
+    )
     sort_by: Literal["rating", "distance", "newest"] = "rating"
     page: int = 1
     limit: int = 20
@@ -528,7 +539,9 @@ class ReviewSchema(BaseModel):
 class ForumAuthorSchema(BaseModel):
     id: uuid.UUID
     username: str | None = None
+    full_name: str | None = None
     avatar_url: str | None = None
+    is_verified_business: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -540,18 +553,6 @@ class ForumTagSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ForumPostListItem(BaseModel):
-    id: uuid.UUID
-    title: str
-    content_snippet: str
-    author: ForumAuthorSchema
-    tags: list[ForumTagSchema] = Field(default_factory=list)
-    reply_count: int = 0
-    created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
 class ForumPostImageSchema(BaseModel):
     id: uuid.UUID
     image_url: str
@@ -559,10 +560,28 @@ class ForumPostImageSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ForumPostListItem(BaseModel):
+    id: uuid.UUID
+    title: str
+    content_snippet: str
+    author: ForumAuthorSchema
+    tags: list[ForumTagSchema] = Field(default_factory=list)
+    images: list[ForumPostImageSchema] = Field(default_factory=list)
+    reply_count: int = 0
+    like_count: int = 0
+    view_count: int = 0
+    created_at: datetime
+    is_liked: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ForumCommentUserSchema(BaseModel):
     id: uuid.UUID
     username: str | None = None
+    full_name: str | None = None
     avatar_url: str | None = None
+    is_verified_business: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -573,6 +592,8 @@ class ForumCommentSchema(BaseModel):
     user: ForumCommentUserSchema
     created_at: datetime
     parent_id: uuid.UUID | None = None
+    like_count: int = 0
+    is_liked: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -585,7 +606,11 @@ class ForumPostDetail(BaseModel):
     images: list[ForumPostImageSchema] = Field(default_factory=list)
     tags: list[ForumTagSchema] = Field(default_factory=list)
     replies: list[ForumCommentSchema] = Field(default_factory=list)
+    reply_count: int = 0
+    like_count: int = 0
+    view_count: int = 0
     created_at: datetime
+    is_liked: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -609,22 +634,64 @@ class ForumReplyCreate(BaseModel):
     parent_reply_id: uuid.UUID | None = None
 
 
+class ForumReplyUpdate(BaseModel):
+    content: str = Field(..., min_length=1)
+
+
 class ContentReportCreate(BaseModel):
     reason: str = Field(..., min_length=1)
 
 
-class ContentReportResponse(BaseModel):
+# --- Moderation (Ticketing Architecture) Schemas ---
+
+
+class ReportDetail(BaseModel):
+    """Individual user complaint within a moderation case."""
+
     id: uuid.UUID
     reporter_id: uuid.UUID
-    target_type: str
-    target_id: uuid.UUID
     reason: str
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class ResolveReportRequest(BaseModel):
+class ModerationCaseSummary(BaseModel):
+    """Summary view of a moderation case (ticket) for list display."""
+
+    id: uuid.UUID
+    target_type: Literal["post", "reply"]
+    target_id: uuid.UUID
+    status: Literal["pending", "approved", "rejected"]
+    created_at: datetime
+    report_count: int = Field(..., description="Number of reports in this case")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ModerationCaseDetail(ModerationCaseSummary):
+    """Detailed view of a moderation case with reports and content snapshot."""
+
+    reason: str | None = None
+    resolved_at: datetime | None = None
+    content_snapshot: ForumPostDetail | ForumCommentSchema | None = Field(
+        None, description="Fetched title/body/image of reported content"
+    )
+    reports: list[ReportDetail] = Field(
+        default_factory=list, description="All user complaints for this case"
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ResolveCaseRequest(BaseModel):
+    """Request to resolve a moderation case.
+
+    Action Mapping:
+    - 'dismiss' -> Status 'approved' (Content is safe)
+    - 'remove_content' / 'ban_user' -> Status 'rejected' (Content is removed)
+    """
+
     action: Literal["dismiss", "remove_content", "ban_user"]
     notes: str | None = None
     ban_duration_days: int | None = Field(
@@ -651,6 +718,17 @@ class VerifyBusinessRequest(BaseModel):
     notes: str | None = None
 
 
+class BusinessVerificationSubmission(BaseModel):
+    """Schema for business owners to submit/resubmit verification request."""
+
+    business_image_url: str = Field(
+        ..., description="URL to business verification image"
+    )
+    business_description: str = Field(
+        ..., min_length=10, max_length=1000, description="Description of the business"
+    )
+
+
 class ForumSearchFilter(BaseModel):
     q: str | None = None
     tags: list[str] | None = None
@@ -664,3 +742,59 @@ class TripGenerateRequest(BaseModel):
     start_date: date
     end_date: date
     # Removed interests and budget to match UI
+
+
+# --- AI Recommendation Schemas ---
+
+
+class UserContextSchema(BaseModel):
+    """User preference context for recommendations"""
+
+    saved_categories: list[str] = Field(default_factory=list)
+    saved_count_per_category: dict[str, int] = Field(default_factory=dict)
+    visited_cities: list[str] = Field(default_factory=list)
+    price_preference: str | None = None
+    avg_rating_given: float | None = None
+    preferred_cuisines: list[str] = Field(default_factory=list)
+    hotel_preferences: dict[str, Any] = Field(default_factory=dict)
+    recent_activity_focus: str | None = None
+
+
+class SearchCriteriaSchema(BaseModel):
+    """AI-generated search criteria"""
+
+    place_types: list[str] = Field(default_factory=list)
+    cities: list[str] = Field(default_factory=list)
+    keywords: list[str] = Field(default_factory=list)
+    min_rating: float = 0.0
+    price_ranges: list[str] = Field(default_factory=list)
+    must_have_tags: list[str] = Field(default_factory=list)
+    exclude_tags: list[str] = Field(default_factory=list)
+    reasoning: str = ""
+    match_priority: dict[str, float] = Field(
+        default_factory=lambda: {
+            "category_match": 0.3,
+            "rating": 0.2,
+            "price": 0.15,
+            "location": 0.2,
+            "keywords": 0.15,
+        }
+    )
+
+
+class RecommendationItem(BaseModel):
+    """Single recommendation with relevance info"""
+
+    place: PlacePublic
+    relevance_score: float = Field(..., ge=0.0, le=1.0)
+    match_reasons: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RecommendationResponse(BaseModel):
+    """AI recommendation response"""
+
+    recommendations: list[RecommendationItem]
+    search_summary: str
+    user_context_used: UserContextSchema | None = None

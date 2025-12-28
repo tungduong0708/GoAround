@@ -1,18 +1,66 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import { useUserProfile } from "@/composables";
 import ProfileHeader from "@/components/UserProfile/ProfileHeader.vue";
 import UserProfileTabs from "@/components/UserProfile/UserProfileTabs.vue";
+import BusinessVerificationModal from "@/components/UserProfile/BusinessVerificationModal.vue";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { RefreshCwIcon } from "lucide-vue-next";
+import { toast } from "vue-sonner";
+import type { IUserUpdate } from "@/utils/interfaces";
+import { UserService } from "@/services";
 
 // Initialise composable
-const { user, loading, error, isMe, loadData } = useUserProfile();
+const { user, loading, error, isMe, loadData, updateProfile } =
+  useUserProfile();
 
-// Ensure data is loaded
+// Reference to ProfileHeader for controlling the edit modal
+const profileHeaderRef = ref<InstanceType<typeof ProfileHeader> | null>(null);
+
+// Business verification modal state
+const showVerificationModal = ref(false);
+const verificationModalRef = ref<InstanceType<typeof BusinessVerificationModal> | null>(null);
 
 const retry = () => {
   loadData();
+};
+
+const handleSaveProfile = async (data: IUserUpdate) => {
+  try {
+    await updateProfile(data);
+    // Close the modal on success
+    profileHeaderRef.value?.closeEditModal();
+    toast.success("Profile updated successfully!");
+  } catch (err: any) {
+    const errorMessage =
+      err?.response?.data?.detail || err.message || "Failed to update profile";
+    // Pass error back to the modal to display
+    profileHeaderRef.value?.closeEditModal(errorMessage);
+    toast.error(errorMessage);
+  }
+};
+
+const handleRequestVerification = () => {
+  showVerificationModal.value = true;
+};
+
+const handleSubmitVerification = async (data: {
+  business_image_url: string;
+  business_description: string;
+}) => {
+  try {
+    const result = await UserService.verifyBusiness(data);
+    toast.success(result.message || "Verification request submitted successfully!");
+    showVerificationModal.value = false;
+    // Reload user data to get updated verification status
+    await loadData();
+  } catch (err: any) {
+    const errorMessage =
+      err?.detail || "Failed to submit verification request";
+    verificationModalRef.value?.stopSubmitting(errorMessage);
+    toast.error(errorMessage);
+  }
 };
 </script>
 
@@ -70,12 +118,15 @@ const retry = () => {
       <div v-else class="space-y-10">
         <!-- Profile Header -->
         <ProfileHeader
+          ref="profileHeaderRef"
           v-motion
           :initial="{ opacity: 0, y: -20 }"
           :enter="{ opacity: 1, y: 0, transition: { duration: 500 } }"
           :user="user"
           :loading="loading"
           :is-me="isMe as boolean"
+          @save="handleSaveProfile"
+          @request-verification="handleRequestVerification"
         />
 
         <!-- Tabs (Only show if user exists) -->
@@ -91,6 +142,13 @@ const retry = () => {
           :user-id="user.id"
         />
       </div>
+
+      <!-- Business Verification Modal -->
+      <BusinessVerificationModal
+        ref="verificationModalRef"
+        v-model:open="showVerificationModal"
+        @submit="handleSubmitVerification"
+      />
     </div>
   </div>
 </template>

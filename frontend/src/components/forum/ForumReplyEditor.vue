@@ -18,11 +18,6 @@ const emit = defineEmits<{
   (e: "submit"): void;
   (e: "cancel"): void;
 }>();
-
-const updateValue = (event: Event) => {
-  const target = event.target as HTMLTextAreaElement;
-  emit("update:modelValue", target.value);
-};
 </script>
 
 <template>
@@ -45,8 +40,8 @@ const updateValue = (event: Event) => {
 
       <div class="flex-1 space-y-2">
         <Textarea
-          :value="props.modelValue"
-          @input="updateValue"
+          :model-value="props.modelValue"
+          @update:model-value="emit('update:modelValue', $event)"
           :placeholder="placeholder || 'Share your thoughts...'"
           class="min-h-[80px] resize-none border-0 bg-transparent p-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-sm placeholder:text-muted-foreground/60"
           :class="{ 'border-destructive': error }"

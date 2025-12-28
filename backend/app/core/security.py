@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from app.core.config import settings
 
 security = HTTPBearer()
+optional_security = HTTPBearer(auto_error=False)
 
 
 class AmrEntry(BaseModel):
@@ -96,3 +97,30 @@ def get_token_payload(
             detail="Invalid token",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+def get_optional_token_payload(
+    credentials: HTTPAuthorizationCredentials | None = Security(optional_security),
+) -> TokenPayload | None:
+    """
+    Validates the Supabase JWT and returns the user payload.
+    Returns None if no token is provided (for optional authentication).
+    """
+    if credentials is None:
+        return None
+
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(
+            token,
+            settings.SUPABASE_JWT_SECRET,
+            algorithms=["HS256", "ES256", "RS256"],
+            issuer=settings.SUPABASE_JWT_ISSUER,
+            audience="authenticated",
+            options={"verify_signature": True},
+            leeway=60,
+        )
+        return TokenPayload(**payload)
+    except (ValidationError, jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        # For optional auth, return None on invalid/expired tokens
+        return None

@@ -1,7 +1,6 @@
 export { useThemeStore } from "./themeStore";
 export { useSearchStore } from "./searchStore";
 export { useAuthStore } from "./authStore";
-export { useRecommendationStore } from "./recommendationStore";
 export { usePlaceStore } from "./placeStore";
 export { useUserStore } from "./userStore";
 export { useTripStore } from "./tripStore";
@@ -10,3 +9,4 @@ export { useForumPostStore } from "./forumPostStore";
 export { useListPlaceStore } from "./listPlaceStore";
 export { useUserProfileStore } from "./userProfileStore";
 export { useCitiesStore } from "./citiesStore";
+export { useRecommendationStore } from "./recommendationStore";

@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime
+from datetime import datetime
 from typing import Sequence
 
 from sqlalchemy import func, select
@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.models import (
     BusinessVerificationRequest,
     ForumPost,
+    ModerationTarget,
     PostReply,
     Profile,
     Review,
@@ -25,6 +26,7 @@ from app.schemas import (
     UserPhotoResponse,
     UserPostResponse,
     UserPublic,
+    UserReplyResponse,
     UserReviewResponse,
     UserStats,
     UserUpdate,
@@ -45,6 +47,25 @@ async def _get_email(
     user_id: uuid.UUID,
 ) -> str | None:
     stmt = select(auth_users.c.email).where(auth_users.c.id == user_id)
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def _get_ban_reason(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+) -> str | None:
+    """Get the most recent ban reason from moderation targets."""
+    stmt = (
+        select(ModerationTarget.reason)
+        .where(
+            ModerationTarget.target_type == "profile",
+            ModerationTarget.target_id == user_id,
+            ModerationTarget.status == "approved",
+        )
+        .order_by(ModerationTarget.created_at.desc())
+        .limit(1)
+    )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -138,6 +159,12 @@ async def get_user_detail(
         return None
 
     email = await _get_email(session, user_id)
+    profile = await _get_profile(session, user_id)
+    ban_reason = (
+        await _get_ban_reason(session, user_id)
+        if profile and profile.ban_until
+        else None
+    )
 
     return UserDetail(
         username=user_public.username,
@@ -149,6 +176,8 @@ async def get_user_detail(
         stats=user_public.stats,
         created_at=user_public.created_at,
         email=email,
+        ban_until=profile.ban_until if profile else None,
+        ban_reason=ban_reason,
     )
 
 
@@ -171,25 +200,24 @@ async def create_user(
 
     session.add(profile)
 
-    # If business account, create verification request
-    if (
-        role == "business"
-        and user_create.business_image_url
-        and user_create.business_description
-    ):
-        verification_request = BusinessVerificationRequest(
-            profile_id=user_id,
-            business_image_url=user_create.business_image_url,
-            business_description=user_create.business_description,
-            status="pending",
-        )
-        session.add(verification_request)
-
     try:
         await session.commit()
     except IntegrityError:
         await session.rollback()
         raise RuntimeError("Profile already exists")
+
+    # If business account, submit verification request using shared logic
+    if (
+        role == "business"
+        and user_create.business_image_url
+        and user_create.business_description
+    ):
+        await submit_business_verification(
+            session=session,
+            user_id=user_id,
+            business_image_url=user_create.business_image_url,
+            business_description=user_create.business_description,
+        )
 
     email = await _get_email(session, user_id)
 
@@ -212,6 +240,8 @@ async def create_user(
         stats=stats,
         created_at=profile.updated_at,
         email=email,
+        ban_until=profile.ban_until,
+        ban_reason=None,
     )
 
 
@@ -228,13 +258,14 @@ async def update_user(
     if not profile:
         return None
 
-    data = user_update.model_dump(exclude_unset=True)
+    data = user_update.model_dump(exclude_unset=True, exclude_none=True)
 
     for field, value in data.items():
         setattr(profile, field, value)
 
     try:
         await session.commit()
+        await session.refresh(profile)
     except IntegrityError:
         await session.rollback()
         raise RuntimeError("Profile already exists")
@@ -274,6 +305,8 @@ async def update_user(
         replies_count=replies_count or 0,
     )
 
+    ban_reason = await _get_ban_reason(session, user_id) if profile.ban_until else None
+
     return UserDetail(
         id=profile.id,
         username=profile.username or "",
@@ -284,6 +317,8 @@ async def update_user(
         stats=stats,
         created_at=profile.updated_at,
         email=email,
+        ban_until=profile.ban_until,
+        ban_reason=ban_reason,
     )
 
 
@@ -423,3 +458,111 @@ async def get_user_photos(
     ]
 
     return photos, total
+
+
+async def has_pending_verification_request(
+    session: AsyncSession, user_id: uuid.UUID
+) -> bool:
+    """
+    Check if a user has a pending business verification request.
+
+    Returns:
+        True if a pending verification request exists, False otherwise.
+    """
+    stmt = select(BusinessVerificationRequest).where(
+        BusinessVerificationRequest.profile_id == user_id,
+        BusinessVerificationRequest.status == "pending",
+    )
+    result = await session.execute(stmt)
+    existing_request = result.scalars().first()
+    return existing_request is not None
+
+
+async def submit_business_verification(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    business_image_url: str,
+    business_description: str,
+) -> BusinessVerificationRequest:
+    """
+    Submit or resubmit a business verification request.
+
+    If a verification request already exists, it will be updated
+    with the new information and status reset to "pending".
+    Otherwise, a new request is created.
+
+    This supports the re-verification workflow where rejected businesses
+    can update their information and resubmit.
+
+    Note: The caller should check for pending requests before calling this function.
+    """
+    # Check if verification request already exists
+    stmt = select(BusinessVerificationRequest).where(
+        BusinessVerificationRequest.profile_id == user_id
+    )
+    result = await session.execute(stmt)
+    existing_request = result.scalars().first()
+
+    if existing_request:
+        # Update existing request (for re-verification)
+        existing_request.business_image_url = business_image_url
+        existing_request.business_description = business_description
+        existing_request.status = "pending"
+        existing_request.created_at = datetime.utcnow()
+        existing_request.reviewed_at = None
+        verification_request = existing_request
+    else:
+        # Create new request (first time submission)
+        verification_request = BusinessVerificationRequest(
+            profile_id=user_id,
+            business_image_url=business_image_url,
+            business_description=business_description,
+            status="pending",
+        )
+        session.add(verification_request)
+
+    await session.commit()
+    await session.refresh(verification_request)
+
+    return verification_request
+
+
+async def get_user_replies(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    page: int = 1,
+    limit: int = 20,
+) -> tuple[Sequence[UserReplyResponse], int]:
+    """
+    Get list of forum replies created by a specific user.
+    """
+    # Get total count
+    count_stmt = select(func.count(PostReply.id)).where(PostReply.user_id == user_id)
+    total = await session.scalar(count_stmt) or 0
+
+    # Get paginated results
+    offset = (page - 1) * limit
+    stmt = (
+        select(PostReply)
+        .options(selectinload(PostReply.post))
+        .where(PostReply.user_id == user_id)
+        .order_by(PostReply.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    result = await session.execute(stmt)
+    replies = result.scalars().all()
+
+    return (
+        [
+            UserReplyResponse(
+                id=reply.id,
+                post_id=reply.post_id,
+                post_title=reply.post.title,
+                content=reply.content,
+                created_at=reply.created_at,
+            )
+            for reply in replies
+        ],
+        total,
+    )

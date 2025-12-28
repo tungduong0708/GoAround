@@ -13,6 +13,7 @@ import type {
   IForumPostListItem,
   IForumPostUpdate,
   IForumReplyCreate,
+  IForumReplyUpdate,
   IForumCommentSchema,
 } from "@/utils/interfaces";
 
@@ -33,9 +34,36 @@ class ForumService {
     query?: IForumSearchQuery,
   ): Promise<IPaginatedResponse<IForumPostListItem[]>> {
     try {
+      console.log("Fetching forum posts with query:", query);
+      
       const response = await commonInstance.get("/forum/posts", {
         params: query,
+        paramsSerializer: {
+          serialize: (params) => {
+            const searchParams = new URLSearchParams();
+            
+            for (const key in params) {
+              const value = params[key];
+              
+              if (value === undefined || value === null) {
+                continue;
+              }
+              
+              // Handle array parameters (like tags) - send as repeated params
+              if (Array.isArray(value)) {
+                value.forEach((item) => {
+                  searchParams.append(key, item);
+                });
+              } else {
+                searchParams.append(key, String(value));
+              }
+            }
+            
+            return searchParams.toString();
+          }
+        }
       });
+      console.log("Received forum posts response:", response.data);
       return response.data as IPaginatedResponse<IForumPostListItem[]>;
     } catch (error: any) {
       console.error(error);
@@ -99,6 +127,36 @@ class ForumService {
       throw error;
     }
   }
+
+  async updateReply(
+    post_id: string,
+    reply_id: string,
+    input: IForumReplyUpdate,
+  ): Promise<IForumCommentSchema> {
+    try {
+      const response = await authInstance.put(
+        `/forum/posts/${post_id}/replies/${reply_id}`,
+        input,
+      );
+      return (response.data as IApiResponse<IForumCommentSchema>).data;
+    } catch (error: any) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async deleteReply(post_id: string, reply_id: string): Promise<IMessage> {
+    try {
+      const response = await authInstance.delete(
+        `/forum/posts/${post_id}/replies/${reply_id}`,
+      );
+      return (response.data as IApiResponse<IMessage>).data;
+    } catch (error: any) {
+      console.error(error);
+      throw error;
+    }
+  }
+
   async reportPost(id: string, input: IContentReportCreate): Promise<IMessage> {
     try {
       const response = await authInstance.post(
@@ -118,6 +176,57 @@ class ForumService {
         input,
       );
       return (response.data as IApiResponse<IMessage>).data;
+    } catch (error: any) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async likePost(id: string): Promise<{ like_count: number; is_liked: boolean }> {
+    try {
+      const response = await authInstance.post(`/forum/posts/${id}/like`);
+      return (response.data as IApiResponse<{ like_count: number; is_liked: boolean }>).data;
+    } catch (error: any) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async checkPostLikeStatus(id: string): Promise<{ is_liked: boolean }> {
+    try {
+      const response = await authInstance.get(`/forum/posts/${id}/like/check`);
+      return (response.data as IApiResponse<{ is_liked: boolean }>).data;
+    } catch (error: any) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async likeReply(postId: string, replyId: string): Promise<{ like_count: number; is_liked: boolean }> {
+    try {
+      const response = await authInstance.post(`/forum/posts/${postId}/replies/${replyId}/like`);
+      return (response.data as IApiResponse<{ like_count: number; is_liked: boolean }>).data;
+    } catch (error: any) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async checkReplyLikeStatus(postId: string, replyId: string): Promise<{ is_liked: boolean }> {
+    try {
+      const response = await authInstance.get(`/forum/posts/${postId}/replies/${replyId}/like/check`);
+      return (response.data as IApiResponse<{ is_liked: boolean }>).data;
+    } catch (error: any) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async getTags(): Promise<string[]> {
+    try {
+      const response = await commonInstance.get("/forum/tags");
+      const data = (response.data as IApiResponse<Array<{ id: string; name: string }>>).data;
+      return data.map(tag => tag.name);
     } catch (error: any) {
       console.error(error);
       throw error;

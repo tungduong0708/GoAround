@@ -90,6 +90,7 @@ if (typeof window !== "undefined") {
 </script>
 
 <template>
+  <div>
   <Teleport to="body">
     <Transition
       enter-active-class="transition-opacity duration-300"
@@ -160,4 +161,5 @@ if (typeof window !== "undefined") {
       </div>
     </Transition>
   </Teleport>
+  </div>
 </template>

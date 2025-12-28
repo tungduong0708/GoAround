@@ -124,11 +124,8 @@ export function useLoginForm() {
   const onSubmit = handleSubmit(async (values) => {
     isLoading.value = true;
     try {
-      const { error } = await authStore.signInWithPassword(
-        values.email,
-        values.password
-      );
-      if (error) throw error;
+      const { error } = await authStore.signInWithPassword(values.email, values.password)
+      if (error) throw error
       // Check profile and redirect accordingly
       await redirectAfterLogin();
     } catch (error: any) {

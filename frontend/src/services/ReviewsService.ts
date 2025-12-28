@@ -36,6 +36,7 @@ class ReviewsService {
     id: string,
   ): Promise<IReviewSchema> {
     try {
+      console.log("Fetching review with ID:", id);
       const response = await commonInstance.get(`/reviews/${id}`);
       return (response.data as IApiResponse<IReviewSchema>).data;
     } catch (error: any) {

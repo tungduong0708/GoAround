@@ -17,11 +17,20 @@ onMounted(async () => {
       // No profile found, redirect to create profile
       console.log('[AuthCallback] No profile found, redirecting to create profile')
       router.replace({ name: 'profile-create' })
-    } else {
-      // Profile exists, redirect to home
-      console.log('[AuthCallback] Profile found, redirecting to home')
-      router.replace({ name: 'home' })
+      return
     }
+    
+    console.log("userProfileStore.profile:", userProfileStore.profile)
+    // Check if user is banned
+    if (userProfileStore.profile?.ban_until) {
+      console.log('[AuthCallback] User is banned, redirecting to banned page')
+      router.replace({ name: 'banned' })
+      return
+    }
+    
+    // Profile exists and user is not banned, redirect to home
+    console.log('[AuthCallback] Profile found, redirecting to home')
+    router.replace({ name: 'home' })
   } catch (error) {
     // On error, redirect to profile creation to be safe
     console.error('[AuthCallback] Error checking profile:', error)

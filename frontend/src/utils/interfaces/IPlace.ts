@@ -199,3 +199,26 @@ export interface IPlaceImageSchema {
   image_url: string;
   caption?: string;
 }
+
+export interface IUserContext {
+  saved_categories: string[];
+  saved_count_per_category: Record<string, number>;
+  visited_cities: string[];
+  price_preference?: string;
+  avg_rating_given?: number;
+  preferred_cuisines: string[];
+  hotel_preferences: Record<string, any>;
+  recent_activity_focus?: string;
+}
+
+export interface IRecommendationItem {
+  place: IPlacePublic;
+  relevance_score: number;
+  match_reasons: string[];
+}
+
+export interface IRecommendationResponse {
+  recommendations: IRecommendationItem[];
+  search_summary: string;
+  user_context_used?: IUserContext;
+}

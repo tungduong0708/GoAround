@@ -56,6 +56,15 @@ const guardRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: "/admin", 
+    name: "admin",
+    component: () => import("@/pages/Admin/AdminPage.vue"),
+    meta: {
+      title: "Admin Dashboard",
+      authRequired: true,
+    },
+  },
+  {
     path: "/saved-places",
     name: "saved-places",
     component: () => import("@/pages/SavedPlacesPage.vue"),
@@ -96,6 +105,25 @@ const guardRoutes: RouteRecordRaw[] = [
         component: () => import("@/pages/Forums/PostPage.vue"),
         meta: {
           title: "Post Details",
+          authRequired: false,
+        },
+      },
+      {
+        path: ":postId/edit",
+        name: "edit-post",
+        component: () => import("@/pages/Forums/NewPostPage.vue"),
+        meta: {
+          title: "Edit Post",
+          authRequired: true,
+        },
+      },
+      // Not Found
+      {
+        path: ":catchAll(.*)",
+        name: "not-found",
+        component: () => import("@/pages/NotFound.vue"),
+        meta: {
+          title: "Not Found",
           authRequired: false,
         },
       },

@@ -242,9 +242,10 @@ const handleRenameList = async () => {
 </script>
 
 <template>
-  <div class="flex w-full flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
-    <!-- Page Header -->
-    <section v-motion-slide-visible-once-left class="mx-auto w-full max-w-7xl">
+  <div>
+    <div class="flex w-full flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+      <!-- Page Header -->
+      <section v-motion-slide-visible-once-left class="mx-auto w-full max-w-7xl">
       <div class="flex items-center justify-between gap-6 flex-wrap">
         <div class="space-y-2">
           <h1
@@ -596,6 +597,7 @@ const handleRenameList = async () => {
     </Dialog>
 
     <LoginPromptModal v-model:open="showLoginPrompt" />
+    </div>
   </div>
 </template>
 

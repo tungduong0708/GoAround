@@ -1,7 +1,7 @@
 import uuid
-from typing import Any, List
+from typing import Annotated, Any, List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app import crud
 from app.api.deps import CurrentUserDep, SessionDep
@@ -20,6 +20,7 @@ from app.schemas import (
     ReviewSchema,
     TransferOwnershipRequest,
 )
+from app.service import ai_service
 
 router = APIRouter(tags=["places"], prefix="/places")
 
@@ -36,12 +37,15 @@ router = APIRouter(tags=["places"], prefix="/places")
 )
 async def search_places(
     session: SessionDep,
-    filter_params: PlaceSearchFilter = Depends(),
+    filter_params: Annotated[PlaceSearchFilter, Query()],
 ) -> Any:
     """
     Search places by keyword, tags, price, or location (radius).
-    Returns places with related forum posts and public trips.
-    Only approved places are shown unless the user is an Admin.
+    
+    Pagination (page/limit parameters) applies to places only.
+    Additionally returns up to 5 related forum posts and 5 public trips as supplementary results.
+    
+    Metadata total_items reflects the count of places only.
     """
     # Validation for distance sorting
     if filter_params.sort_by == "distance" and not filter_params.location:
@@ -58,6 +62,39 @@ async def search_places(
             page=filter_params.page, limit=filter_params.limit, total_items=total
         ),
     )
+
+
+@router.get(
+    "/recommendations",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[list[PlacePublic]],
+)
+async def get_ai_recommendations(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    query: str | None = None,
+    city: str | None = None,
+    max_results: int = 10,
+) -> Any:
+    """
+    Get AI-powered personalized place recommendations.
+
+    Uses user's saved lists, trips, and reviews to suggest relevant places.
+    Supports natural language queries like:
+    - "romantic dinner with city view"
+    - "family-friendly activities"
+    - "coffee shops for working"
+    - "places I might like" (uses only user preferences)
+    """
+    recommendations = await ai_service.get_ai_recommendations(
+        session=session,
+        user_id=current_user.id,
+        query=query,
+        city=city,
+        max_results=max_results,
+    )
+
+    return APIResponse(data=recommendations)
 
 
 @router.get(

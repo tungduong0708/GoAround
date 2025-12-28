@@ -134,11 +134,35 @@ class PlacesService {
     }
   }
 
-  // Temporarily disable recommendations since this is not documented in the backend yet
-  // async getRecommendations(): Promise<IPlace[]> {
-  //   const response = await commonInstance.get("/places/recommendations");
-  //   return (response.data as IApiResponse<IPlace[]>).data;
-  // }
+  /**
+   * Get AI-powered personalized place recommendations
+   * @param query - Natural language search query (e.g., "romantic dinner spots")
+   * @param city - Optional city filter
+   * @param maxResults - Maximum number of recommendations (1-50)
+   */
+  async getAIRecommendations(params?: {
+    query?: string;
+    city?: string;
+    maxResults?: number;
+  }): Promise<IPlacePublic[]> {
+    const queryParams = new URLSearchParams();
+    
+    if (params?.query) {
+      queryParams.append('query', params.query);
+    }
+    if (params?.city) {
+      queryParams.append('city', params.city);
+    }
+    if (params?.maxResults) {
+      queryParams.append('max_results', params.maxResults.toString());
+    }
+
+    const response = await authInstance.get(
+      `/places/recommendations?${queryParams.toString()}`
+    );
+    
+    return (response.data as IApiResponse<IPlacePublic[]>).data;
+  }
 
   async getReviewsForPlace(
     placeId: string,

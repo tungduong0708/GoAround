@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import GoogleMap from "@/components/common/GoogleMap.vue";
+import LeafletMap from "@/components/common/LeafletMap.vue";
 import BookmarkButton from "@/components/common/BookmarkButton.vue";
 import WriteReviewModal from "@/components/common/WriteReviewModal.vue";
 import ReviewCard from "@/components/common/ReviewCard.vue";
@@ -269,7 +269,7 @@ onMounted(() => {
           >
             <h2 class="text-2xl font-semibold">Location map</h2>
             <div class="h-80 w-full rounded-3xl shadow-sm overflow-hidden">
-              <GoogleMap
+              <LeafletMap
                 v-if="coordinates"
                 :lat="coordinates.lat"
                 :lng="coordinates.lng"

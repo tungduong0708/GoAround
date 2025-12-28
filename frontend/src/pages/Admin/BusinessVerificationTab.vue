@@ -45,7 +45,7 @@ const handleApprove = async () => {
   processing.value = true;
   try {
     await verifyBusiness(
-      selectedVerification.value.verification_id,
+      selectedVerification.value.user.id,
       "approve",
       reviewNote.value
     );
@@ -78,7 +78,7 @@ const handleReject = async () => {
   processing.value = true;
   try {
     await verifyBusiness(
-      selectedVerification.value.verification_id,
+      selectedVerification.value.user.id,
       "reject",
       reviewNote.value
     );

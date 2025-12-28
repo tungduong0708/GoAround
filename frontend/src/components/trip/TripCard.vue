@@ -64,7 +64,7 @@ const handleClick = () => {
       v-motion
       :initial="{ opacity: 0, y: 50 }"
       :enter="{ opacity: 1, y: 0, transition: { delay: index * 100 } }"
-      class="cursor-pointer group overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-coral/10 hover:-translate-y-1 hover:border-coral/40"
+      class="cursor-pointer group overflow-hidden rounded-xl border border-border/30 bg-card ring-1 ring-black/5 hover:ring-coral/20 hover:border-coral/40 transition-all duration-300 hover:-translate-y-1"
       @click="(e: MouseEvent) => {
         e.preventDefault();
         handleClick();
@@ -132,7 +132,7 @@ const handleClick = () => {
     v-motion
     :initial="{ opacity: 0, y: 50 }"
     :enter="{ opacity: 1, y: 0, transition: { delay: index * 100 } }"
-    class="cursor-pointer group overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-coral/10 hover:-translate-y-1 hover:border-coral/40"
+    class="cursor-pointer group overflow-hidden rounded-xl border border-border/30 bg-card ring-1 ring-black/5 hover:ring-coral/20 hover:border-coral/40 transition-all duration-300 hover:-translate-y-1"
     @click="handleClick"
   >
     <!-- Gradient accent bar -->

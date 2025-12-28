@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from "vue";
+import { useRouter } from "vue-router";
 import { Button } from "@/components/ui/button";
 import {
   Carousel,
@@ -9,26 +10,61 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from "@/components/ui/carousel";
-import type { IPlacePublic } from "@/utils/interfaces";
-import { StarIcon, Compass, ArrowRight } from "lucide-vue-next";
+import type { ITripListSchema } from "@/utils/interfaces";
+import { StarIcon, Compass, ArrowRight, MapPin, Calendar, ShieldCheck } from "lucide-vue-next";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 
 const props = defineProps<{
-  trips: IPlacePublic[];
+  trips: ITripListSchema[];
 }>();
 
+const router = useRouter();
 const carouselApi = ref<CarouselApi | null>(null);
 let autoplayTimer: ReturnType<typeof setInterval> | null = null;
 const AUTOPLAY_DELAY = 5000;
 
-const roundedRating = (trip: IPlacePublic) =>
-  Math.max(0, Math.min(5, Math.round(trip.average_rating ?? 0)));
-const priceLabel = (trip: IPlacePublic) => {
-  if (typeof trip.price_range === "number")
-    return `€${trip.price_range}/Day`;
-  return "From €—";
+const gradients = [
+  "from-orange-400 via-amber-500 to-yellow-400",
+  "from-rose-400 via-pink-500 to-fuchsia-500",
+  "from-violet-400 via-purple-500 to-indigo-500",
+  "from-cyan-400 via-teal-500 to-emerald-500",
+  "from-blue-400 via-indigo-500 to-purple-500",
+  "from-amber-400 via-orange-500 to-red-500",
+];
+
+const getGradient = (index: number) => gradients[index % gradients.length];
+
+const formatTripLocation = (trip: ITripListSchema): string => {
+  // For trip list view, we don't have detailed location info
+  // Return destination count instead
+  return trip.stop_count && trip.stop_count > 0 
+    ? `${trip.stop_count} destination${trip.stop_count > 1 ? 's' : ''}`
+    : 'No destinations yet';
 };
-const locationLabel = (trip: IPlacePublic) =>
-  [trip.city, trip.country].filter(Boolean).join(", ");
+
+const formatTripDateRange = (trip: ITripListSchema) => {
+  if (!trip.start_date) return "Dates not set";
+  const start = new Date(trip.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  if (!trip.end_date) return start;
+  const end = new Date(trip.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return `${start} - ${end}`;
+};
+
+const formatTripPlaceCount = (trip: ITripListSchema) => {
+  const count = trip.stop_count || 0;
+  return `${count} ${count === 1 ? 'place' : 'places'}`;
+};
+
+const getTripStatus = (trip: ITripListSchema) => {
+  const now = new Date();
+  const start = trip.start_date ? new Date(trip.start_date) : null;
+  const end = trip.end_date ? new Date(trip.end_date) : null;
+
+  if (start && start > now) return "Upcoming";
+  if (end && end < now) return "Completed";
+  return "In Progress";
+};
 
 const stopAutoplay = () => {
   if (autoplayTimer) {
@@ -53,6 +89,14 @@ const startAutoplay = () => {
 const handleInitApi = (api: CarouselApi) => {
   carouselApi.value = api;
   startAutoplay();
+};
+
+const handlePlanTripClick = () => {
+  router.push({ name: 'trip', query: { openAI: 'true' } });
+};
+
+const handleViewAllClick = () => {
+  router.push({ name: 'trip', hash: '#trips-list' });
 };
 
 watch(
@@ -124,8 +168,9 @@ onBeforeUnmount(stopAutoplay);
           <div class="flex flex-wrap items-center gap-4">
             <Button
               class="group rounded-full bg-coral px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-coral/30 hover:-translate-y-0.5 hover:bg-coral-dark hover:shadow-xl hover:shadow-coral/35 transition-all duration-200"
+              @click="handlePlanTripClick"
             >
-              Plan your trip
+              Plan trip with AI
               <ArrowRight
                 :size="18"
                 class="ml-2 transition-transform group-hover:translate-x-1"
@@ -134,6 +179,7 @@ onBeforeUnmount(stopAutoplay);
             <Button
               variant="link"
               class="text-base font-semibold text-slate-700 dark:text-slate-200 underline-offset-4 hover:text-coral transition-colors"
+              @click="handleViewAllClick"
             >
               View all trip plans
             </Button>
@@ -149,72 +195,83 @@ onBeforeUnmount(stopAutoplay);
             @pointerenter="stopAutoplay"
             @pointerleave="startAutoplay"
           >
-            <CarouselContent class="-ml-2 md:-ml-4">
+            <CarouselContent class="-ml-2 md:-ml-4 py-4">
               <CarouselItem
-                v-for="trip in props.trips"
+                v-for="(trip, index) in props.trips"
                 :key="trip.id"
-                class="pl-2 md:pl-4 basis-[95%] sm:basis-[85%]"
+                class="pl-2 md:pl-4 basis-full md:basis-[65%] lg:basis-[50%]"
               >
-                <article
-                  class="group overflow-hidden rounded-2xl bg-white dark:bg-slate-800 shadow-xl ring-1 ring-slate-200/60 dark:ring-slate-700/50 hover:-translate-y-2 hover:shadow-2xl transition-all duration-300"
+                <Card
+                  class="group cursor-pointer overflow-hidden rounded-2xl border border-border/30 bg-card ring-1 ring-black/5 hover:ring-coral/20 hover:border-coral/40 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col"
+                  @click="router.push(`/trip/${trip.id}`)"
                 >
-                  <!-- Image -->
-                  <div class="relative h-[300px] sm:h-[360px] overflow-hidden">
+                  <!-- Cover / Accent -->
+                  <div class="relative h-40 overflow-hidden" :class="trip.preview_image_url ? '' : 'bg-gradient-to-br ' + getGradient(index)">
+                    <!-- Background image if available -->
                     <img
-                      v-if="trip.main_image_url!=null"  
-                      :src="trip.main_image_url"
-                      :alt="trip.name"
-                      class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      v-if="trip.preview_image_url"
+                      :src="trip.preview_image_url"
+                      :alt="trip.trip_name"
+                      class="absolute inset-0 w-full h-full object-cover"
+                      @error="(e) => (e.target as HTMLImageElement).style.display = 'none'"
                     />
-                    <!-- Gradient overlay -->
-                    <div
-                      class="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"
-                    />
-                    <!-- Price badge -->
-                    <div
-                      class="absolute top-4 right-4 px-4 py-2 rounded-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm shadow-lg"
-                    >
-                      <span
-                        class="text-sm font-bold text-slate-900 dark:text-white"
-                        >{{ priceLabel(trip) }}</span
-                      >
+                    <!-- Overlay -->
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                    <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/10" />
+                    <div class="absolute top-4 left-4">
+                      <Badge class="rounded-full bg-white/90 dark:bg-slate-800/90 text-foreground px-3 py-1.5 text-xs font-semibold shadow-md">
+                        {{ getTripStatus(trip) }}
+                      </Badge>
+                    </div>
+                    <div class="absolute bottom-4 left-4 right-4">
+                      <h3 class="text-xl font-bold text-white drop-shadow-lg line-clamp-2">
+                        {{ trip.trip_name }}
+                      </h3>
                     </div>
                   </div>
 
-                  <!-- Content -->
-                  <div class="p-6 space-y-4">
-                    <div class="flex items-center justify-between">
-                      <span
-                        class="text-xs font-bold uppercase tracking-[0.2em] text-coral"
+                  <CardContent class="space-y-3 p-4 flex-1 flex flex-col justify-between">
+                    <div class="space-y-2 text-sm text-muted-foreground">
+                      <div class="flex items-center gap-2">
+                        <MapPin :size="16" class="text-coral flex-shrink-0" />
+                        <span class="truncate">{{ formatTripLocation(trip) }}</span>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <Calendar :size="16" class="text-coral flex-shrink-0" />
+                        <span class="truncate">{{ formatTripDateRange(trip) }}</span>
+                      </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 pt-1">
+                      <Badge
+                        variant="secondary"
+                        class="bg-coral/10 text-coral border-0 px-2.5 py-0.5 text-xs font-medium rounded-md"
                       >
-                        {{ trip.place_type?.toUpperCase() }}
-                      </span>
+                        {{ formatTripPlaceCount(trip) }}
+                      </Badge>
+                      <Badge
+                        v-if="trip.public"
+                        variant="secondary"
+                        class="bg-emerald-500/10 text-emerald-600 border-0 px-2.5 py-0.5 text-xs font-medium rounded-md"
+                      >
+                        Public
+                      </Badge>
+                      <Badge
+                        v-else
+                        variant="secondary"
+                        class="bg-slate-500/10 text-slate-600 dark:text-slate-400 border-0 px-2.5 py-0.5 text-xs font-medium rounded-md"
+                      >
+                        Private
+                      </Badge>
+                      <Badge
+                        variant="secondary"
+                        class="bg-muted text-muted-foreground border-0 px-2.5 py-0.5 text-xs font-medium rounded-md"
+                      >
+                        ID: {{ trip.id.slice(0, 6) }}
+                      </Badge>
                     </div>
-                    <h3
-                      class="text-2xl font-bold text-slate-900 dark:text-white group-hover:text-coral transition-colors"
-                    >
-                      {{ trip.name }}
-                    </h3>
-                    <div
-                      class="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-300"
-                    >
-                      <span class="flex items-center gap-1">
-                        <StarIcon
-                          v-for="n in 5"
-                          :key="`${trip.id}-star-${n}`"
-                          class="size-4"
-                          :class="
-                            n <= roundedRating(trip)
-                              ? 'fill-amber text-amber'
-                              : 'fill-slate-200 dark:fill-slate-600 text-slate-300 dark:text-slate-500'
-                          "
-                        />
-                      </span>
-                      <span class="w-1 h-1 rounded-full bg-slate-400" />
-                      <span>{{ locationLabel(trip) }}</span>
-                    </div>
-                  </div>
-                </article>
+                  </CardContent>
+                </Card>
               </CarouselItem>
 
               <!-- Empty state -->
@@ -231,10 +288,10 @@ onBeforeUnmount(stopAutoplay);
 
             <!-- Navigation buttons -->
             <CarouselPrevious
-              class="absolute left-0 top-1/2 -translate-y-1/2 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm shadow-lg hover:shadow-xl hover:bg-white dark:hover:bg-slate-700 border-slate-200/80 dark:border-slate-700 transition-all duration-200"
+              class="-left-12 top-1/2 -translate-y-1/2 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm shadow-lg hover:shadow-xl hover:bg-white dark:hover:bg-slate-700 border-slate-200/80 dark:border-slate-700 transition-all duration-200"
             />
             <CarouselNext
-              class="absolute right-0 top-1/2 -translate-y-1/2 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm shadow-lg hover:shadow-xl hover:bg-white dark:hover:bg-slate-700 border-slate-200/80 dark:border-slate-700 transition-all duration-200"
+              class="-right-12 top-1/2 -translate-y-1/2 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm shadow-lg hover:shadow-xl hover:bg-white dark:hover:bg-slate-700 border-slate-200/80 dark:border-slate-700 transition-all duration-200"
             />
           </Carousel>
         </div>

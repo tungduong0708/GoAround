@@ -104,6 +104,42 @@ async def list_trips(
     return data, total
 
 
+async def list_public_trips(
+    session: AsyncSession,
+    page: int,
+    limit: int,
+) -> tuple[list[TripListSchema], int]:
+    """List all public trips with pagination (no authentication required)."""
+    base_query = select(Trip.id).where(Trip.public == True)
+    total_res = await session.execute(
+        select(func.count()).select_from(base_query.subquery())
+    )
+    total = int(total_res.scalar() or 0)
+
+    stmt = (
+        select(Trip, func.count(TripStop.id).label("stop_count"))
+        .outerjoin(TripStop, Trip.id == TripStop.trip_id)
+        .where(Trip.public == True)
+        .group_by(Trip.id)
+        .order_by(Trip.start_date.asc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+    )
+    res = await session.execute(stmt)
+    data = [
+        TripListSchema(
+            id=trip.id,
+            trip_name=trip.trip_name,
+            start_date=trip.start_date,
+            end_date=trip.end_date,
+            public=trip.public,
+            stop_count=int(stop_count or 0),
+        )
+        for trip, stop_count in res.all()
+    ]
+    return data, total
+
+
 async def create_trip(
     session: AsyncSession, user_id: uuid.UUID, data: TripCreate
 ) -> TripSchema:
@@ -178,21 +214,21 @@ async def update_trip(
     """Update an existing trip."""
     # Eagerly load stops to avoid lazy loading in async context
     result = await session.execute(
-        select(Trip)
-        .options(selectinload(Trip.stops))
-        .where(Trip.id == trip_id)
+        select(Trip).options(selectinload(Trip.stops)).where(Trip.id == trip_id)
     )
     trip = result.scalars().first()
     if not trip:
         raise ValueError("Trip not found")
     if trip.user_id != user_id:
         raise PermissionError("Not authorized to update this trip")
-    
+
     # Extract stops and tags before converting to dict
-    stops_data = data.stops if hasattr(data, 'stops') and data.stops is not None else None
-    tags = data.tags if hasattr(data, 'tags') and data.tags is not None else None
-    
-    upd = data.model_dump(exclude_unset=True, exclude={'stops', 'tags'})
+    stops_data = (
+        data.stops if hasattr(data, "stops") and data.stops is not None else None
+    )
+    tags = data.tags if hasattr(data, "tags") and data.tags is not None else None
+
+    upd = data.model_dump(exclude_unset=True, exclude={"stops", "tags"})
 
     # Validate dates if both are being updated
     start_date = upd.get("start_date", trip.start_date)
@@ -227,9 +263,7 @@ async def update_trip(
     # Handle stops updates
     if stops_data is not None:
         # Remove all existing stops using bulk delete to avoid prepared statement conflicts
-        await session.execute(
-            delete(TripStop).where(TripStop.trip_id == trip_id)
-        )
+        await session.execute(delete(TripStop).where(TripStop.trip_id == trip_id))
         await session.flush()
 
         # Add new stops
@@ -415,11 +449,9 @@ async def delete_trip(
 
     try:
         # First delete all trip stops using bulk delete to avoid prepared statement conflicts
-        await session.execute(
-            delete(TripStop).where(TripStop.trip_id == trip_id)
-        )
+        await session.execute(delete(TripStop).where(TripStop.trip_id == trip_id))
         await session.flush()
-        
+
         # Then delete the trip
         await session.delete(trip)
         await session.commit()

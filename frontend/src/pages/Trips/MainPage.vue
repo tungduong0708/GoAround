@@ -4,12 +4,14 @@ import { RouterLink, useRouter, useRoute } from "vue-router";
 import type { ITripListSchema } from "@/utils/interfaces";
 import { useTrips, usePlanTrip, useGenerateTrip } from "@/composables";
 import { useAuthGuard } from "@/composables/useAuthGuard";
+import TripService from "@/services/TripService";
 import Button from "@/components/ui/button/Button.vue";
 import Card from "@/components/ui/card/Card.vue";
 import CardContent from "@/components/ui/card/CardContent.vue";
 import PlanTripModal from "@/components/trip/PlanTripModal.vue";
 import GenerateTripModal from "@/components/trip/GenerateTripModal.vue";
 import LoginPromptModal from "@/components/auth/LoginPromptModal.vue";
+import TripCard from "@/components/trip/TripCard.vue";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -56,9 +58,50 @@ const {
   loadTrips,
 } = useTrips({ autoLoad: false }); // Changed to false to manually control loading
 
+// Public trips state
+const publicTrips = ref<ITripListSchema[]>([]);
+const loadingPublicTrips = ref(false);
+
+// Load public trips
+const loadPublicTrips = async () => {
+  try {
+    loadingPublicTrips.value = true;
+    const response = await TripService.getInstance().getPublicTrips({ page: 1, limit: 6 });
+    publicTrips.value = response.data;
+  } catch (err) {
+    console.error('Failed to load public trips:', err);
+  } finally {
+    loadingPublicTrips.value = false;
+  }
+};
+
 // Always reload trips when component mounts to ensure fresh data
-onMounted(() => {
-  loadTrips(true);
+onMounted(async () => {
+  await loadTrips(true);
+  
+  // Load public trips if user has no trips
+  if (!hasTrips.value && !loading.value) {
+    await loadPublicTrips();
+  }
+  
+  // Check if we should auto-open the AI generation modal
+  if (route.query.openAI === 'true') {
+    setTimeout(() => {
+      guardAction(openGenerateTripModal);
+      // Clean up URL
+      router.replace({ name: 'trip' });
+    }, 300);
+  }
+  
+  // Check if we should scroll to trips list
+  if (route.hash === '#trips-list') {
+    setTimeout(() => {
+      const tripsSection = document.getElementById('trips-list');
+      if (tripsSection) {
+        tripsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 500);
+  }
 });
 
 const { showPlanTripModal, openPlanTripModal, handleTripSubmit } = usePlanTrip();
@@ -317,11 +360,11 @@ const handleDeleteConfirm = async () => {
       </div>
     </section>
 
-    <!-- Empty State -->
+    <!-- Empty State with Public Trips -->
     <section
       v-else-if="!hasTrips"
       v-motion-pop-visible-once
-      class="mx-auto w-full max-w-6xl"
+      class="mx-auto w-full max-w-6xl space-y-12"
     >
       <div
         class="text-center py-16 px-6 rounded-3xl bg-gradient-to-br from-muted/30 to-muted/10 border border-dashed border-border"
@@ -345,10 +388,46 @@ const handleDeleteConfirm = async () => {
           Start planning
         </Button>
       </div>
+
+      <!-- Public Trips Section -->
+      <div v-if="publicTrips.length > 0" class="space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-2xl font-bold text-foreground">Explore Public Trips</h2>
+            <p class="text-muted-foreground mt-1">Get inspired by trips created by other travelers</p>
+          </div>
+          <Badge class="bg-emerald-500/10 text-emerald-600 border-0 px-3 py-1.5">
+            {{ publicTrips.length }} trips
+          </Badge>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <TripCard
+            v-for="(trip, index) in publicTrips"
+            :key="trip.id"
+            :trip="trip"
+            :index="index"
+            :show-public-badge="true"
+            :clickable="true"
+          />
+        </div>
+      </div>
+
+      <!-- Loading state for public trips -->
+      <div v-else-if="loadingPublicTrips" class="space-y-6">
+        <h2 class="text-2xl font-bold text-foreground">Explore Public Trips</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div
+            v-for="i in 6"
+            :key="i"
+            class="animate-pulse rounded-xl border border-border/50 bg-muted/30 h-64"
+          ></div>
+        </div>
+      </div>
     </section>
 
     <!-- Trips Grid -->
-    <section v-else class="mx-auto w-full max-w-6xl">
+    <section id="trips-list" v-else class="mx-auto w-full max-w-6xl">
       <div
         class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
         aria-label="Saved trips"

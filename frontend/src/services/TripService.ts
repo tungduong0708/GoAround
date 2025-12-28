@@ -1,5 +1,5 @@
 // Temporarily done for refactoring API call
-import { authInstance } from "@/config";
+import { authInstance, commonInstance } from "@/config";
 import type {
   ITripListSchema,
   // ITripStopSchema,
@@ -34,6 +34,16 @@ class TripService {
   ): Promise<IPaginatedResponse<ITripListSchema[]>> {
     console.log("Fetching trips with query:", query);
     const response = await authInstance.get("/trips", { params: query });
+    return response.data as IPaginatedResponse<ITripListSchema[]>;
+  }
+
+  async getPublicTrips(
+    query?: IPagingQuery,
+  ): Promise<IPaginatedResponse<ITripListSchema[]>> {
+    console.log("Fetching public trips with query:", query);
+    const response = await commonInstance.get("/utils/public-trips", { 
+      params: query 
+    });
     return response.data as IPaginatedResponse<ITripListSchema[]>;
   }
 

@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { Plus, Calendar, MapPin, GripVertical, Trash2 } from "lucide-vue-next";
+import { Plus, Calendar, MapPin, GripVertical, Trash2, Bookmark, ChevronDown } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { ITripStopWithPlace } from "@/utils/interfaces";
 
 interface DayItinerary {
@@ -18,6 +24,7 @@ interface TripItineraryProps {
 
 interface TripItineraryEmits {
   (e: "add-place", dayIndex: number): void;
+  (e: "add-from-saved-list", dayIndex?: number): void;
   (e: "remove-stop", stopId: string): void;
   (e: "reorder-stop", fromIndex: number, toIndex: number, dayIndex: number): void;
   (e: "move-stop-between-days", stopId: string, fromDayIndex: number, toDayIndex: number, toPosition: number): void;
@@ -262,12 +269,27 @@ const handleRemoveStop = (stopId: string) => {
 const handleAddPlace = (dayIndex: number) => {
   emit("add-place", dayIndex);
 };
+
+const handleAddFromSavedList = (dayIndex?: number) => {
+  emit("add-from-saved-list", dayIndex);
+};
 </script>
 
 <template>
   <div class="flex flex-col h-full">
     <div class="p-6 border-b border-border/50">
-      <h2 class="text-xl font-bold text-foreground mb-1">Itinerary</h2>
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-xl font-bold text-foreground">Itinerary</h2>
+        <Button
+          size="sm"
+          variant="outline"
+          class="border-coral text-coral hover:bg-coral hover:text-white transition-colors"
+          @click="handleAddFromSavedList()"
+        >
+          <Bookmark :size="16" class="mr-1" />
+          Saved Lists
+        </Button>
+      </div>
       <p class="text-sm text-muted-foreground">
         {{ days.length > 0 ? `${days.length} day${days.length > 1 ? 's' : ''} planned` : 'Set trip dates to start planning' }}
       </p>
@@ -306,14 +328,28 @@ const handleAddPlace = (dayIndex: number) => {
                 {{ formatDate(day.date) }}
               </p>
             </button>
-            <Button
-              size="sm"
-              class="bg-coral text-white hover:bg-coral-dark rounded-lg px-3 py-1.5 text-sm"
-              @click="handleAddPlace(dayIndex)"
-            >
-              <Plus :size="16" class="mr-1" />
-              Add Place
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger as-child>
+                <Button
+                  size="sm"
+                  class="bg-coral text-white hover:bg-coral-dark rounded-lg px-3 py-1.5 text-sm"
+                >
+                  <Plus :size="16" class="mr-1" />
+                  Add Place
+                  <ChevronDown :size="14" class="ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem @click="handleAddPlace(dayIndex)">
+                  <Plus :size="16" class="mr-2" />
+                  Search Places
+                </DropdownMenuItem>
+                <DropdownMenuItem @click="handleAddFromSavedList(dayIndex)">
+                  <Bookmark :size="16" class="mr-2" />
+                  From Saved List
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <div

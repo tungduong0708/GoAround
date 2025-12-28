@@ -50,6 +50,7 @@ const {
 const showSavedPlacesModal = ref(false);
 const showAddPlaceModal = ref(false);
 const selectedDayForPlace = ref<number>(0);
+const selectedDayForSavedList = ref<number | undefined>(undefined);
 const isEditingDetails = ref(true);
 const selectedDayIndex = ref<number>(0);
 
@@ -75,8 +76,38 @@ const stopsForItinerary = computed(() => {
   return localStops.value;
 });
 
-const handleAddFromSavedPlaces = () => {
+const handleAddFromSavedPlaces = (dayIndex?: number) => {
+  selectedDayForSavedList.value = dayIndex;
   showSavedPlacesModal.value = true;
+};
+
+const handlePlacesSelected = (places: any[], dayIndex?: number) => {
+  if (!trip.value?.start_date) return;
+
+  // Calculate arrival time based on selected day
+  let arrivalTime = new Date().toISOString();
+  
+  if (dayIndex !== undefined && trip.value.start_date) {
+    const startDate = new Date(trip.value.start_date);
+    const targetDate = new Date(startDate);
+    targetDate.setDate(startDate.getDate() + dayIndex);
+    targetDate.setHours(9, 0, 0, 0);
+    arrivalTime = targetDate.toISOString();
+  }
+
+  // Create new stops from selected places
+  const newStops = places.map((place, index) => ({
+    id: `temp-${Date.now()}-${index}`, // Temporary ID
+    place_id: place.id,
+    place: place,
+    stop_order: localStops.value.length + index,
+    arrival_time: arrivalTime,
+    notes: '',
+    trip_id: trip.value!.id,
+  }));
+
+  // Add to local stops
+  localStops.value = [...localStops.value, ...newStops];
 };
 
 const handlePlaceAdded = async () => {
@@ -512,6 +543,7 @@ watch(
           :end-date="trip.end_date"
           :stops="stopsForItinerary"
           @add-place="handleAddPlaceToDay"
+          @add-from-saved-list="handleAddFromSavedPlaces"
           @remove-stop="handleRemoveStop"
           @reorder-stop="handleReorderStop"
           @move-stop-between-days="handleMoveStopBetweenDays"
@@ -549,12 +581,13 @@ watch(
           </div>
         </div>
 
-        <!-- Floating Add Place Button -->
+        <!-- Floating Add from Saved Lists Button -->
         <Button
           class="absolute right-6 bottom-6 w-14 h-14 rounded-full shadow-2xl bg-coral text-white hover:bg-coral-dark hover:scale-110 transition-all duration-200 z-10"
           @click="handleAddFromSavedPlaces"
         >
-          <Plus :size="24" />
+          <Bookmark :size="20" />
+          <span class="font-semibold">Saved Lists</span>
         </Button>
       </div>
     </div>
@@ -563,6 +596,9 @@ watch(
     <SavedPlacesModal
       v-model:open="showSavedPlacesModal"
       :trip-id="tripId"
+      :selected-day-index="selectedDayForSavedList"
+      :trip-start-date="trip?.start_date"
+      @places-selected="handlePlacesSelected"
       @success="handlePlaceAdded"
     />
 

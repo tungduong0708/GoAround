@@ -21,6 +21,7 @@ interface TripItineraryEmits {
   (e: "remove-stop", stopId: string): void;
   (e: "reorder-stop", fromIndex: number, toIndex: number, dayIndex: number): void;
   (e: "move-stop-between-days", stopId: string, fromDayIndex: number, toDayIndex: number, toPosition: number): void;
+  (e: "day-selected", dayIndex: number): void;
 }
 
 const props = withDefaults(defineProps<TripItineraryProps>(), {
@@ -36,6 +37,11 @@ const draggedStop = ref<{
   dayIndex: number;
   stop: ITripStopWithPlace;
 } | null>(null);
+
+const selectDay = (dayIndex: number) => {
+  selectedDay.value = dayIndex;
+  emit('day-selected', dayIndex);
+};
 const dragOverDayIndex = ref<number | null>(null);
 const dragOverStopIndex = ref<number | null>(null);
 const dropPosition = ref<{ dayIndex: number; position: number } | null>(null);
@@ -290,7 +296,7 @@ const handleAddPlace = (dayIndex: number) => {
         >
           <div class="flex items-center justify-between mb-3">
             <button
-              @click="selectedDay = dayIndex"
+              @click="selectDay(dayIndex)"
               class="text-left flex-1 group"
             >
               <h3 class="font-semibold text-foreground group-hover:text-coral transition-colors">

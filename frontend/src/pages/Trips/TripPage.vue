@@ -11,6 +11,7 @@ import Input from "@/components/ui/input/Input.vue";
 import Label from "@/components/ui/label/Label.vue";
 import SavedPlacesModal from "@/components/trip/SavedPlacesModal.vue";
 import TripItinerary from "@/components/trip/TripItinerary.vue";
+import TripMap from "@/components/trip/TripMap.vue";
 import AddPlaceToTripModal from "@/components/trip/AddPlaceToTripModal.vue";
 import GenerateTripModal from "@/components/trip/GenerateTripModal.vue";
 import {
@@ -50,6 +51,7 @@ const showSavedPlacesModal = ref(false);
 const showAddPlaceModal = ref(false);
 const selectedDayForPlace = ref<number>(0);
 const isEditingDetails = ref(true);
+const selectedDayIndex = ref<number>(0);
 
 const { 
   showGenerateTripModal, 
@@ -224,6 +226,29 @@ const handleMoveStopBetweenDays = (
   localStops.value = updatedStops;
 };
 
+const saveStopsOrder = async () => {
+  if (!trip.value) return;
+  
+  try {
+    // Prepare stops payload with updated order
+    const stopsPayload = localStops.value.map((stop, idx) => ({
+      place_id: stop.place?.id || '',
+      stop_order: idx,
+      arrival_time: stop.arrival_time || '',
+      notes: stop.notes || ''
+    }));
+    
+    // Update trip with new stops order
+    await TripService.updateTrip(trip.value.id, {
+      stops: stopsPayload
+    });
+    
+    console.log('[TripPage] Stops order saved successfully');
+  } catch (error) {
+    console.error('[TripPage] Failed to save stops order:', error);
+  }
+};
+
 const handleAddPlaceToDay = (dayIndex: number) => {
   selectedDayForPlace.value = dayIndex;
   showAddPlaceModal.value = true;
@@ -233,6 +258,10 @@ const handleAddPlace = (place: any) => {
   // TODO: Implement adding place to specific day
   console.log("Add place to day", selectedDayForPlace.value, place);
   showAddPlaceModal.value = false;
+};
+
+const handleDaySelected = (dayIndex: number) => {
+  selectedDayIndex.value = dayIndex;
 };
 
 const startEditingDetails = () => {
@@ -486,12 +515,14 @@ watch(
           @remove-stop="handleRemoveStop"
           @reorder-stop="handleReorderStop"
           @move-stop-between-days="handleMoveStopBetweenDays"
+          @day-selected="handleDaySelected"
         />
       </div>
 
       <!-- Right Panel: Map Placeholder -->
       <div class="flex-1 relative bg-muted/20">
-        <div class="absolute inset-0 flex items-center justify-center">
+        <TripMap v-if="trip && localStops.length > 0" :stops="localStops" :selected-day-index="selectedDayIndex" />
+        <div v-else class="absolute inset-0 flex items-center justify-center">
           <div class="relative w-full h-full">
             <img
               src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&h=800&fit=crop"
@@ -511,7 +542,7 @@ watch(
                   }}
                 </p>
                 <div class="text-sm text-muted-foreground">
-                  {{ trip.stops?.length || 0 }} stop{{ (trip.stops?.length || 0) !== 1 ? 's' : '' }} in this trip
+                  {{ trip?.stops?.length || 0 }} stop{{ (trip?.stops?.length || 0) !== 1 ? 's' : '' }} in this trip
                 </div>
               </div>
             </div>
@@ -520,7 +551,7 @@ watch(
 
         <!-- Floating Add Place Button -->
         <Button
-          class="absolute right-6 bottom-6 w-14 h-14 rounded-full shadow-2xl bg-coral text-white hover:bg-coral-dark hover:scale-110 transition-all duration-200"
+          class="absolute right-6 bottom-6 w-14 h-14 rounded-full shadow-2xl bg-coral text-white hover:bg-coral-dark hover:scale-110 transition-all duration-200 z-10"
           @click="handleAddFromSavedPlaces"
         >
           <Plus :size="24" />

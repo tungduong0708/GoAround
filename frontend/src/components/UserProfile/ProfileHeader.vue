@@ -183,7 +183,7 @@ const statItems = [
                   variant="secondary"
                   class="px-3 py-1 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 font-medium capitalize border-orange-500/20"
                 >
-                  {{ user.role }} Account
+                  {{ user.role != "business" ? user.role : user.is_verified_business ? "Verified Business" : "Unverified Business" }} Account
                 </Badge>
               </div>
             </div>

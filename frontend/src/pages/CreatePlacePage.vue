@@ -152,11 +152,11 @@ const handleSubmit = async () => {
     } 
     // Handle error message directly on error object
     else if (error.message) {
-      errorMessage.value = error.message;
+      errorMessage.value = error.detail;
     } 
     // Ultimate fallback
     else {
-      errorMessage.value = "Failed to create place. Please try again.";
+      errorMessage.value = "Failed to create place. Please try again. Error: " + (error.detail ? error.detail : "Unknown error occurred.");
     }
   } finally {
     isSubmitting.value = false;

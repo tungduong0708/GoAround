@@ -20,6 +20,7 @@ interface TripItineraryEmits {
   (e: "add-place", dayIndex: number): void;
   (e: "remove-stop", stopId: string): void;
   (e: "reorder-stop", fromIndex: number, toIndex: number, dayIndex: number): void;
+  (e: "move-stop-between-days", stopId: string, fromDayIndex: number, toDayIndex: number, toPosition: number): void;
 }
 
 const props = withDefaults(defineProps<TripItineraryProps>(), {
@@ -29,7 +30,14 @@ const props = withDefaults(defineProps<TripItineraryProps>(), {
 const emit = defineEmits<TripItineraryEmits>();
 
 const selectedDay = ref(0);
-const draggedStop = ref<{ stopId: string; fromIndex: number; dayIndex: number } | null>(null);
+const draggedStop = ref<{ 
+  stopId: string; 
+  stopIndex: number; 
+  dayIndex: number;
+  stop: ITripStopWithPlace;
+} | null>(null);
+const dragOverDayIndex = ref<number | null>(null);
+const dragOverStopIndex = ref<number | null>(null);
 
 // Compute days based on date range and populate with stops
 const days = computed((): DayItinerary[] => {
@@ -71,33 +79,81 @@ const formatDate = (dateString: string) => {
   });
 };
 
-const handleDragStart = (event: DragEvent, stopId: string, stopIndex: number, dayIndex: number) => {
-  draggedStop.value = { stopId, fromIndex: stopIndex, dayIndex };
+const handleDragStart = (event: DragEvent, stop: ITripStopWithPlace, stopIndex: number, dayIndex: number) => {
+  draggedStop.value = { stopId: stop.id, stopIndex, dayIndex, stop };
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", stop.id);
   }
+  // Add dragging class to the element
+  (event.target as HTMLElement).classList.add('opacity-50');
 };
 
-const handleDragOver = (event: DragEvent) => {
+const handleDragEnd = (event: DragEvent) => {
+  (event.target as HTMLElement).classList.remove('opacity-50');
+  draggedStop.value = null;
+  dragOverDayIndex.value = null;
+  dragOverStopIndex.value = null;
+};
+
+const handleDragOver = (event: DragEvent, dayIndex?: number, stopIndex?: number) => {
   event.preventDefault();
   if (event.dataTransfer) {
     event.dataTransfer.dropEffect = "move";
   }
+  if (dayIndex !== undefined) {
+    dragOverDayIndex.value = dayIndex;
+  }
+  if (stopIndex !== undefined) {
+    dragOverStopIndex.value = stopIndex;
+  }
 };
 
-const handleDrop = (event: DragEvent, toIndex: number, dayIndex: number) => {
+const handleDragLeave = () => {
+  dragOverDayIndex.value = null;
+  dragOverStopIndex.value = null;
+};
+
+const handleDropOnStop = (event: DragEvent, toIndex: number, dayIndex: number) => {
   event.preventDefault();
+  event.stopPropagation();
   
   if (!draggedStop.value) return;
   
-  const { fromIndex, dayIndex: fromDayIndex } = draggedStop.value;
+  const { stopId, stopIndex: fromIndex, dayIndex: fromDayIndex } = draggedStop.value;
   
-  // Only reorder within the same day for now
-  if (fromDayIndex === dayIndex && fromIndex !== toIndex) {
-    emit("reorder-stop", fromIndex, toIndex, dayIndex);
+  // Moving within the same day
+  if (fromDayIndex === dayIndex) {
+    if (fromIndex !== toIndex) {
+      emit("reorder-stop", fromIndex, toIndex, dayIndex);
+    }
+  } else {
+    // Moving between different days
+    emit("move-stop-between-days", stopId, fromDayIndex, dayIndex, toIndex);
   }
   
   draggedStop.value = null;
+  dragOverDayIndex.value = null;
+  dragOverStopIndex.value = null;
+};
+
+const handleDropOnDay = (event: DragEvent, dayIndex: number) => {
+  event.preventDefault();
+  event.stopPropagation();
+  
+  if (!draggedStop.value) return;
+  
+  const { stopId, dayIndex: fromDayIndex } = draggedStop.value;
+  const dayStops = days.value[dayIndex]?.stops || [];
+  
+  // If dropping on a day, add to the end
+  if (fromDayIndex !== dayIndex) {
+    emit("move-stop-between-days", stopId, fromDayIndex, dayIndex, dayStops.length);
+  }
+  
+  draggedStop.value = null;
+  dragOverDayIndex.value = null;
+  dragOverStopIndex.value = null;
 };
 
 const handleRemoveStop = (stopId: string) => {
@@ -162,16 +218,37 @@ const handleAddPlace = (dayIndex: number) => {
           </div>
 
           <div
-            class="space-y-2"
-            @dragover="handleDragOver"
+            class="space-y-2 min-h-[60px] rounded-lg transition-colors"
+            :class="[
+              dragOverDayIndex === dayIndex && day.stops.length === 0 
+                ? 'bg-coral/10 border-2 border-dashed border-coral' 
+                : ''
+            ]"
+            @dragover="handleDragOver($event, dayIndex)"
+            @dragleave="handleDragLeave"
+            @drop="handleDropOnDay($event, dayIndex)"
           >
+            <div
+              v-if="day.stops.length === 0"
+              class="p-4 text-center text-muted-foreground text-sm rounded-lg border-2 border-dashed border-border/50"
+            >
+              No places added yet
+            </div>
+
             <div
               v-for="(stop, stopIndex) in day.stops"
               :key="stop.id"
               draggable="true"
-              @dragstart="handleDragStart($event, stop.id, stopIndex, dayIndex)"
-              @drop="handleDrop($event, stopIndex, dayIndex)"
-              class="bg-card border border-border/60 rounded-lg p-3 group hover:border-coral/50 hover:shadow-md transition-all cursor-move"
+              @dragstart="handleDragStart($event, stop, stopIndex, dayIndex)"
+              @dragend="handleDragEnd"
+              @dragover.stop="handleDragOver($event, dayIndex, stopIndex)"
+              @drop="handleDropOnStop($event, stopIndex, dayIndex)"
+              class="bg-card border-2 rounded-lg p-3 group hover:border-coral/50 hover:shadow-md transition-all cursor-move relative"
+              :class="[
+                dragOverDayIndex === dayIndex && dragOverStopIndex === stopIndex 
+                  ? 'border-coral ring-2 ring-coral/20' 
+                  : 'border-border/60'
+              ]"
             >
               <div class="flex gap-3">
                 <div class="flex items-center">

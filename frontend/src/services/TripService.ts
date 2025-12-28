@@ -95,14 +95,35 @@ class TripService {
 
   async generateTrip(input: ITripGenerateRequest): Promise<ITripSchema> {
     try {
-      const response = await authInstance.post("/trips/generate", input);
-      return (response.data as IApiResponse<ITripSchema>).data;
-    } catch (error: any) {
-      if (error.response && error.response.status === 400) {
-        console.error("Bad Request: ", error.response.data.detail);
-      } else if (error.response && error.response.status === 500) {
-        console.error("Server Error: ", error.response.data.detail);
+      // AI generation can take a while, so disable timeout (set to 0)
+      const response = await authInstance.post("/trips/generate", input, {
+        timeout: 0, // No timeout - wait for server response
+      });
+      console.log('Generate trip API raw response:', response);
+      console.log('Generate trip API response.data:', response.data);
+      
+      // Backend returns APIResponse[TripSchema] = { data: TripSchema, meta: null }
+      const apiResponse = response.data as IApiResponse<ITripSchema>;
+      console.log('Parsed API response:', apiResponse);
+      console.log('Trip data:', apiResponse.data);
+      
+      if (!apiResponse.data || !apiResponse.data.id) {
+        console.error('Invalid trip data received. Full response:', response.data);
+        throw new Error('Invalid response from server: missing trip data');
       }
+      
+      return apiResponse.data;
+    } catch (error: any) {
+      console.error("Generate trip error:", error);
+      
+      if (error.response && error.response.status === 400) {
+        console.error("Bad Request: ", error.response.data);
+        throw new Error(error.response.data.detail || 'Bad request');
+      } else if (error.response && error.response.status === 500) {
+        console.error("Server Error: ", error.response.data);
+        throw new Error(error.response.data.detail || 'Server error');
+      }
+      
       throw error;
     }
   }

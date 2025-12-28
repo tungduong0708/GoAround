@@ -2,12 +2,13 @@
 import { computed, ref } from "vue";
 import { RouterLink, useRouter } from "vue-router";
 import type { ITripListSchema } from "@/utils/interfaces";
-import { useTrips, usePlanTrip } from "@/composables";
+import { useTrips, usePlanTrip, useGenerateTrip } from "@/composables";
 import { useAuthGuard } from "@/composables/useAuthGuard";
 import Button from "@/components/ui/button/Button.vue";
 import Card from "@/components/ui/card/Card.vue";
 import CardContent from "@/components/ui/card/CardContent.vue";
 import PlanTripModal from "@/components/trip/PlanTripModal.vue";
+import GenerateTripModal from "@/components/trip/GenerateTripModal.vue";
 import LoginPromptModal from "@/components/auth/LoginPromptModal.vue";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -54,6 +55,13 @@ const {
 } = useTrips({ autoLoad: true });
 
 const { showPlanTripModal, openPlanTripModal, handleTripSubmit } = usePlanTrip();
+const { 
+  showGenerateTripModal, 
+  openGenerateTripModal, 
+  handleGenerateSubmit,
+  aiGenerating,
+  error: generateError
+} = useGenerateTrip();
 const { showLoginPrompt, guardAction } = useAuthGuard();
 
 const activeFilter = ref<TripFilter>("all");
@@ -98,6 +106,7 @@ const getTripStatus = (trip: ITripListSchema) => {
 };
 
 const handleNewTrip = () => guardAction(openPlanTripModal);
+const handleAIGenerate = () => guardAction(openGenerateTripModal);
 const handleResumeNextTrip = () => {
   if (!nextTrip.value) return;
   guardAction(() => router.push(`/trip/${nextTrip.value?.id}`));
@@ -159,6 +168,17 @@ const handleDeleteConfirm = async () => {
             >
               <Plus :size="20" />
               Plan a trip
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              class="inline-flex items-center gap-2 px-5 py-3 rounded-xl border-2 border-purple-200 hover:border-purple-400 hover:bg-gradient-to-r hover:from-purple-50 hover:to-coral-light transition-all"
+              @click="handleAIGenerate"
+            >
+              <Sparkles :size="18" class="text-purple-600" />
+              <span class="font-semibold bg-gradient-to-r from-purple-600 to-coral bg-clip-text text-transparent">
+                AI Generate
+              </span>
             </Button>
             <Button
               v-if="nextTrip"
@@ -438,6 +458,14 @@ const handleDeleteConfirm = async () => {
     <PlanTripModal
       v-model:open="showPlanTripModal"
       @submit="handleTripSubmit"
+    />
+
+    <!-- Generate Trip Modal -->
+    <GenerateTripModal
+      v-model:open="showGenerateTripModal"
+      :loading="aiGenerating"
+      :error="generateError"
+      @submit="handleGenerateSubmit"
     />
 
     <LoginPromptModal v-model:open="showLoginPrompt" />

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useTripDetails } from "@/composables";
+import { useTripDetails, useGenerateTrip } from "@/composables";
 import TripService from "@/services/TripService";
 import Button from "@/components/ui/button/Button.vue";
 import Card from "@/components/ui/card/Card.vue";
@@ -12,6 +12,7 @@ import Label from "@/components/ui/label/Label.vue";
 import SavedPlacesModal from "@/components/trip/SavedPlacesModal.vue";
 import TripItinerary from "@/components/trip/TripItinerary.vue";
 import AddPlaceToTripModal from "@/components/trip/AddPlaceToTripModal.vue";
+import GenerateTripModal from "@/components/trip/GenerateTripModal.vue";
 import {
   MapPin,
   Calendar,
@@ -49,6 +50,14 @@ const showSavedPlacesModal = ref(false);
 const showAddPlaceModal = ref(false);
 const selectedDayForPlace = ref<number>(0);
 const isEditingDetails = ref(false);
+
+const { 
+  showGenerateTripModal, 
+  openGenerateTripModal, 
+  handleGenerateSubmit,
+  aiGenerating,
+  error: generateError
+} = useGenerateTrip();
 
 // Editable trip details
 const editableTripName = ref("");
@@ -223,8 +232,7 @@ const togglePublic = () => {
 };
 
 const handleAIGenerate = () => {
-  // TODO: Implement AI generation
-  console.log("AI Generate trip coming soon!");
+  openGenerateTripModal();
 };
 
 onMounted(async () => {
@@ -480,6 +488,14 @@ onMounted(async () => {
       v-model:open="showAddPlaceModal"
       :day-number="selectedDayForPlace + 1"
       @add-place="handleAddPlace"
+    />
+
+    <!-- Generate Trip Modal -->
+    <GenerateTripModal
+      v-model:open="showGenerateTripModal"
+      :loading="aiGenerating"
+      :error="generateError"
+      @submit="handleGenerateSubmit"
     />
   </div>
 </template>

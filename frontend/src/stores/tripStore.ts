@@ -9,6 +9,7 @@ export const useTripStore = defineStore("trip", () => {
   const currentTrip = ref<ITripSchema | null>(null);
   const loading = ref(false);
   const planTripLoading = ref(false);
+  const aiGenerating = ref(false);
   const deletingTripId = ref<string | null>(null);
   const error = ref<string | null>(null);
   const tripPreviewImages = ref<Map<string, string>>(new Map());
@@ -236,12 +237,50 @@ export const useTripStore = defineStore("trip", () => {
     }
   };
 
+  const generateTrip = async (input: { destination: string; start_date: string; end_date: string }) => {
+    aiGenerating.value = true;
+    error.value = null;
+
+    try {
+      console.log('Calling generateTrip API with:', input);
+      const generatedTrip = await TripService.generateTrip(input);
+      console.log('Generated trip received:', generatedTrip);
+      
+      if (!generatedTrip || !generatedTrip.id) {
+        throw new Error('Invalid trip data received from API');
+      }
+      
+      // Cache preview image if trip has stops with places
+      if (generatedTrip.stops && generatedTrip.stops.length > 0) {
+        for (const stop of generatedTrip.stops) {
+          if (stop.place?.main_image_url) {
+            tripPreviewImages.value.set(generatedTrip.id, stop.place.main_image_url);
+            break;
+          }
+        }
+      }
+      
+      // Reload trips in the background (non-blocking for navigation)
+      loadTrips().catch(err => console.warn('Failed to reload trips:', err));
+      
+      return generatedTrip;
+    } catch (err) {
+      console.error('Generate trip error in store:', err);
+      error.value =
+        err instanceof Error ? err.message : "Failed to generate trip";
+      throw err;
+    } finally {
+      aiGenerating.value = false;
+    }
+  };
+
   return {
     // State
     trips,
     currentTrip,
     loading,
     planTripLoading,
+    aiGenerating,
     deletingTripId,
     error,
 
@@ -260,6 +299,7 @@ export const useTripStore = defineStore("trip", () => {
     addPlaceToTrip,
     removePlaceFromTrip,
     deleteTrip,
+    generateTrip,
     clearError,
     getTripById,
   };

@@ -35,8 +35,33 @@ class ForumService {
   ): Promise<IPaginatedResponse<IForumPostListItem[]>> {
     try {
       console.log("Fetching forum posts with query:", query);
+      
       const response = await commonInstance.get("/forum/posts", {
         params: query,
+        paramsSerializer: {
+          serialize: (params) => {
+            const searchParams = new URLSearchParams();
+            
+            for (const key in params) {
+              const value = params[key];
+              
+              if (value === undefined || value === null) {
+                continue;
+              }
+              
+              // Handle array parameters (like tags) - send as repeated params
+              if (Array.isArray(value)) {
+                value.forEach((item) => {
+                  searchParams.append(key, item);
+                });
+              } else {
+                searchParams.append(key, String(value));
+              }
+            }
+            
+            return searchParams.toString();
+          }
+        }
       });
       console.log("Received forum posts response:", response.data);
       return response.data as IPaginatedResponse<IForumPostListItem[]>;

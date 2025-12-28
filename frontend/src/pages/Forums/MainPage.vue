@@ -11,14 +11,11 @@ const {
   searchQuery,
   activeSort,
   activeTags,
-  activeTimeFilter,
   posts,
   loading,
   sortOptions,
   tagOptions,
-  timeOptions,
   toggleTag,
-  setTimeFilter,
   setSort,
   pagination,
   currentPage,
@@ -28,6 +25,7 @@ const {
   likedPosts,
   toggleLike,
   flushPendingLikes,
+  triggerSearch,
 } = useForumMain();
 
 // Ensure likes are saved before navigating away
@@ -46,6 +44,7 @@ onBeforeRouteLeave(async () => {
       <ForumSearchHeader
         v-motion-slide-visible-once-top
         v-model="searchQuery"
+        @search="triggerSearch"
       />
 
       <!-- 2. Filters -->
@@ -55,11 +54,8 @@ onBeforeRouteLeave(async () => {
           :active-sort="activeSort"
           :tag-options="tagOptions"
           :active-tags="activeTags"
-          :time-options="timeOptions"
-          :active-time-filter="activeTimeFilter"
           @update:sort="setSort"
           @toggle:tag="toggleTag"
-          @update:time="setTimeFilter"
         />
       </div>
 

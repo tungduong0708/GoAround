@@ -6,6 +6,20 @@ import { useRouter } from "vue-router";
 
 const modelValue = defineModel<string>();
 const router = useRouter();
+
+const emit = defineEmits<{
+  (e: "search"): void;
+}>();
+
+const handleSearch = () => {
+  emit("search");
+};
+
+const handleKeyPress = (event: KeyboardEvent) => {
+  if (event.key === "Enter") {
+    handleSearch();
+  }
+};
 </script>
 
 <template>
@@ -47,11 +61,13 @@ const router = useRouter();
           v-model="modelValue"
           placeholder="Search posts by keywords, topics, or questions...."
           class="h-14 rounded-2xl border-2 pl-12 text-lg focus-visible:ring-offset-0 focus-visible:border-orange-500"
+          @keypress="handleKeyPress"
         />
       </div>
       <Button
         size="lg"
         class="h-14 rounded-2xl bg-orange-500 px-8 text-lg font-semibold text-white hover:bg-orange-600 shadow-md shadow-orange-500/20"
+        @click="handleSearch"
       >
         Search
       </Button>

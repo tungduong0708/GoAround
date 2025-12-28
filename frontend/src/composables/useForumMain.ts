@@ -2,6 +2,7 @@ import { ref, onMounted, computed, watch, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
 import { useForumStore, useAuthStore } from "@/stores";
 import ForumService from "@/services/ForumService";
+import type { IForumSearchQuery } from "@/utils/interfaces";
 
 export function useForumMain() {
   const store = useForumStore();
@@ -12,7 +13,6 @@ export function useForumMain() {
   const searchQuery = ref("");
   const activeSort = ref<("newest" | "popular" | "oldest")>("newest");
   const activeTags = ref<string[]>([]);
-  const activeTimeFilter = ref("All Time");
   const currentPage = ref(1);
   
   // Like functionality
@@ -20,26 +20,40 @@ export function useForumMain() {
   const pendingLikes = ref<Map<string, { timeout: ReturnType<typeof setTimeout> }>>(new Map());
 
   const sortOptions = ["newest", "popular", "oldest"];
-  const tagOptions = [
-    "Paris",
-    "Japan",
-    "Food",
-    "Budget",
-    "Family",
-    "Nature",
-    "Vietnam",
-    "Iceland",
-  ];
-  const timeOptions = ["All Time", "Last 7 Days", "Last 30 Days"];
+  const tagOptions = ref<string[]>([]);
+
+  // Fetch tags from backend
+  const fetchTags = async () => {
+    try {
+      const tags = await ForumService.getTags();
+      tagOptions.value = tags;
+    } catch (err) {
+      console.error("Failed to fetch tags:", err);
+      // Fallback to default tags if fetch fails
+      tagOptions.value = [
+        "Paris",
+        "Japan",
+        "Food",
+        "Budget",
+        "Family",
+        "Nature",
+        "Vietnam",
+        "Iceland",
+      ];
+    }
+  };
 
   const fetchPosts = async () => {
-    await store.fetchPosts({
-      q: searchQuery.value,
+    // Build query
+    const query: IForumSearchQuery = {
+      q: searchQuery.value || undefined,
       sort: activeSort.value,
       page: currentPage.value,
       limit: 5, // 5 per page for easier testing of pagination
-      tags: activeTags.value,
-    });
+      tags: activeTags.value.length > 0 ? activeTags.value : undefined,
+    };
+
+    await store.fetchPosts(query);
     
     // Initialize likedPosts from the is_liked field in posts
     if (isAuthenticated.value) {
@@ -53,12 +67,13 @@ export function useForumMain() {
   };
 
   // Initial fetch
-  onMounted(() => {
-    fetchPosts();
+  onMounted(async () => {
+    await fetchTags();
+    await fetchPosts();
   });
 
-  // Refetch when filters change (reset page to 1)
-  watch([searchQuery, activeSort, activeTags, activeTimeFilter], () => {
+  // Only refetch when sort changes (reset page to 1)
+  watch([activeSort], () => {
     currentPage.value = 1;
     fetchPosts();
   });
@@ -79,8 +94,10 @@ export function useForumMain() {
     }
   };
 
-  const setTimeFilter = (time: string) => {
-    activeTimeFilter.value = time;
+  const triggerSearch = () => {
+    // Reset to page 1 and fetch with current filters
+    currentPage.value = 1;
+    fetchPosts();
   };
 
   const setSort = (sort: string) => {
@@ -181,7 +198,7 @@ export function useForumMain() {
   });
 
   // Watch for route changes and flush pending likes
-  watch([searchQuery, activeSort, activeTags, activeTimeFilter, currentPage], () => {
+  watch([searchQuery, activeSort, activeTags, currentPage], () => {
     flushPendingLikes();
   });
 
@@ -190,7 +207,6 @@ export function useForumMain() {
     searchQuery,
     activeSort,
     activeTags,
-    activeTimeFilter,
     currentPage,
     pagination,
     isAuthenticated,
@@ -204,17 +220,17 @@ export function useForumMain() {
     // Options
     sortOptions,
     tagOptions,
-    timeOptions,
 
     // Actions
     fetchPosts,
     toggleTag,
-    setTimeFilter,
     setSort,
     setPage,
     nextPage,
     previousPage,
     toggleLike,
     flushPendingLikes,
+    triggerSearch,
+    fetchTags,
   };
 }

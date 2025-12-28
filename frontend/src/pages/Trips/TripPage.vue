@@ -284,8 +284,30 @@ const handleAddPlaceToDay = (dayIndex: number) => {
 };
 
 const handleAddPlace = (place: any) => {
-  // TODO: Implement adding place to specific day
-  console.log("Add place to day", selectedDayForPlace.value, place);
+  if (!trip.value?.start_date) return;
+
+  // Calculate arrival time based on selected day
+  const startDate = new Date(trip.value.start_date);
+  const targetDate = new Date(startDate);
+  targetDate.setDate(startDate.getDate() + selectedDayForPlace.value);
+  targetDate.setHours(9, 0, 0, 0);
+  const arrivalTime = targetDate.toISOString();
+
+  // Create new stop
+  const newStop = {
+    id: `temp-${Date.now()}`,
+    place_id: place.id,
+    place: place,
+    stop_order: localStops.value.length + 1,
+    arrival_time: arrivalTime,
+    notes: '',
+    trip_id: trip.value.id,
+  };
+
+  // Add to local stops
+  localStops.value = [...localStops.value, newStop];
+  
+  console.log("Place added to day", selectedDayForPlace.value + 1, place.name);
   showAddPlaceModal.value = false;
 };
 

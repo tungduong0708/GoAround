@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from "vue";
 import {
   Dialog,
   DialogContent,
@@ -7,12 +7,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Button from "@/components/ui/button/Button.vue";
 import Input from "@/components/ui/input/Input.vue";
 import Card from "@/components/ui/card/Card.vue";
-import { Search, MapPin, X, Bookmark, Star } from "lucide-vue-next";
-import { useListPlaceStore } from "@/stores/listPlaceStore";
+import { Search, MapPin, X, Star, Loader2 } from "lucide-vue-next";
+import { PlacesService } from "@/services";
 import type { IPlacePublic } from "@/utils/interfaces";
 
 interface AddPlaceToTripModalProps {
@@ -32,60 +31,100 @@ const props = withDefaults(defineProps<AddPlaceToTripModalProps>(), {
 
 const emit = defineEmits<AddPlaceToTripModalEmits>();
 
-const listPlaceStore = useListPlaceStore();
 const searchQuery = ref("");
-const activeTab = ref<"saved" | "search">("saved");
-const loading = ref(false);
-const selectedListId = ref<string | null>(null);
+const searchSuggestions = ref<IPlacePublic[]>([]);
+const isSearching = ref(false);
+const showSuggestions = ref(false);
+const searchTimeoutId = ref<number | null>(null);
+const inputRef = ref<HTMLInputElement | null>(null);
+const dropdownPosition = ref({ top: 0, left: 0, width: 0 });
 
-const lists = computed(() => listPlaceStore.listLists);
-const currentList = computed(() => listPlaceStore.listCurrentSelection);
-const savedPlaces = computed(() => currentList.value?.items || []);
+// Calculate dropdown position relative to input
+const updateDropdownPosition = async () => {
+  await nextTick();
+  if (!inputRef.value) return;
+  
+  const element = (inputRef.value as any).$el || inputRef.value;
+  const rect = element.getBoundingClientRect();
+  
+  dropdownPosition.value = {
+    top: rect.bottom + window.scrollY,
+    left: rect.left + window.scrollX,
+    width: rect.width
+  };
+};
 
-// Mock search results - in production, this would call a search API
-const searchResults = computed((): IPlacePublic[] => {
-  if (!searchQuery.value.trim()) return [];
-  // Return empty for now, should integrate with search service
-  return [];
+// Watch for input changes and search
+watch(searchQuery, (value) => {
+  if (searchTimeoutId.value) {
+    clearTimeout(searchTimeoutId.value);
+  }
+
+  if (!value || value.trim().length === 0) {
+    searchSuggestions.value = [];
+    showSuggestions.value = false;
+    return;
+  }
+  
+  if (value.trim().length < 2) {
+    searchSuggestions.value = [];
+    showSuggestions.value = false;
+    return;
+  }
+
+  searchTimeoutId.value = window.setTimeout(async () => {
+    isSearching.value = true;
+    try {
+      const response = await PlacesService.getPlaces({
+        q: value,
+        limit: 20,
+      });
+      searchSuggestions.value = response.data?.places || [];
+      showSuggestions.value = searchSuggestions.value.length > 0;
+      if (showSuggestions.value) {
+        await nextTick();
+        updateDropdownPosition();
+      }
+    } catch (error) {
+      console.error("Search failed:", error);
+      searchSuggestions.value = [];
+      showSuggestions.value = false;
+    } finally {
+      isSearching.value = false;
+    }
+  }, 300);
 });
 
-const handleOpenChange = async (value: boolean) => {
+const handlePositionUpdate = () => {
+  if (showSuggestions.value) {
+    updateDropdownPosition();
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('resize', handlePositionUpdate);
+  window.addEventListener('scroll', handlePositionUpdate, true);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handlePositionUpdate);
+  window.removeEventListener('scroll', handlePositionUpdate, true);
+});
+
+const handleOpenChange = (value: boolean) => {
   emit("update:open", value);
-  
-  if (value && activeTab.value === "saved") {
-    await loadLists();
+  if (!value) {
+    searchSuggestions.value = [];
+    showSuggestions.value = false;
+    searchQuery.value = "";
   }
 };
 
-const loadLists = async () => {
-  loading.value = true;
-  try {
-    await listPlaceStore.fetchListPlaces({ page: 1, limit: 50 });
-  } catch (error) {
-    console.error("Failed to load lists:", error);
-  } finally {
-    loading.value = false;
-  }
-};
-
-const handleSelectList = async (listId: string) => {
-  selectedListId.value = listId;
-  loading.value = true;
-  
-  try {
-    await listPlaceStore.fetchListCurrentSelection(listId);
-  } catch (error) {
-    console.error("Failed to load list details:", error);
-  } finally {
-    loading.value = false;
-  }
-};
-
-const handleAddPlace = (item: { place: IPlacePublic; saved_at: string } | IPlacePublic) => {
-  // Extract place from nested structure if needed
-  const place = 'place' in item ? item.place : item;
+const handleAddPlace = (place: IPlacePublic) => {
   emit("add-place", place);
   emit("update:open", false);
+  searchQuery.value = "";
+  showSuggestions.value = false;
 };
 
 const formatLocation = (place: IPlacePublic) => {
@@ -100,210 +139,92 @@ const formatLocation = (place: IPlacePublic) => {
       class="max-w-2xl max-h-[85vh] p-0 flex flex-col gap-0 overflow-hidden rounded-2xl"
     >
       <DialogHeader class="px-6 py-4 border-b border-border/50">
-        <div class="flex items-center justify-between">
-          <div>
-            <DialogTitle class="text-xl font-bold">
-              Add Place to Day {{ dayNumber }}
-            </DialogTitle>
-            <p class="text-sm text-muted-foreground mt-0.5">
-              Choose from your saved places or search for new ones
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            class="rounded-lg hover:bg-muted"
-            @click="handleOpenChange(false)"
-          >
-            <X :size="20" />
-          </Button>
-        </div>
+        <DialogTitle class="text-xl font-bold">
+          Search Places for Day {{ dayNumber }}
+        </DialogTitle>
+        <p class="text-sm text-muted-foreground mt-0.5">
+          Search and add places to your itinerary
+        </p>
       </DialogHeader>
 
-      <Tabs v-model="activeTab" class="flex-1 flex flex-col min-h-0">
-        <TabsList class="mx-6 mt-4 grid w-full grid-cols-2">
-          <TabsTrigger value="saved" class="flex items-center gap-2">
-            <Bookmark :size="16" />
-            Saved Places
-          </TabsTrigger>
-          <TabsTrigger value="search" class="flex items-center gap-2">
-            <Search :size="16" />
-            Search All
-          </TabsTrigger>
-        </TabsList>
+      <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div class="p-6 border-b border-border/50 flex-shrink-0">
+          <div class="relative">
+            <Search
+              class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              :size="18"
+            />
+            <Input
+              ref="inputRef"
+              v-model="searchQuery"
+              placeholder="Search for places..."
+              class="pl-10 h-11 rounded-xl"
+              @focus="updateDropdownPosition"
+            />
+            <Loader2
+              v-if="isSearching"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground animate-spin"
+              :size="18"
+            />
+          </div>
+        </div>
 
-        <TabsContent value="saved" class="flex-1 flex flex-col min-h-0 mt-0">
-          <div v-if="!selectedListId" class="flex-1 overflow-hidden">
-            <div class="p-6">
-              <h3 class="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">
-                Your Lists
-              </h3>
+        <div class="flex-1 overflow-y-auto px-6 pb-6">
+          <div v-if="!searchQuery.trim()" class="text-center py-12">
+            <div
+              class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted/50 mb-4"
+            >
+              <Search :size="32" class="text-muted-foreground" />
             </div>
-            <ScrollArea class="flex-1 px-6 pb-6">
-              <div class="space-y-2">
-                <Card
-                  v-for="list in lists"
-                  :key="list.id"
-                  class="cursor-pointer transition-all hover:border-coral/50 hover:shadow-md"
-                  @click="handleSelectList(list.id)"
-                >
-                  <div class="p-4">
-                    <div class="flex items-center gap-3">
-                      <div
-                        class="flex items-center justify-center w-10 h-10 rounded-lg bg-coral/10"
-                      >
-                        <Bookmark :size="20" class="text-coral" />
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <h4 class="font-semibold text-foreground truncate">
-                          {{ list.name }}
-                        </h4>
-                        <p class="text-sm text-muted-foreground">
-                          {{ list.item_count || 0 }} places
-                        </p>
-                      </div>
+            <p class="text-muted-foreground">
+              Start typing to search for places
+            </p>
+          </div>
+
+          <div v-else-if="!isSearching && searchSuggestions.length === 0" class="text-center py-12">
+            <p class="text-muted-foreground">No places found</p>
+            <p class="text-sm text-muted-foreground mt-2">
+              Try a different search term
+            </p>
+          </div>
+
+          <div v-else-if="searchSuggestions.length > 0" class="space-y-3 py-4">
+            <Card
+              v-for="place in searchSuggestions"
+              :key="place.id"
+              class="cursor-pointer transition-all hover:border-coral/50 hover:shadow-md"
+              @click="handleAddPlace(place)"
+            >
+              <div class="p-3">
+                <div class="flex gap-3">
+                  <img
+                    v-if="place.main_image_url"
+                    :src="place.main_image_url"
+                    :alt="place.name"
+                    class="w-20 h-20 rounded-lg object-cover shrink-0 bg-muted"
+                  />
+                  <div class="flex-1 min-w-0">
+                    <h4 class="font-semibold text-foreground mb-1 truncate">
+                      {{ place.name }}
+                    </h4>
+                    <div class="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
+                      <MapPin :size="12" />
+                      <span class="truncate">{{ formatLocation(place) }}</span>
                     </div>
-                  </div>
-                </Card>
-              </div>
-            </ScrollArea>
-          </div>
-
-          <div v-else class="flex-1 flex flex-col min-h-0">
-            <div class="px-6 py-3 border-b border-border/50">
-              <Button
-                variant="ghost"
-                size="sm"
-                class="text-coral hover:text-coral-dark hover:bg-coral/10"
-                @click="selectedListId = null"
-              >
-                ← Back to Lists
-              </Button>
-            </div>
-            <ScrollArea class="flex-1 px-6 pb-6">
-              <div class="space-y-3 py-4">
-                <Card
-                  v-for="item in savedPlaces"
-                  :key="item.place.id"
-                  class="cursor-pointer transition-all hover:border-coral/50 hover:shadow-md group"
-                  @click="handleAddPlace(item)"
-                >
-                  <div class="p-3">
-                    <div class="flex gap-3">
-                      <img
-                        v-if="item.place.main_image_url"
-                        :src="item.place.main_image_url"
-                        :alt="item.place.name"
-                        class="w-20 h-20 rounded-lg object-cover shrink-0 bg-muted"
-                      />
-                      <div class="flex-1 min-w-0">
-                        <h4 class="font-semibold text-foreground mb-1 truncate">
-                          {{ item.place.name }}
-                        </h4>
-                        <div class="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
-                          <MapPin :size="12" />
-                          <span class="truncate">{{ formatLocation(item.place) }}</span>
-                        </div>
-                        <div class="flex items-center gap-1.5">
-                          <Star :size="12" class="text-amber fill-amber" />
-                          <span class="text-xs font-semibold">{{ item.place.average_rating }}</span>
-                          <span class="text-xs text-muted-foreground">
-                            ({{ item.place.review_count }} reviews)
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-
-                <div
-                  v-if="savedPlaces.length === 0 && !loading"
-                  class="text-center py-12"
-                >
-                  <div
-                    class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted/50 mb-4"
-                  >
-                    <Bookmark :size="32" class="text-muted-foreground" />
-                  </div>
-                  <p class="text-muted-foreground">No places in this list</p>
-                </div>
-              </div>
-            </ScrollArea>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="search" class="flex-1 flex flex-col min-h-0 mt-0">
-          <div class="p-6 border-b border-border/50">
-            <div class="relative">
-              <Search
-                class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                :size="18"
-              />
-              <Input
-                v-model="searchQuery"
-                placeholder="Search for places..."
-                class="pl-10 h-11 rounded-xl"
-              />
-            </div>
-          </div>
-
-          <ScrollArea class="flex-1 px-6 pb-6">
-            <div v-if="!searchQuery.trim()" class="text-center py-12">
-              <div
-                class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted/50 mb-4"
-              >
-                <Search :size="32" class="text-muted-foreground" />
-              </div>
-              <p class="text-muted-foreground">
-                Start typing to search for places
-              </p>
-            </div>
-
-            <div v-else-if="searchResults.length === 0" class="text-center py-12">
-              <p class="text-muted-foreground">No places found</p>
-              <p class="text-sm text-muted-foreground mt-2">
-                Try a different search term
-              </p>
-            </div>
-
-            <div v-else class="space-y-3 py-4">
-              <Card
-                v-for="place in searchResults"
-                :key="place.id"
-                class="cursor-pointer transition-all hover:border-coral/50 hover:shadow-md"
-                @click="handleAddPlace(place)"
-              >
-                <div class="p-3">
-                  <div class="flex gap-3">
-                    <img
-                      v-if="place.main_image_url"
-                      :src="place.main_image_url"
-                      :alt="place.name"
-                      class="w-20 h-20 rounded-lg object-cover shrink-0 bg-muted"
-                    />
-                    <div class="flex-1 min-w-0">
-                      <h4 class="font-semibold text-foreground mb-1 truncate">
-                        {{ place.name }}
-                      </h4>
-                      <div class="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
-                        <MapPin :size="12" />
-                        <span class="truncate">{{ formatLocation(place) }}</span>
-                      </div>
-                      <div class="flex items-center gap-1.5">
-                        <Star :size="12" class="text-amber fill-amber" />
-                        <span class="text-xs font-semibold">{{ place.average_rating }}</span>
-                        <span class="text-xs text-muted-foreground">
-                          ({{ place.review_count }} reviews)
-                        </span>
-                      </div>
+                    <div class="flex items-center gap-1.5">
+                      <Star :size="12" class="text-amber fill-amber" />
+                      <span class="text-xs font-semibold">{{ place.average_rating }}</span>
+                      <span class="text-xs text-muted-foreground">
+                        ({{ place.review_count }} reviews)
+                      </span>
                     </div>
                   </div>
                 </div>
-              </Card>
-            </div>
-          </ScrollArea>
-        </TabsContent>
-      </Tabs>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </div>
     </DialogContent>
   </Dialog>
 </template>

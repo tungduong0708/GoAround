@@ -25,6 +25,7 @@ export interface ITripUpdate{
 export interface ITripStopWithPlace {
   id: string;
   trip_id: string;
+  place_id?: string;
   stop_order: number; 
   arrival_time?: string | null;
   notes?: string | null;

@@ -177,23 +177,51 @@ export const useTripStore = defineStore("trip", () => {
     error.value = null;
 
     try {
-      // Get current trip data
+      // Optimistically update the UI by filtering out the stop
+      if (currentTrip.value && currentTrip.value.id === tripId) {
+        currentTrip.value = {
+          ...currentTrip.value,
+          stops: currentTrip.value.stops?.filter(stop => stop.id !== stopId) || []
+        };
+      }
+
+      // Get current trip data from server
       const currentTripData = await TripService.getTripById(tripId);
       
-      // Filter out the stop to remove and convert to create format
-      // Update the trip with the filtered stops
-      await TripService.updateTrip(tripId, {
+      // Filter out the stop to remove and map to the required format
+      const filteredStops = currentTripData.stops
+        ?.filter(stop => stop.id !== stopId)
+        .map(stop => {
+          const placeId = stop.place_id || stop.place?.id || '';
+          const arrivalTime = stop.arrival_time || new Date().toISOString();
+          
+          return {
+            place_id: placeId,
+            stop_order: stop.stop_order,
+            arrival_time: arrivalTime,
+            notes: stop.notes || undefined,
+          };
+        }) || [];
+      
+      // Update the trip with the filtered stops (this will replace all stops)
+      const updatedTrip = await TripService.updateTrip(tripId, {
         trip_name: currentTripData.trip_name,
         start_date: currentTripData.start_date,
         end_date: currentTripData.end_date,
         tags: currentTripData.tags,
+        stops: filteredStops,
       });
 
+      // Reload the current trip to reflect changes from server
+      await loadTripById(tripId);
+      
       // Reload trips list to reflect changes
       await loadTrips();
     } catch (err) {
       error.value =
         err instanceof Error ? err.message : "Failed to remove place from trip";
+      // Reload trip to revert optimistic update on error
+      await loadTripById(tripId);
       throw err;
     } finally {
       loading.value = false;

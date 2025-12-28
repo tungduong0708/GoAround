@@ -29,7 +29,7 @@ import {
 
 const route = useRoute();
 const router = useRouter();
-const tripId = route.params.tripId as string;
+const tripId = route.params.id as string;
 
 const {
   trip,
@@ -121,15 +121,13 @@ const handlePlaceAdded = async () => {
 
 const handleRemoveStop = async (stopId: string) => {
   if (confirm("Are you sure you want to remove this place from your trip?")) {
-    try {
-      await removeStop(stopId);
-      // Sync local stops with updated trip data
-      if (trip.value?.stops) {
-        localStops.value = [...trip.value.stops];
-      }
-    } catch (err) {
-      console.error("Failed to remove stop:", err);
-    }
+    console.log('[TripPage] Removing stop locally:', stopId);
+    console.log('[TripPage] Before removal - localStops count:', localStops.value.length);
+    
+    // Remove from localStops only - no API call
+    localStops.value = localStops.value.filter(stop => stop.id !== stopId);
+    
+    console.log('[TripPage] After removal - localStops count:', localStops.value.length);
   }
 };
 

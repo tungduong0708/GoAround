@@ -15,6 +15,13 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { toast } from "vue-sonner";
 import { AdminService } from "@/services";
@@ -32,6 +39,7 @@ const detailLoading = ref(false);
 const isDialogOpen = ref(false);
 const resolveAction = ref<"dismiss" | "remove_content" | "ban_user">("dismiss");
 const resolveNote = ref("");
+const banDuration = ref<number>(7); // Default to 7 days
 const resolving = ref(false);
 
 const loadCases = () => {
@@ -80,7 +88,8 @@ const handleResolve = async () => {
     await resolveCase(
       selectedCaseId.value,
       resolveAction.value,
-      resolveNote.value
+      resolveNote.value,
+      resolveAction.value === "ban_user" ? banDuration.value : undefined
     );
     toast.success("Success", {
       description: "Case resolved successfully",
@@ -350,6 +359,25 @@ const handleResolve = async () => {
                 </Label>
               </div>
             </RadioGroup>
+
+            <!-- Ban Duration Selector (shown only when ban_user is selected) -->
+            <div v-if="resolveAction === 'ban_user'" class="space-y-2 mb-4">
+              <Label>Ban Duration</Label>
+              <Select v-model="banDuration">
+                <SelectTrigger>
+                  <SelectValue placeholder="Select ban duration" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem :value="1">24 hours</SelectItem>
+                  <SelectItem :value="3">3 days</SelectItem>
+                  <SelectItem :value="7">7 days</SelectItem>
+                  <SelectItem :value="30">30 days</SelectItem>
+                  <SelectItem :value="90">90 days</SelectItem>
+                  <SelectItem :value="365">365 days</SelectItem>
+                  <SelectItem :value="1000000000">Forever</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             <div class="space-y-2">
               <Label>Resolution Note (Optional)</Label>

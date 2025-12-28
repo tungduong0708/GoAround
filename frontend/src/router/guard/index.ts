@@ -56,6 +56,15 @@ const guardRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: "/admin", 
+    name: "admin",
+    component: () => import("@/pages/Admin/AdminPage.vue"),
+    meta: {
+      title: "Admin Dashboard",
+      authRequired: true,
+    },
+  },
+  {
     path: "/saved-places",
     name: "saved-places",
     component: () => import("@/pages/SavedPlacesPage.vue"),

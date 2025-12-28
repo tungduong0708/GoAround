@@ -5,6 +5,7 @@ import { supabase } from "@/config/supabase/supabase";
 import { AuthenticationService } from "@/services";
 import { UserRole } from "@/utils/types/UserRole";
 import { useUserProfileStore } from "./userProfileStore";
+import { useCitiesStore } from "./citiesStore";
 
 export const useAuthStore = defineStore("auth", () => {
   const session = ref<Session | null>(null);
@@ -41,32 +42,42 @@ export const useAuthStore = defineStore("auth", () => {
     supabase.auth.onAuthStateChange(async (event, currentSession) => {
       setAuthState(currentSession)
       
-      // Fetch profile when user signs in
+      // Fetch profile and cities when user signs in
       if (event === 'SIGNED_IN' && currentSession) {
         const userProfileStore = useUserProfileStore()
+        const citiesStore = useCitiesStore()
         try {
-          await userProfileStore.fetchProfile()
+          await Promise.all([
+            userProfileStore.fetchProfile(),
+            citiesStore.fetchCities()
+          ])
         } catch (err) {
-          console.error('Failed to fetch profile after sign in:', err)
+          console.error('Failed to fetch data after sign in:', err)
         }
       }
       
-      // Clear profile when user signs out
+      // Clear profile and cities when user signs out
       if (event === 'SIGNED_OUT') {
         const userProfileStore = useUserProfileStore()
+        const citiesStore = useCitiesStore()
         userProfileStore.clearProfile()
+        citiesStore.clearCities()
       }
     })
 
     isLoading.value = false
 
-    // Fetch profile if user is authenticated
+    // Fetch profile and cities if user is authenticated
     if (isAuthenticated.value) {
       const userProfileStore = useUserProfileStore()
+      const citiesStore = useCitiesStore()
       try {
-        await userProfileStore.fetchProfile()
+        await Promise.all([
+          userProfileStore.fetchProfile(),
+          citiesStore.fetchCities()
+        ])
       } catch (err) {
-        console.error('Failed to fetch profile during auth initialization:', err)
+        console.error('Failed to fetch data during auth initialization:', err)
       }
     }
   }
@@ -75,20 +86,26 @@ export const useAuthStore = defineStore("auth", () => {
     const { data } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       setAuthState(currentSession)
       
-      // Fetch profile when user signs in
+      // Fetch profile and cities when user signs in
       if (event === 'SIGNED_IN' && currentSession) {
         const userProfileStore = useUserProfileStore()
+        const citiesStore = useCitiesStore()
         try {
-          await userProfileStore.fetchProfile()
+          await Promise.all([
+            userProfileStore.fetchProfile(),
+            citiesStore.fetchCities()
+          ])
         } catch (err) {
-          console.error('Failed to fetch profile after sign in:', err)
+          console.error('Failed to fetch data after sign in:', err)
         }
       }
       
-      // Clear profile when user signs out
+      // Clear profile and cities when user signs out
       if (event === 'SIGNED_OUT') {
         const userProfileStore = useUserProfileStore()
+        const citiesStore = useCitiesStore()
         userProfileStore.clearProfile()
+        citiesStore.clearCities()
       }
       
       callback?.(event, currentSession)
@@ -173,9 +190,11 @@ export const useAuthStore = defineStore("auth", () => {
       user.value = null;
       role.value = null;
 
-      // Clear profile store
+      // Clear profile and cities stores
       const userProfileStore = useUserProfileStore();
+      const citiesStore = useCitiesStore();
       userProfileStore.clearProfile();
+      citiesStore.clearCities();
     } catch (err: any) {
       error.value = err?.message ?? "Sign out failed";
       // Even if signout fails, clear local state
@@ -185,7 +204,9 @@ export const useAuthStore = defineStore("auth", () => {
       role.value = null;
 
       const userProfileStore = useUserProfileStore();
+      const citiesStore = useCitiesStore();
       userProfileStore.clearProfile();
+      citiesStore.clearCities();
     } finally {
       isLoading.value = false;
     }

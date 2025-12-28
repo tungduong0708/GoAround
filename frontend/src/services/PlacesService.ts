@@ -186,6 +186,15 @@ class PlacesService {
     }
   }
 
+  async getCities(): Promise<string[]> {
+    try {
+      const response = await commonInstance.get<IApiResponse<string[]>>("/places/cities/list");
+      return response.data.data;
+    } catch (error) {
+      console.error("Failed to fetch cities:", error);
+      throw error;
+    }
+  }
 }
 
 export default PlacesService.getInstance();

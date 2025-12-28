@@ -11,6 +11,8 @@ import Button from '@/components/ui/button/Button.vue';
 import Input from '@/components/ui/input/Input.vue';
 import Label from '@/components/ui/label/Label.vue';
 import { Sparkles, Loader2, AlertCircle } from 'lucide-vue-next';
+import { useCitiesStore } from '@/stores';
+import { storeToRefs } from 'pinia';
 
 interface GenerateTripModalProps {
   open: boolean;
@@ -32,6 +34,11 @@ const emit = defineEmits<GenerateTripModalEmits>();
 const destination = ref('');
 const startDate = ref('');
 const endDate = ref('');
+const filteredCities = ref<string[]>([]);
+const showDropdown = ref(false);
+
+const citiesStore = useCitiesStore();
+const { cities } = storeToRefs(citiesStore);
 
 const isOpen = computed({
   get: () => props.open,
@@ -45,6 +52,40 @@ const isOpen = computed({
 const isFormValid = computed(() => {
   return destination.value.trim() && startDate.value && endDate.value;
 });
+
+// Filter cities based on input
+const filterCities = () => {
+  const query = destination.value.toLowerCase().trim();
+  if (!query) {
+    filteredCities.value = cities.value;
+  } else {
+    filteredCities.value = cities.value.filter(city =>
+      city.toLowerCase().includes(query)
+    );
+  }
+};
+
+const handleDestinationInput = () => {
+  filterCities();
+  showDropdown.value = true;
+};
+
+const handleDestinationFocus = () => {
+  filterCities();
+  showDropdown.value = true;
+};
+
+const selectCity = (city: string) => {
+  destination.value = city;
+  showDropdown.value = false;
+};
+
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as HTMLElement;
+  if (!target.closest('.destination-autocomplete')) {
+    showDropdown.value = false;
+  }
+};
 
 const handleSubmit = async () => {
   if (!isFormValid.value || props.loading) return;
@@ -61,6 +102,7 @@ const handleCancel = () => {
   destination.value = '';
   startDate.value = '';
   endDate.value = '';
+  showDropdown.value = false;
   emit('update:open', false);
 };
 
@@ -69,10 +111,20 @@ const resetForm = () => {
   destination.value = '';
   startDate.value = '';
   endDate.value = '';
+  showDropdown.value = false;
 };
 
-// Watch for modal closing to reset form
-import { watch } from 'vue';
+// Watch for modal closing to reset form and handle click outside
+import { watch, onMounted as onMountedVue, onUnmounted } from 'vue';
+
+onMountedVue(() => {
+  document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
+
 watch(() => props.open, (newVal) => {
   if (!newVal) {
     // Reset form when modal closes
@@ -116,7 +168,7 @@ watch(() => props.open, (newVal) => {
 
       <form @submit.prevent="handleSubmit" class="space-y-6 pt-4">
         <!-- Destination -->
-        <div class="space-y-2">
+        <div class="space-y-2 relative destination-autocomplete">
           <Label for="destination" class="text-sm font-medium">
             Destination
           </Label>
@@ -128,7 +180,25 @@ watch(() => props.open, (newVal) => {
             required
             :disabled="loading"
             class="w-full"
+            @input="handleDestinationInput"
+            @focus="handleDestinationFocus"
+            autocomplete="off"
           />
+          
+          <!-- Dropdown List -->
+          <div
+            v-if="showDropdown && filteredCities.length > 0"
+            class="absolute z-50 w-full mt-1 bg-background border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto"
+          >
+            <div
+              v-for="city in filteredCities"
+              :key="city"
+              class="px-4 py-2 hover:bg-accent cursor-pointer transition-colors"
+              @click="selectCity(city)"
+            >
+              {{ city }}
+            </div>
+          </div>
         </div>
 
         <!-- Date Range -->

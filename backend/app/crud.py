@@ -18,6 +18,7 @@ from app.service.place_service import (
     get_place,
     get_places_by_owner,
     get_profile_by_email,
+    get_unique_cities,
     update_place,
 )
 from app.service.review_service import (

@@ -269,11 +269,15 @@ async def resolve_case(
     if not moderation_target:
         return False
 
-    # Update status based on action
-    if action == "dismiss":
-        moderation_target.status = "approved"
-    else:  # remove_content or ban_user
-        moderation_target.status = "rejected"
+    # OLD: Update status based on action
+    # if action == "dismiss":
+    #     moderation_target.status = "approved"
+    # else:  # remove_content or ban_user
+    #     moderation_target.status = "rejected"
+    #
+    # NEW: Considered "approved" as "resolved", to reduce changes
+    #   Thus, always set status to "approved"
+    moderation_target.status = "approved"
 
     # Set resolution metadata
     moderation_target.resolved_at = datetime.utcnow()

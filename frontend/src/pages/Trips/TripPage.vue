@@ -124,38 +124,42 @@ const handleReorderStop = (fromIndex: number, toIndex: number, dayIndex: number)
       return stopDate === dateString;
     });
   
+  console.log('[TripPage] Day stops:', dayStopsWithIndices.map((item, i) => ({
+    dayIndex: i,
+    fullArrayIndex: item.originalIndex,
+    name: item.stop.place?.name
+  })));
+  
   if (fromIndex >= dayStopsWithIndices.length || toIndex > dayStopsWithIndices.length) return;
   if (fromIndex === toIndex) return;
   
   const movedItem = dayStopsWithIndices[fromIndex];
   if (!movedItem) return;
   
-  // Create new stops array
+  // Simple approach: reorder within the day's subset, then rebuild full array
+  const reorderedDayStops = [...dayStopsWithIndices];
+  const [removed] = reorderedDayStops.splice(fromIndex, 1);
+  reorderedDayStops.splice(toIndex, 0, removed);
+  
+  console.log('[TripPage] Reordered day stops:', reorderedDayStops.map((item, i) => ({
+    newDayIndex: i,
+    name: item.stop.place?.name
+  })));
+  
+  // Rebuild the full stops array with the reordered day
   const updatedStops = [...localStops.value];
   
-  // Remove the moved stop from its original position
-  updatedStops.splice(movedItem.originalIndex, 1);
-  
-  // Calculate the insertion index in the full stops array
-  let insertIndex: number;
-  if (toIndex === 0) {
-    // Insert at the beginning - find the first stop of this day
-    insertIndex = dayStopsWithIndices[0].originalIndex;
-    if (movedItem.originalIndex < insertIndex) insertIndex--;
-  } else if (toIndex >= dayStopsWithIndices.length) {
-    // Insert at the end - find the last stop of this day
-    const lastDayStop = dayStopsWithIndices[dayStopsWithIndices.length - 1];
-    insertIndex = lastDayStop.originalIndex;
-    if (movedItem.originalIndex < lastDayStop.originalIndex) insertIndex--;
-    insertIndex++; // Insert after the last item
-  } else {
-    // Insert before the stop at toIndex
-    const targetItem = dayStopsWithIndices[toIndex];
-    insertIndex = updatedStops.findIndex(s => s.id === targetItem.stop.id);
+  // Replace all stops for this day with the reordered ones
+  // First, remove all day stops from full array
+  for (let i = dayStopsWithIndices.length - 1; i >= 0; i--) {
+    updatedStops.splice(dayStopsWithIndices[i].originalIndex, 1);
   }
   
-  // Insert at new position
-  updatedStops.splice(insertIndex, 0, movedItem.stop);
+  // Then insert all reordered stops at the position where the first one was
+  const insertPosition = dayStopsWithIndices[0].originalIndex;
+  for (let i = 0; i < reorderedDayStops.length; i++) {
+    updatedStops.splice(insertPosition + i, 0, reorderedDayStops[i].stop);
+  }
   
   console.log('[TripPage] Reorder complete:', {
     oldLength: localStops.value.length,

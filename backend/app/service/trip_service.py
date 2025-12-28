@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, with_polymorphic
 
@@ -226,10 +226,10 @@ async def update_trip(
 
     # Handle stops updates
     if stops_data is not None:
-        # Remove all existing stops
-        await session.execute(select(TripStop).where(TripStop.trip_id == trip_id))
-        for stop in trip.stops:
-            await session.delete(stop)
+        # Remove all existing stops using bulk delete to avoid prepared statement conflicts
+        await session.execute(
+            delete(TripStop).where(TripStop.trip_id == trip_id)
+        )
         await session.flush()
 
         # Add new stops

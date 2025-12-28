@@ -20,6 +20,7 @@ from app.schemas import (
     ReviewSchema,
     TransferOwnershipRequest,
 )
+from app.service import ai_service
 
 router = APIRouter(tags=["places"], prefix="/places")
 
@@ -58,6 +59,39 @@ async def search_places(
             page=filter_params.page, limit=filter_params.limit, total_items=total
         ),
     )
+
+
+@router.get(
+    "/recommendations",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[list[PlacePublic]],
+)
+async def get_ai_recommendations(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    query: str | None = None,
+    city: str | None = None,
+    max_results: int = 10,
+) -> Any:
+    """
+    Get AI-powered personalized place recommendations.
+
+    Uses user's saved lists, trips, and reviews to suggest relevant places.
+    Supports natural language queries like:
+    - "romantic dinner with city view"
+    - "family-friendly activities"
+    - "coffee shops for working"
+    - "places I might like" (uses only user preferences)
+    """
+    recommendations = await ai_service.get_ai_recommendations(
+        session=session,
+        user_id=current_user.id,
+        query=query,
+        city=city,
+        max_results=max_results,
+    )
+
+    return APIResponse(data=recommendations)
 
 
 @router.get(

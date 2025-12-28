@@ -61,11 +61,11 @@ export interface IPlaceCreate {
   location?: ILocation | null;
 
   description?: string | null;
-  opening_hours?: string | null;
+  opening_hours?: Record<string, unknown> | null;
   place_type: "hotel" | "restaurant" | "landmark" | "cafe";
   main_image_url?: string | null;
-  images?: string[] | null;
-  tags?: string[] | null;
+  images?: string[];
+  tags?: string[];
 
   // Optional fields
   hotel_class?: number | null;
@@ -76,7 +76,7 @@ export interface IPlaceCreate {
   price_range?: string | null;
 
   ticket_price?: number | null;
-  coffee_specialities?: string | null;
+  coffee_specialties?: string | null;
 
   // Temporary commented out older fields
   // place_type: PlaceType;
@@ -127,7 +127,7 @@ export interface IPlaceDetail {
   cuisine_type?: string | null;
   ticket_price?: number | null;
 
-  coffee_specialities?: string | null;
+  coffee_specialties?: string | null;
   amenities?: string[] | null;
 
   images?: IPlaceImageSchema[] | null;
@@ -160,7 +160,7 @@ export interface IPlaceUpdate {
   price_range?: string | null;
 
   ticket_price?: number | null;
-  coffee_specialities?: string | null;
+  coffee_specialties?: string | null;
 
   // Commented out fields to be check later
   // name: string;
@@ -198,4 +198,27 @@ export interface IPlaceImageSchema {
   id: string;
   image_url: string;
   caption?: string;
+}
+
+export interface IUserContext {
+  saved_categories: string[];
+  saved_count_per_category: Record<string, number>;
+  visited_cities: string[];
+  price_preference?: string;
+  avg_rating_given?: number;
+  preferred_cuisines: string[];
+  hotel_preferences: Record<string, any>;
+  recent_activity_focus?: string;
+}
+
+export interface IRecommendationItem {
+  place: IPlacePublic;
+  relevance_score: number;
+  match_reasons: string[];
+}
+
+export interface IRecommendationResponse {
+  recommendations: IRecommendationItem[];
+  search_summary: string;
+  user_context_used?: IUserContext;
 }

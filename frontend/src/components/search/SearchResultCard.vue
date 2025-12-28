@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import BookmarkButton from "@/components/common/BookmarkButton.vue";
 import type { IPlacePublic } from "@/utils/interfaces";
-import { BookmarkIcon, MapPinIcon, StarIcon } from "lucide-vue-next";
+import { MapPinIcon, StarIcon } from "lucide-vue-next";
 
 const props = defineProps<{
     result: IPlacePublic;
@@ -51,14 +51,7 @@ const handleClick = () => {
                 class="h-full w-full object-cover transition duration-500 hover:scale-105"
             />
             <div class="absolute right-3 top-3 flex items-center gap-2">
-                <Button
-                    variant="secondary"
-                    size="icon"
-                    class="rounded-full bg-white/80 text-foreground shadow"
-                    aria-label="Save to bookmarks"
-                >
-                    <BookmarkIcon class="size-4" aria-hidden="true" />
-                </Button>
+                <BookmarkButton :place="result" variant="icon" />
                 <div
                     class="flex items-center gap-1 rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white"
                 >

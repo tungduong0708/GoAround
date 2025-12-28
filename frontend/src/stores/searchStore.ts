@@ -2,7 +2,6 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { PlacesService } from "@/services";
 import type {
-  IPlacePublic,
   IPlaceSearchQuery,
   IPaginatedResponse,
   IPlaceSearchResponse,
@@ -29,11 +28,9 @@ export const useSearchStore = defineStore("search", () => {
     () =>
       !error.value &&
       results.value?.data &&
-      (
-        results.value.data.places.length > 0 ||
-        results.value.data.posts.length > 0 || 
-        results.value.data.trips.length > 0 
-      )
+      (results.value.data.places.length > 0 ||
+        results.value.data.posts.length > 0 ||
+        results.value.data.trips.length > 0)
   );
 
   const buildFilters = (): Omit<IPlaceSearchQuery, "q"> => {
@@ -61,6 +58,16 @@ export const useSearchStore = defineStore("search", () => {
   const clearResults = () => {
     results.value = undefined;
     hasSearched.value = false;
+  };
+
+  const resetSearch = () => {
+    query.value = "";
+    filters.value = {};
+    results.value = undefined;
+    loading.value = false;
+    error.value = null;
+    hasSearched.value = false;
+    category.value = "all";
   };
 
   const search = async () => {
@@ -105,6 +112,7 @@ export const useSearchStore = defineStore("search", () => {
     setFilters,
     setCategory,
     clearResults,
+    resetSearch,
     search,
   };
 });

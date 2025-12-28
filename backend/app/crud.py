@@ -34,6 +34,7 @@ from app.service.saved_list_service import (
     get_saved_list,
     list_saved_lists,
     remove_place_from_list,
+    update_saved_list,
 )
 from app.service.search_service import search_places
 from app.service.trip_service import (
@@ -46,6 +47,7 @@ from app.service.trip_service import (
     update_trip,
     update_trip_stop,
 )
+from app.service.ai_service import generate_trip_plan
 
 __all__ = [
     # Place operations
@@ -64,6 +66,7 @@ __all__ = [
     "get_saved_list",
     "list_saved_lists",
     "remove_place_from_list",
+    "update_saved_list",
     # Review operations
     "create_review",
     "delete_review",
@@ -84,4 +87,7 @@ __all__ = [
     "create_forum_reply",
     "get_forum_post",
     "list_forum_posts",
+    "generate_place_description",
+    # AI operations
+    "generate_trip_plan",
 ]

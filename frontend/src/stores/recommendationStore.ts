@@ -4,38 +4,95 @@ import { PlacesService } from '@/services'
 import type { IPlacePublic } from '@/utils/interfaces'
 
 export const useRecommendationStore = defineStore('recommendations', () => {
-  const items = ref<IPlacePublic[]>([])
-  const loading = ref(false)
-  const error = ref<string | null>(null)
+  // AI-powered recommendations state
+  const aiRecommendations = ref<IPlacePublic[]>([])
+  const isLoadingAI = ref(false)
+  const aiError = ref<string | null>(null)
   const hasLoaded = ref(false)
 
-  const loadRecommendations = async (options?: { force?: boolean }) => {
-    if (loading.value) return
-    if (hasLoaded.value && !options?.force) return
+  /**
+   * Fetch AI-powered personalized recommendations
+   * @param query - Natural language search query (e.g., "romantic dinner spots")
+   * @param city - Optional city filter
+   * @param maxResults - Maximum number of results (default: 10)
+   * @param force - Force reload even if already loaded
+   */
+  const fetchAIRecommendations = async (
+    query?: string, 
+    city?: string, 
+    maxResults?: number,
+    force = false
+  ) => {
+    // Skip if already loading
+    if (isLoadingAI.value) return aiRecommendations.value
+    
+    // Skip if already loaded and not forcing
+    if (hasLoaded.value && !force && aiRecommendations.value.length > 0) {
+      return aiRecommendations.value
+    }
 
-    loading.value = true
-    error.value = null
+    isLoadingAI.value = true
+    aiError.value = null
 
     try {
-      items.value = await PlacesService.getRecommendations()
+      const places = await PlacesService.getAIRecommendations({
+        query,
+        city,
+        maxResults: maxResults || 10
+      })
+
+      aiRecommendations.value = places
       hasLoaded.value = true
+      return places
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Unable to load recommendations right now.'
+      aiError.value = err instanceof Error ? err.message : 'Failed to load AI recommendations'
+      throw err
     } finally {
-      loading.value = false
+      isLoadingAI.value = false
     }
   }
 
-  const clearError = () => {
-    error.value = null
+  /**
+   * Get personalized recommendations without a specific query
+   * Uses only user preferences and history
+   */
+  const fetchPersonalizedRecommendations = async (maxResults?: number, force = false) => {
+    return fetchAIRecommendations(undefined, undefined, maxResults, force)
+  }
+
+  /**
+   * Search for places matching a query with AI understanding
+   */
+  const searchWithAI = async (query: string, city?: string, maxResults?: number, force = false) => {
+    return fetchAIRecommendations(query, city, maxResults, force)
+  }
+
+  const clearAIError = () => {
+    aiError.value = null
+  }
+
+  const clearAIRecommendations = () => {
+    aiRecommendations.value = []
+    hasLoaded.value = false
+  }
+
+  const refreshRecommendations = async () => {
+    return fetchPersonalizedRecommendations(undefined, true)
   }
 
   return {
-    items,
-    loading,
-    error,
+    // AI recommendation state
+    aiRecommendations,
+    isLoadingAI,
+    aiError,
     hasLoaded,
-    loadRecommendations,
-    clearError,
+    
+    // AI recommendation actions
+    fetchAIRecommendations,
+    fetchPersonalizedRecommendations,
+    searchWithAI,
+    clearAIError,
+    clearAIRecommendations,
+    refreshRecommendations,
   }
 })

@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.models import (
     BusinessVerificationRequest,
     ForumPost,
+    ModerationTarget,
     PostReply,
     Profile,
     Review,
@@ -45,6 +46,25 @@ async def _get_email(
     user_id: uuid.UUID,
 ) -> str | None:
     stmt = select(auth_users.c.email).where(auth_users.c.id == user_id)
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def _get_ban_reason(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+) -> str | None:
+    """Get the most recent ban reason from moderation targets."""
+    stmt = (
+        select(ModerationTarget.reason)
+        .where(
+            ModerationTarget.target_type == "profile",
+            ModerationTarget.target_id == user_id,
+            ModerationTarget.status == "approved",
+        )
+        .order_by(ModerationTarget.created_at.desc())
+        .limit(1)
+    )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -138,6 +158,12 @@ async def get_user_detail(
         return None
 
     email = await _get_email(session, user_id)
+    profile = await _get_profile(session, user_id)
+    ban_reason = (
+        await _get_ban_reason(session, user_id)
+        if profile and profile.ban_until
+        else None
+    )
 
     return UserDetail(
         username=user_public.username,
@@ -149,6 +175,8 @@ async def get_user_detail(
         stats=user_public.stats,
         created_at=user_public.created_at,
         email=email,
+        ban_until=profile.ban_until if profile else None,
+        ban_reason=ban_reason,
     )
 
 
@@ -212,6 +240,8 @@ async def create_user(
         stats=stats,
         created_at=profile.updated_at,
         email=email,
+        ban_until=profile.ban_until,
+        ban_reason=None,
     )
 
 
@@ -274,6 +304,8 @@ async def update_user(
         replies_count=replies_count or 0,
     )
 
+    ban_reason = await _get_ban_reason(session, user_id) if profile.ban_until else None
+
     return UserDetail(
         id=profile.id,
         username=profile.username or "",
@@ -284,6 +316,8 @@ async def update_user(
         stats=stats,
         created_at=profile.updated_at,
         email=email,
+        ban_until=profile.ban_until,
+        ban_reason=ban_reason,
     )
 
 

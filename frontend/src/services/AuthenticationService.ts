@@ -58,8 +58,13 @@ class AuthenticationService {
   }
 
   async signOut() {
-    const { error } = await supabase.auth.signOut();
+    // Sign out with 'local' scope removes the session from the current browser
+    // This clears the access token and refresh token from storage
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) throw error;
+    
+    // Force clear the session from memory
+    await supabase.auth.getSession();
   }
 
   async getMe() {

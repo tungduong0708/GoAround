@@ -2,11 +2,20 @@ import { RouterView, type RouteRecordRaw } from "vue-router";
 
 const guardRoutes: RouteRecordRaw[] = [
   {
+    path: "/places/create",
+    name: "create-place",
+    component: () => import("@/pages/CreatePlacePage.vue"),
+    meta: {
+      title: "Create Place",
+      authRequired: true,
+    },
+  },
+  {
     path: "/profile",
-    name: "profile",
+    name: "profile-me",
     component: () => import("@/pages/UserProfile/UserProfilePage.vue"),
     meta: {
-      title: "Profile",
+      title: "My Profile",
       authRequired: true,
     },
   },
@@ -47,11 +56,11 @@ const guardRoutes: RouteRecordRaw[] = [
     },
   },
   {
-    path: "/admin",
-    name: "admin",
-    component: () => import("@/pages/Admin/AdminPage.vue"),
+    path: "/saved-places",
+    name: "saved-places",
+    component: () => import("@/pages/SavedPlacesPage.vue"),
     meta: {
-      title: "Admin",
+      title: "Saved Places",
       authRequired: true,
     },
   },
@@ -88,15 +97,6 @@ const guardRoutes: RouteRecordRaw[] = [
         meta: {
           title: "Post Details",
           authRequired: false,
-        },
-      },
-      {
-        path: ":postId/edit",
-        name: "edit-post",
-        component: () => import("@/pages/Forums/NewPostPage.vue"),
-        meta: {
-          title: "Edit Post",
-          authRequired: true,
         },
       },
       // Not Found

@@ -40,6 +40,26 @@ const commonRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: "/auth/callback",
+    name: "auth-callback",
+    component: () => import("@/pages/AuthCallbackPage.vue"),
+    meta: {
+      title: "Loading",
+      authRequired: true,
+      hideHeader: true,
+    },
+  },
+  {
+    path: "/banned",
+    name: "banned",
+    component: () => import("@/pages/BannedPage.vue"),
+    meta: {
+      title: "Account Suspended",
+      authRequired: true,
+      hideHeader: true,
+    },
+  },
+  {
     path: "/search",
     name: "search",
     component: () => import("@/pages/SearchPage.vue"),
@@ -55,24 +75,6 @@ const commonRoutes: RouteRecordRaw[] = [
     meta: {
       title: "Place Details",
       authRequired: false,
-    },
-  },
-  {
-    path: "/places/create",
-    name: "create-place",
-    component: () => import("@/pages/CreatePlacePage.vue"),
-    meta: {
-      title: "Create Place",
-      authRequired: true,
-    },
-  },
-  {
-    path: "/profile",
-    name: "profile-me",
-    component: () => import("@/pages/UserProfile/UserProfilePage.vue"),
-    meta: {
-      title: "My Profile",
-      authRequired: true,
     },
   },
   {

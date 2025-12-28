@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import SearchBar from "@/components/search/SearchBar.vue";
 import SearchResultCard from "@/components/search/SearchResultCard.vue";
+import TripCard from "@/components/trip/TripCard.vue";
+import ForumPostSearchCard from "@/components/search/ForumPostSearchCard.vue";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import { useSearchResults, useSearchCategories } from "@/composables";
 import { SlidersHorizontalIcon } from "lucide-vue-next";
-import { onMounted } from "vue";
+import { computed } from "vue";
 
 const {
   searchTerm,
@@ -19,6 +22,18 @@ const {
 } = useSearchResults({ searchOnCategoryChange: true });
 
 const { categories, selectedCategory } = useSearchCategories();
+
+const hasTrips = computed(() => 
+  results.value?.data.trips && results.value.data.trips.length > 0
+);
+
+const hasPlaces = computed(() =>
+  results.value?.data.places && results.value.data.places.length > 0
+);
+
+const hasPosts = computed(() =>
+  results.value?.data.posts && results.value.data.posts.length > 0
+);
 </script>
 
 <template>
@@ -76,7 +91,7 @@ const { categories, selectedCategory } = useSearchCategories();
     <section class="mt-10 space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 class="text-2xl font-semibold tracking-tight text-foreground">
-          Search Results
+          Places
         </h2>
         <p class="text-sm text-muted-foreground">
           {{ results?.data.places.length ?? 0 }} places found
@@ -116,7 +131,7 @@ const { categories, selectedCategory } = useSearchCategories();
         </div>
 
         <div
-          v-else
+          v-else-if="hasPlaces"
           class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
         >
           <SearchResultCard
@@ -129,6 +144,60 @@ const { categories, selectedCategory } = useSearchCategories();
             @select="selectResult"
           />
         </div>
+
+        <div
+          v-else
+          class="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-border/70 p-10 text-center text-muted-foreground"
+        >
+          <p class="text-lg font-medium text-foreground">No places found</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Forum Posts Section -->
+    <section v-if="hasPosts && !loading" class="mt-12 space-y-4">
+      <Separator class="my-8" />
+      
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-2xl font-semibold tracking-tight text-foreground">
+          Related Forum Posts
+        </h2>
+        <p class="text-sm text-muted-foreground">
+          {{ results?.data.posts.length ?? 0 }} posts found
+        </p>
+      </div>
+
+      <div class="space-y-4">
+        <ForumPostSearchCard
+          v-for="post in results?.data.posts"
+          :key="post.id"
+          :post="post"
+        />
+      </div>
+    </section>
+
+    <!-- Public Trips Section -->
+    <section v-if="hasTrips && !loading" class="mt-12 space-y-4">
+      <Separator class="my-8" />
+      
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-2xl font-semibold tracking-tight text-foreground">
+          Public Trips
+        </h2>
+        <p class="text-sm text-muted-foreground">
+          {{ results?.data.trips.length ?? 0 }} trips found
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <TripCard
+          v-for="(trip, index) in results?.data.trips"
+          :key="trip.id"
+          :trip="trip"
+          :index="index"
+          :show-public-badge="true"
+          :clickable="false"
+        />
       </div>
     </section>
   </div>

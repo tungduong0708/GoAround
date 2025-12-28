@@ -57,21 +57,8 @@ export function useSignupForm() {
 
   // --- Auth Flow Logic ---
   const redirectHome = async () => {
-    // Check if profile exists before redirecting
-    try {
-      const profileExists = await userProfileStore.fetchProfile()
-      if (!profileExists) {
-        // Profile not found, redirect to profile creation
-        router.replace({ name: 'profile-create' })
-      } else {
-        // Profile exists, go to home
-        router.replace('/')
-      }
-    } catch (error) {
-      // On other non-404 errors, still go home (e.g., network issues)
-      console.error('Error checking profile:', error)
-      router.replace('/')
-    }
+    // Redirect to auth callback page which will check profile
+    router.replace({ name: 'auth-callback' })
   }
 
   const initializeSession = async () => {

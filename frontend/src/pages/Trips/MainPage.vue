@@ -1,24 +1,17 @@
 <script setup lang="ts">
-import { RouterLink } from "vue-router";
 import { useTrips, usePlanTrip } from "@/composables";
 import { useAuthGuard } from "@/composables/useAuthGuard";
 import Button from "@/components/ui/button/Button.vue";
-import Card from "@/components/ui/card/Card.vue";
-import CardHeader from "@/components/ui/card/CardHeader.vue";
-import CardTitle from "@/components/ui/card/CardTitle.vue";
-import CardContent from "@/components/ui/card/CardContent.vue";
+import TripCard from "@/components/trip/TripCard.vue";
 import PlanTripModal from "@/components/trip/PlanTripModal.vue";
 import LoginPromptModal from "@/components/auth/LoginPromptModal.vue";
-import { MapPin, Calendar, FileText, Plus, Compass } from "lucide-vue-next";
+import { Plus, Compass } from "lucide-vue-next";
 
 const {
   trips,
   loading,
   error,
   hasTrips,
-  formatTripLocation,
-  formatTripDateRange,
-  formatTripPlaceCount,
 } = useTrips({ autoLoad: true });
 
 const { showPlanTripModal, openPlanTripModal, handleTripSubmit } =
@@ -113,77 +106,13 @@ const handleNewTrip = () => guardAction(openPlanTripModal);
         class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
         aria-label="Saved trips"
       >
-        <RouterLink
+        <TripCard
           v-for="(trip, index) in trips"
           :key="trip.id"
-          :to="`/trip/${trip.id}`"
-          class="block"
-          custom
-          v-slot="{ navigate, href }"
-        >
-          <Card
-            :as="'a'"
-            :href="href"
-            v-motion
-            :initial="{ opacity: 0, y: 50 }"
-            :enter="{ opacity: 1, y: 0, transition: { delay: index * 100 } }"
-            class="cursor-pointer group overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-coral/10 hover:-translate-y-1 hover:border-coral/40"
-            @click="
-                            (e: MouseEvent) => {
-                                e.preventDefault();
-                                guardAction(navigate);
-                            }
-                        "
-          >
-            <!-- Gradient accent bar -->
-            <div
-              class="h-1.5 bg-gradient-to-r from-coral via-coral-dark to-coral-darker"
-            />
-
-            <CardHeader class="pb-3">
-              <CardTitle
-                class="text-xl font-bold text-foreground group-hover:text-coral transition-colors duration-200"
-              >
-                {{ trip.trip_name }}
-              </CardTitle>
-            </CardHeader>
-
-            <CardContent class="space-y-3 pt-0">
-              <div
-                class="flex items-center gap-3 text-muted-foreground text-sm group-hover:text-muted-foreground/80 transition-colors"
-              >
-                <div
-                  class="flex items-center justify-center w-8 h-8 rounded-lg bg-coral/10 shrink-0"
-                >
-                  <MapPin :size="16" class="text-coral" />
-                </div>
-                <span class="truncate">{{ formatTripLocation(trip) }}</span>
-              </div>
-
-              <div
-                class="flex items-center gap-3 text-muted-foreground text-sm"
-              >
-                <div
-                  class="flex items-center justify-center w-8 h-8 rounded-lg bg-coral/10 shrink-0"
-                >
-                  <Calendar :size="16" class="text-coral" />
-                </div>
-                <span>{{ formatTripDateRange(trip) }}</span>
-              </div>
-
-              <div class="flex items-center gap-3 text-sm">
-                <div
-                  class="flex items-center justify-center w-8 h-8 rounded-lg bg-coral/10 shrink-0"
-                >
-                  <FileText :size="16" class="text-coral" />
-                </div>
-                <span class="text-foreground font-semibold">
-                  {{ formatTripPlaceCount(trip) }}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </RouterLink>
+          :trip="trip"
+          :index="index"
+          :clickable="true"
+        />
       </div>
     </section>
 

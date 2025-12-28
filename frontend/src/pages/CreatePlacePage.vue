@@ -8,6 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, MapPin, Hotel, UtensilsCrossed, Coffee, Landmark, Loader2 } from "lucide-vue-next";
 import ImageUpload from "@/components/common/ImageUpload.vue";
+import HotelDetailsForm from "@/components/place/HotelDetailsForm.vue";
+import RestaurantDetailsForm from "@/components/place/RestaurantDetailsForm.vue";
+import CafeDetailsForm from "@/components/place/CafeDetailsForm.vue";
+import LandmarkDetailsForm from "@/components/place/LandmarkDetailsForm.vue";
 import PlacesService from "@/services/PlacesService";
 import type { IPlaceCreate } from "@/utils/interfaces";
 
@@ -23,6 +27,24 @@ const description = ref("");
 const mainImageUrl = ref("");
 const additionalImages = ref<string[]>([]);
 const tags = ref("");
+
+// Category-specific fields
+// Hotel fields
+const hotelClass = ref<number | null>(null);
+const pricePerNight = ref<number | null>(null);
+const hotelAmenities = ref("");
+
+// Restaurant fields
+const cuisineType = ref("");
+const restaurantPriceRange = ref("");
+
+// Cafe fields
+const coffeeSpecialties = ref("");
+const cafeAmenities = ref("");
+const cafePriceRange = ref("");
+
+// Landmark fields
+const ticketPrice = ref<number | null>(null);
 
 // UI state
 const isSubmitting = ref(false);
@@ -72,15 +94,31 @@ const handleSubmit = async () => {
   try {
     const placeData: IPlaceCreate = {
       name: placeName.value.trim(),
-      address: address.value.trim(),
+      address: address.value.trim() || null,
       city: city.value.trim() || null,
       country: country.value.trim() || null,
       place_type: selectedCategory.value,
       description: description.value.trim() || null,
       main_image_url: mainImageUrl.value || null,
-      images: additionalImages.value.length > 0 ? additionalImages.value : null,
-      tags: tags.value ? tags.value.split(",").map(t => t.trim()).filter(Boolean) : null,
+      images: additionalImages.value.length > 0 ? additionalImages.value : [],
+      tags: tags.value ? tags.value.split(",").map(t => t.trim()).filter(Boolean) : [],
     };
+
+    // Add category-specific fields
+    if (selectedCategory.value === "hotel") {
+      placeData.hotel_class = (hotelClass.value !== null && hotelClass.value !== undefined && !isNaN(hotelClass.value)) ? hotelClass.value : null;
+      placeData.price_per_night = (pricePerNight.value !== null && pricePerNight.value !== undefined && !isNaN(pricePerNight.value)) ? pricePerNight.value : null;
+      placeData.amenities = hotelAmenities.value ? hotelAmenities.value.split(",").map(a => a.trim()).filter(Boolean) : null;
+    } else if (selectedCategory.value === "restaurant") {
+      placeData.cuisine_type = cuisineType.value.trim() || null;
+      placeData.price_range = restaurantPriceRange.value || null;
+    } else if (selectedCategory.value === "cafe") {
+      placeData.coffee_specialties = coffeeSpecialties.value.trim() || null;
+      placeData.amenities = cafeAmenities.value ? cafeAmenities.value.split(",").map(a => a.trim()).filter(Boolean) : null;
+      placeData.price_range = cafePriceRange.value || null;
+    } else if (selectedCategory.value === "landmark") {
+      placeData.ticket_price = (ticketPrice.value !== null && ticketPrice.value !== undefined && !isNaN(ticketPrice.value)) ? ticketPrice.value : null;
+    }
 
     const createdPlace = await PlacesService.createPlace(placeData);
     
@@ -263,6 +301,36 @@ const handleSubmit = async () => {
           </div>
         </CardContent>
       </Card>
+
+      <!-- Category-Specific Fields -->
+      <HotelDetailsForm
+        v-if="selectedCategory === 'hotel'"
+        v-model:hotel-class="hotelClass"
+        v-model:price-per-night="pricePerNight"
+        v-model:amenities="hotelAmenities"
+        :disabled="isSubmitting"
+      />
+
+      <RestaurantDetailsForm
+        v-if="selectedCategory === 'restaurant'"
+        v-model:cuisine-type="cuisineType"
+        v-model:price-range="restaurantPriceRange"
+        :disabled="isSubmitting"
+      />
+
+      <CafeDetailsForm
+        v-if="selectedCategory === 'cafe'"
+        v-model:coffee-specialties="coffeeSpecialties"
+        v-model:amenities="cafeAmenities"
+        v-model:price-range="cafePriceRange"
+        :disabled="isSubmitting"
+      />
+
+      <LandmarkDetailsForm
+        v-if="selectedCategory === 'landmark'"
+        v-model:ticket-price="ticketPrice"
+        :disabled="isSubmitting"
+      />
 
       <!-- Main Image -->
       <Card>

@@ -173,6 +173,8 @@ async def create_place(
         # Fallback to generic Place
         db_place = Place(**common_data)
 
+    db_place.tags = []
+
     session.add(db_place)
     await session.flush()
 

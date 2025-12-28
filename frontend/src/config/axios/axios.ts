@@ -42,7 +42,7 @@ class AxiosService {
       headers: {
         "Content-Type": "application/json",
       },
-      timeout: 10000,
+      timeout: 30000, // Increased for AI recommendations
     });
 
     AxiosService.authInstance.interceptors.request.use(async (request) => {

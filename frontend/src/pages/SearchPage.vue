@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import SearchBar from "@/components/search/SearchBar.vue";
+import SearchFilters from "@/components/search/SearchFilters.vue";
 import SearchResultCard from "@/components/search/SearchResultCard.vue";
 import TripCard from "@/components/trip/TripCard.vue";
 import ForumPostSearchCard from "@/components/search/ForumPostSearchCard.vue";
@@ -7,8 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { useSearchResults, useSearchCategories } from "@/composables";
-import { SlidersHorizontalIcon } from "lucide-vue-next";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationFirst,
+  PaginationItem,
+  PaginationLast,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { useSearchResults, useSearchCategories, useSearchFilters } from "@/composables";
 import { computed } from "vue";
 
 const {
@@ -17,11 +27,17 @@ const {
   loading,
   error,
   hasResults,
+  currentPage,
+  totalPages,
+  pagination,
   performSearch,
   selectResult,
-} = useSearchResults({ searchOnCategoryChange: true });
+  goToPage,
+} = useSearchResults({ autoLoad: false });
 
 const { categories, selectedCategory } = useSearchCategories();
+
+const { filters, applyFilters, clearFilters } = useSearchFilters();
 
 const hasTrips = computed(() => 
   results.value?.data.trips && results.value.data.trips.length > 0
@@ -34,6 +50,14 @@ const hasPlaces = computed(() =>
 const hasPosts = computed(() =>
   results.value?.data.posts && results.value.data.posts.length > 0
 );
+
+const handleApplyFilters = () => {
+  applyFilters();
+};
+
+const handleClearFilters = () => {
+  clearFilters();
+};
 </script>
 
 <template>
@@ -69,10 +93,12 @@ const hasPosts = computed(() =>
               </TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button variant="secondary" size="lg" class="rounded-full px-4">
-            <SlidersHorizontalIcon class="mr-2 size-4" aria-hidden="true" />
-            Filters
-          </Button>
+          <SearchFilters 
+            v-model="filters"
+            :category="selectedCategory"
+            @apply="handleApplyFilters"
+            @clear="handleClearFilters"
+          />
         </div>
       </div>
 
@@ -145,11 +171,60 @@ const hasPosts = computed(() =>
           />
         </div>
 
-        <div
-          v-else
-          class="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-border/70 p-10 text-center text-muted-foreground"
-        >
-          <p class="text-lg font-medium text-foreground">No places found</p>
+        <!-- Pagination -->
+        <div v-if="hasPlaces && totalPages > 1" class="mt-12 mb-8 flex justify-center">
+          <Pagination
+            :total="pagination?.total_items ?? 0"
+            :items-per-page="pagination?.limit ?? 12"
+            :sibling-count="1"
+            :default-page="currentPage"
+            @update:page="goToPage"
+          >
+            <PaginationContent class="flex items-center gap-5">
+              <PaginationItem :value="1">
+                <PaginationFirst 
+                  @click="goToPage(1)"
+                />
+              </PaginationItem>
+              <PaginationItem :value="currentPage - 1">
+                <PaginationPrevious 
+                  @click="currentPage > 1 && goToPage(currentPage - 1)"
+                />
+              </PaginationItem>
+              
+              <template v-for="page in totalPages" :key="page">
+                <PaginationItem 
+                  v-if="page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)"
+                  :value="page"
+                >
+                  <Button
+                    :variant="page === currentPage ? 'default' : 'outline'"
+                    class="text-base font-medium"
+                    @click="goToPage(page)"
+                  >
+                    {{ page }}
+                  </Button>
+                </PaginationItem>
+                <PaginationItem 
+                  v-else-if="page === currentPage - 2 || page === currentPage + 2"
+                  :value="page"
+                >
+                  <PaginationEllipsis class="px-2" />
+                </PaginationItem>
+              </template>
+
+              <PaginationItem :value="currentPage + 1">
+                <PaginationNext 
+                  @click="currentPage < totalPages && goToPage(currentPage + 1)"
+                />
+              </PaginationItem>
+              <PaginationItem :value="totalPages">
+                <PaginationLast 
+                  @click="goToPage(totalPages)"
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       </div>
     </section>

@@ -43,13 +43,20 @@ const handleClick = () => {
         @click="handleClick"
         @keyup.enter="handleClick"
     >
-        <div class="relative h-40 w-full overflow-hidden">
+        <div class="relative h-40 w-full overflow-hidden bg-muted">
             <img
                 v-if="result.main_image_url != null"
                 :src="result.main_image_url"
                 :alt="result.name"
                 class="h-full w-full object-cover transition duration-500 hover:scale-105"
+                @error="(e: Event) => (e.target as HTMLImageElement).style.display = 'none'"
             />
+            <div 
+                v-if="!result.main_image_url"
+                class="flex h-full w-full items-center justify-center bg-muted text-muted-foreground"
+            >
+                <MapPinIcon class="size-12 opacity-30" />
+            </div>
             <div class="absolute right-3 top-3 flex items-center gap-2">
                 <BookmarkButton :place="result" variant="icon" />
                 <div

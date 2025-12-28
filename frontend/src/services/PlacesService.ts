@@ -57,6 +57,7 @@ class PlacesService {
 
       // 4. Perform the request
       const response = await commonInstance.get(url);
+      console.log('GetPlaces Response:', response.data);
       return response.data as IPaginatedResponse<IPlaceSearchResponse>;
 
     } catch (error: any) {

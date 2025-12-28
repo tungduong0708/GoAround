@@ -12,12 +12,16 @@ export interface UseSearchResultsOptions {
 export function useSearchResults(options: UseSearchResultsOptions = { autoLoad: true, searchOnCategoryChange: false }) {
   const router = useRouter()
   const store = useSearchStore()
-  const { query, results, loading, error, hasSearched, hasResults, category } = storeToRefs(store)
+  const { query, results, loading, error, hasSearched, hasResults, category, currentPage, totalPages, pagination } = storeToRefs(store)
 
   const performSearch = async () => {
     console.log('Performing search for', query.value)
-    await store.search()
+    await store.search(undefined, true) // Always pass true to indicate new search and rebuild filters
     router.push({ name: "search"})
+  }
+
+  const goToPage = async (page: number) => {
+    await store.goToPage(page)
   }
 
   const setQuery = (value: string) => {
@@ -57,8 +61,12 @@ export function useSearchResults(options: UseSearchResultsOptions = { autoLoad: 
     error,
     hasSearched,
     hasResults,
+    currentPage,
+    totalPages,
+    pagination,
     performSearch,
     selectResult,
+    goToPage,
     setFilters: store.setFilters,
     clearResults: store.clearResults,
   }

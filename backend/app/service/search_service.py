@@ -107,12 +107,19 @@ async def search_places(
         )
 
     # 8. Hotel Price Per Night Range (for Hotels only)
-    if filter_params.price_per_night_min is not None or filter_params.price_per_night_max is not None:
+    if (
+        filter_params.price_per_night_min is not None
+        or filter_params.price_per_night_max is not None
+    ):
         conditions = [poly.place_type == "hotel"]
         if filter_params.price_per_night_min is not None:
-            conditions.append(Hotel.price_per_night >= filter_params.price_per_night_min)
+            conditions.append(
+                Hotel.price_per_night >= filter_params.price_per_night_min
+            )
         if filter_params.price_per_night_max is not None:
-            conditions.append(Hotel.price_per_night <= filter_params.price_per_night_max)
+            conditions.append(
+                Hotel.price_per_night <= filter_params.price_per_night_max
+            )
         query = query.where(and_(*conditions))
 
     # 9. Geo with validation
@@ -160,12 +167,11 @@ async def search_places(
         # Using name asc as safe fallback if created_at isn't guaranteed
         query = query.order_by(poly.name.asc())
 
-    # Count
-    count_query = select(func.count(func.distinct(poly.id))).select_from(
-        query.subquery()
-    )
-    result = await session.execute(count_query)
-    total = result.scalar() or 0
+    # Count distinct places (handling duplicates from joins like tags)
+    # Use distinct() on the query itself to ensure we only count unique place IDs
+    count_query = select(func.count()).select_from(query.distinct().subquery())
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
 
     # Paginate
     offset = (filter_params.page - 1) * filter_params.limit

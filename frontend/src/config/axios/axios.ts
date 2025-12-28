@@ -32,9 +32,12 @@ export function extractApiError(error: unknown): IErrorResponse {
  * - commonInstance: For public/optional auth requests
  * 
  * Both instances include interceptors that:
- * - Automatically attach JWT tokens from Supabase auth
+ * - Automatically attach JWT tokens from Supabase auth (cached for performance)
  * - Handle 401 errors by signing out the user
  * - Normalize error responses for consistent handling
+ * 
+ * Performance: Uses cached access token that's updated via auth state listener
+ * to avoid async getSession() calls on every request.
  * 
  * HMR Support: The instances are properly recreated during hot module replacement
  * to prevent stale interceptors that can cause navigation issues in dev mode.
@@ -42,6 +45,35 @@ export function extractApiError(error: unknown): IErrorResponse {
 class AxiosService {
   private static authInstance: AxiosInstance | null = null;
   private static commonInstance: AxiosInstance | null = null;
+  private static cachedAccessToken: string | null = null;
+  private static isListenerSetup = false;
+
+  /**
+   * Initialize auth state listener to cache access token
+   * This eliminates the need for async getSession() calls on every request
+   */
+  private static setupAuthListener() {
+    if (this.isListenerSetup) return;
+    
+    // Get initial session synchronously if available
+    supabase.auth.getSession().then(({ data }) => {
+      this.cachedAccessToken = data.session?.access_token ?? null;
+    });
+
+    // Listen for auth state changes to keep token fresh
+    supabase.auth.onAuthStateChange((_event, session) => {
+      this.cachedAccessToken = session?.access_token ?? null;
+    });
+
+    this.isListenerSetup = true;
+  }
+
+  /**
+   * Get cached access token (synchronous, no await needed)
+   */
+  private static getAccessToken(): string | null {
+    return this.cachedAccessToken;
+  }
 
   public static getAuthInstance(): AxiosInstance {
     if (!AxiosService.authInstance) {
@@ -52,6 +84,9 @@ class AxiosService {
   }
 
   public static createAuthInstance() {
+    // Setup listener on first creation
+    this.setupAuthListener();
+
     // Clear old interceptors if instance exists
     if (AxiosService.authInstance) {
       AxiosService.authInstance.interceptors.request.clear();
@@ -67,10 +102,11 @@ class AxiosService {
       withCredentials: true,
     });
 
-    AxiosService.authInstance.interceptors.request.use(async (request) => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session?.access_token) {
-        request.headers.Authorization = `Bearer ${data.session.access_token}`;
+    // Synchronous token injection - much faster than async getSession()
+    AxiosService.authInstance.interceptors.request.use((request) => {
+      const token = this.getAccessToken();
+      if (token) {
+        request.headers.Authorization = `Bearer ${token}`;
       }
       return request;
     });
@@ -97,6 +133,9 @@ class AxiosService {
   }
 
   public static createCommonInstance() {
+    // Setup listener on first creation
+    this.setupAuthListener();
+
     // Clear old interceptors if instance exists
     if (AxiosService.commonInstance) {
       AxiosService.commonInstance.interceptors.request.clear();
@@ -112,11 +151,11 @@ class AxiosService {
       withCredentials: true,
     });
 
-    // Add request interceptor to include auth token if available (for optional auth endpoints)
-    AxiosService.commonInstance.interceptors.request.use(async (request) => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session?.access_token) {
-        request.headers.Authorization = `Bearer ${data.session.access_token}`;
+    // Synchronous token injection - much faster than async getSession()
+    AxiosService.commonInstance.interceptors.request.use((request) => {
+      const token = this.getAccessToken();
+      if (token) {
+        request.headers.Authorization = `Bearer ${token}`;
       }
       return request;
     });

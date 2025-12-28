@@ -157,19 +157,22 @@ async def search_places(
 
     # 10. Sorting
     if filter_params.sort_by == "distance" and distance_expr is not None:
+        # Add distance to select list for ORDER BY compatibility with DISTINCT
+        query = query.add_columns(distance_expr.label("distance"))
         query = query.order_by(distance_expr.asc())
     elif filter_params.sort_by == "rating":
         query = query.order_by(poly.average_rating.desc())
+    elif filter_params.sort_by == "newest":
+        # Sort by created_at descending for newest first
+        query = query.order_by(poly.created_at.desc())
     else:
-        # Default newest.
-        # Fallback to sorting by ID if created_at is missing on the polymorphic base
-        # (Though snippet for PlaceImage had created_at, Place usually has it too)
-        # Using name asc as safe fallback if created_at isn't guaranteed
-        query = query.order_by(poly.name.asc())
+        # Default to rating
+        query = query.order_by(poly.average_rating.desc())
 
     # Count distinct places (handling duplicates from joins like tags)
-    # Use distinct() on the query itself to ensure we only count unique place IDs
-    count_query = select(func.count()).select_from(query.distinct().subquery())
+    # Create a subquery from the filtered query (before pagination), then count distinct IDs
+    filtered_subquery = query.subquery()
+    count_query = select(func.count(func.distinct(filtered_subquery.c.id)))
     count_result = await session.execute(count_query)
     total = count_result.scalar() or 0
 
@@ -178,7 +181,13 @@ async def search_places(
     query = query.offset(offset).limit(filter_params.limit)
 
     result = await session.execute(query)
-    results = result.unique().scalars().all()
+
+    # Handle results differently if distance was added to columns
+    if filter_params.sort_by == "distance" and distance_expr is not None:
+        # Extract just the Place objects (first column), ignoring distance column
+        results = [row[0] for row in result.unique().all()]
+    else:
+        results = result.unique().scalars().all()
 
     # Enrich places
     places = [_enrich_place_public(p) for p in results]

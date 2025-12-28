@@ -89,8 +89,8 @@ const handleMainImageUpload = (url: string) => {
   uploadError.value = "";
 };
 
-const handleAdditionalImagesUpdate = (urls: string[]) => {
-  additionalImages.value = urls;
+const handleAdditionalImagesUpdate = (urls: string[] | string) => {
+  additionalImages.value = Array.isArray(urls) ? urls : [urls];
 };
 
 const handleUploadError = (error: string) => {

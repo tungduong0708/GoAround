@@ -13,10 +13,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Switch } from '@/components/ui/switch'
-import { XIcon, StarIcon, SlidersHorizontalIcon, MapPinIcon, Loader2Icon } from 'lucide-vue-next'
+import { XIcon, StarIcon, SlidersHorizontalIcon, MapPinIcon, MapIcon } from 'lucide-vue-next'
 import type { IPlaceSearchQuery } from '@/utils/interfaces'
-import { useGeolocation } from '@/composables'
+import LocationPickerModal from '@/components/common/LocationPickerModal.vue'
 
 interface SearchFiltersProps {
   modelValue: Partial<Omit<IPlaceSearchQuery, 'q' | 'place_type'>>
@@ -34,15 +33,7 @@ const emit = defineEmits<{
 }>()
 
 const isOpen = ref(false)
-
-// Geolocation
-const { 
-  loading: geoLoading, 
-  error: geoError,
-  isSupported: geoSupported,
-  getCurrentLocation,
-  clearLocation 
-} = useGeolocation()
+const isLocationPickerOpen = ref(false)
 
 // Computed properties to determine which filters to show based on category
 const showHotelFilters = computed(() => props.category === 'hotel' || props.category === 'all')
@@ -116,28 +107,25 @@ const radius = computed({
 // Location toggle - use ref instead of computed for async operations
 const useLocation = computed(() => !!localFilters.value.location)
 
-const handleLocationToggle = async (val: boolean) => {
-  console.log("Location toggle changed to:", val);
-  if (val) {
-    const loc = await getCurrentLocation()
-    console.log("Got location:", loc);
-    if (loc) {
-      // Trigger reactivity by creating a new object
-      localFilters.value = {
-        ...localFilters.value,
-        location: loc
-      }
-      console.log("Location set in localFilters:", localFilters.value.location);
-    }
-  } else {
-    // Trigger reactivity by creating a new object
-    localFilters.value = {
-      ...localFilters.value,
-      location: null
-    }
-    clearLocation()
-    console.log("Location cleared");
+const handleLocationSelect = (location: { lat: number; lng: number }) => {
+  console.log("Location selected from map:", location);
+  localFilters.value = {
+    ...localFilters.value,
+    location
   }
+  console.log("Location set in localFilters:", localFilters.value.location);
+}
+
+const handleLocationClear = () => {
+  localFilters.value = {
+    ...localFilters.value,
+    location: null
+  }
+  console.log("Location cleared");
+}
+
+const openLocationPicker = () => {
+  isLocationPickerOpen.value = true
 }
 
 // Sort by
@@ -390,38 +378,60 @@ const handleOpenChange = (open: boolean) => {
         <div class="space-y-4">
           <h3 class="text-sm font-semibold text-primary uppercase tracking-wide">Location</h3>
           
-          <!-- Use My Location -->
+          <!-- Pick Location on Map -->
           <div class="space-y-3">
-            <div class="flex items-center justify-between">
-              <div class="space-y-0.5">
-                <Label class="text-base font-semibold">Use My Location</Label>
-                <p class="text-xs text-muted-foreground">
-                  Enable to search near you and filter by distance
-                </p>
+            <Label class="text-base font-semibold">Search Location</Label>
+            <p class="text-xs text-muted-foreground mb-2">
+              Pick a location on the map to search places nearby
+            </p>
+            
+            <div v-if="!useLocation">
+              <Button
+                type="button"
+                variant="outline"
+                class="w-full justify-start"
+                @click="openLocationPicker"
+              >
+                <MapIcon class="mr-2 size-4" />
+                Pick Location on Map
+              </Button>
+            </div>
+            
+            <div v-else class="space-y-2">
+              <div class="flex items-start gap-2 p-3 rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
+                <MapPinIcon class="size-5 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-green-900 dark:text-green-100">
+                    Location Selected
+                  </p>
+                  <p class="text-xs text-green-700 dark:text-green-300 font-mono mt-0.5">
+                    {{ localFilters?.location?.lat.toFixed(6) ?? "N/A" }}, {{ localFilters?.location?.lng.toFixed(6) ?? "N/A" }}
+                  </p>
+                </div>
               </div>
-              <Switch
-                :model-value="useLocation"
-                :disabled="!geoSupported || geoLoading"
-                @update:model-value="handleLocationToggle"
-              />
-            </div>
-            
-            <div v-if="geoLoading" class="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2Icon class="size-4 animate-spin" />
-              Getting your location...
-            </div>
-            
-            <div v-if="geoError" class="text-sm text-destructive">
-              {{ geoError }}
-            </div>
-            
-            <div v-if="localFilters.location && !geoLoading" class="flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPinIcon class="size-4" />
-              {{ localFilters.location.lat.toFixed(4) }}, {{ localFilters.location.lng.toFixed(4) }}
-            </div>
-            
-            <div v-if="!geoSupported" class="text-sm text-muted-foreground">
-              Geolocation is not supported by your browser
+              
+              <div class="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  class="flex-1"
+                  @click="openLocationPicker"
+                >
+                  <MapIcon class="mr-2 size-4" />
+                  Change Location
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  class="flex-1"
+                  @click="handleLocationClear"
+                >
+                  <XIcon class="mr-2 size-4" />
+                  Clear
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -582,4 +592,13 @@ const handleOpenChange = (open: boolean) => {
       </div>
     </PopoverContent>
   </Popover>
+
+  <!-- Location Picker Modal -->
+  <LocationPickerModal
+    :open="isLocationPickerOpen"
+    :initial-lat="localFilters.location?.lat ?? 10.8231"
+    :initial-lng="localFilters.location?.lng ?? 106.6297"
+    @update:open="isLocationPickerOpen = $event"
+    @select="handleLocationSelect"
+  />
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, onBeforeUnmount, watch } from 'vue';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,8 +15,8 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  initialLat: 10.8231, // Ho Chi Minh City default
-  initialLng: 106.6297,
+  initialLat: 10.762562, // Ho Chi Minh City default
+  initialLng: 106.681886,
 });
 
 const emit = defineEmits<{

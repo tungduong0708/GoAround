@@ -530,7 +530,9 @@ class ReviewSchema(BaseModel):
 class ForumAuthorSchema(BaseModel):
     id: uuid.UUID
     username: str | None = None
+    full_name: str | None = None
     avatar_url: str | None = None
+    is_verified_business: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -568,7 +570,9 @@ class ForumPostListItem(BaseModel):
 class ForumCommentUserSchema(BaseModel):
     id: uuid.UUID
     username: str | None = None
+    full_name: str | None = None
     avatar_url: str | None = None
+    is_verified_business: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

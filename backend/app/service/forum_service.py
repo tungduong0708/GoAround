@@ -74,18 +74,37 @@ async def _get_or_create_moderation_target(
 def _sanitize_author(author: Profile) -> ForumAuthorSchema:
     """Return sanitized author data, hiding info if banned."""
     if is_user_banned(author):
-        return ForumAuthorSchema(id=author.id, username="Banned User")
-    return ForumAuthorSchema(id=author.id, username=author.username)
+        return ForumAuthorSchema(
+            id=author.id,
+            username="Banned User",
+            full_name="Banned User",
+            is_verified_business=False,
+        )
+    return ForumAuthorSchema(
+        id=author.id,
+        username=author.username,
+        full_name=author.full_name,
+        avatar_url=author.avatar_url,
+        is_verified_business=author.is_verified_business,
+    )
 
 
 def _sanitize_comment_user(user: Profile) -> ForumCommentUserSchema:
     """Return sanitized comment user data, hiding info if banned."""
     if is_user_banned(user):
         return ForumCommentUserSchema(
-            id=user.id, username="Banned User", avatar_url=None
+            id=user.id,
+            username="Banned User",
+            full_name="Banned User",
+            avatar_url=None,
+            is_verified_business=False,
         )
     return ForumCommentUserSchema(
-        id=user.id, username=user.username, avatar_url=user.avatar_url
+        id=user.id,
+        username=user.username,
+        full_name=user.full_name,
+        avatar_url=user.avatar_url,
+        is_verified_business=user.is_verified_business,
     )
 
 

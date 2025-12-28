@@ -69,11 +69,11 @@ const getInitials = (username: string) => {
       <div class="flex items-center flex-wrap gap-x-2 gap-y-1">
         <RouterLink :to="`/users/${reply.user.id}`" class="hover:underline">
           <span class="font-semibold text-foreground text-sm">
-            {{ reply.user.username }}
+            {{ reply.user.is_verified_business ? reply.user.username : (reply.user.full_name || reply.user.username) }}
           </span>
         </RouterLink>
         <BadgeCheckIcon
-          v-if="reply.like_count && reply.like_count > 50"
+          v-if="reply.user.is_verified_business"
           class="size-4 text-blue-500 fill-blue-500/10"
         />
         <RouterLink :to="`/users/${reply.user.id}`" class="hover:underline">

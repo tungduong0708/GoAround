@@ -49,6 +49,7 @@ const {
   openReplyEditor,
   closeReplyEditor,
   submitReply,
+  replyingToId,
 
   // Report dialog
   isReportDialogOpen,
@@ -175,10 +176,11 @@ onBeforeRouteLeave(async () => {
                   <div class="flex items-center gap-2">
                     <RouterLink :to="`/users/${post.author.id}`" class="hover:underline">
                       <span class="font-bold text-foreground">
-                        {{ post.author.username }}
+                        {{ post.author.is_verified_business ? post.author.username : (post.author.full_name || post.author.username) }}
                       </span>
                     </RouterLink>
                     <BadgeCheckIcon
+                      v-if="post.author.is_verified_business"
                       class="size-4 text-blue-500 fill-blue-500/10"
                     />
                   </div>
@@ -306,7 +308,7 @@ onBeforeRouteLeave(async () => {
 
             <!-- Reply Editor -->
             <ForumReplyEditor
-              v-if="isReplyEditorOpen"
+              v-if="isReplyEditorOpen && !replyingToId"
               v-model="replyContent"
               :error="replyError"
               :is-submitting="repliesLoading"
@@ -371,6 +373,20 @@ onBeforeRouteLeave(async () => {
                   @edit="startEditingReply"
                 />
 
+                <!-- Inline Reply Editor for this reply -->
+                <div v-if="isReplyEditorOpen && replyingToId === reply.id" class="ml-8 mt-2">
+                  <ForumReplyEditor
+                    v-model="replyContent"
+                    :error="replyError"
+                    :is-submitting="repliesLoading"
+                    :can-submit="replyFormMeta.valid && !!replyContent?.trim()"
+                    :cooldown-seconds="canReply ? 0 : timeUntilCanReply"
+                    placeholder="Write a reply..."
+                    @submit="submitReply"
+                    @cancel="closeReplyEditor"
+                  />
+                </div>
+
                 <!-- Nested replies -->
                 <div
                   v-if="
@@ -430,6 +446,20 @@ onBeforeRouteLeave(async () => {
                       @like="toggleReplyLike"
                       @edit="startEditingReply"
                     />
+
+                    <!-- Inline Reply Editor for nested reply -->
+                    <div v-if="isReplyEditorOpen && replyingToId === nestedReply.id" class="ml-4 mt-2">
+                      <ForumReplyEditor
+                        v-model="replyContent"
+                        :error="replyError"
+                        :is-submitting="repliesLoading"
+                        :can-submit="replyFormMeta.valid && !!replyContent?.trim()"
+                        :cooldown-seconds="canReply ? 0 : timeUntilCanReply"
+                        placeholder="Write a reply..."
+                        @submit="submitReply"
+                        @cancel="closeReplyEditor"
+                      />
+                    </div>
                   </template>
                 </div>
               </template>

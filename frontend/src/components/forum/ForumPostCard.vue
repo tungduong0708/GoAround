@@ -85,10 +85,10 @@ const handleLikeClick = (event: Event) => {
               </RouterLink>
               <RouterLink :to="`/users/${post.author.id}`" @click.stop class="hover:underline">
                 <span class="font-bold text-foreground">{{
-                  post.author.username
+                  post.author.is_verified_business ? post.author.username : (post.author.full_name || post.author.username)
                 }}</span>
               </RouterLink>
-              <BadgeCheckIcon class="size-4 text-blue-500 fill-blue-500/10" />
+              <BadgeCheckIcon v-if="post.author.is_verified_business" class="size-4 text-blue-500 fill-blue-500/10" />
               <RouterLink :to="`/users/${post.author.id}`" @click.stop class="hover:underline">
                 <span class="text-muted-foreground">@{{ post.author.username }}</span>
               </RouterLink>

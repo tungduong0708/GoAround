@@ -1,7 +1,9 @@
 export interface IForumAuthorSchema {
   id: string;
   username?: string | null;
+  full_name?: string | null;
   avatar_url?: string | null;
+  is_verified_business?: boolean;
 }
 export interface IForumTagSchema {
   id: string;
@@ -10,7 +12,9 @@ export interface IForumTagSchema {
 export interface IForumCommentUserSchema {
   id: string;
   username?: string | null;
+  full_name?: string | null;
   avatar_url?: string | null;
+  is_verified_business?: boolean;
 }
 export interface IForumCommentSchema {
   id: string;

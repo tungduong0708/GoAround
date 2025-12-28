@@ -233,7 +233,7 @@ async def get_user_photos(
 @router.get(
     "/{user_id}/replies",
     response_model=APIResponse[List[UserReplyResponse]],
-    status_code=501,
+    status_code=status.HTTP_200_OK,
 )
 async def get_user_replies(
     session: SessionDep,
@@ -244,9 +244,10 @@ async def get_user_replies(
     """
     Get list of forum replies created by a specific user.
     """
-    raise HTTPException(
-        status_code=501,
-        detail="User replies endpoint not yet implemented",
+    replies, total = await user_service.get_user_replies(session, user_id, page, limit)
+    return APIResponse(
+        data=replies,
+        meta=MetaData(page=page, limit=limit, total_items=total),
     )
 
 

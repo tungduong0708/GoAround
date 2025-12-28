@@ -26,6 +26,7 @@ from app.schemas import (
     UserPhotoResponse,
     UserPostResponse,
     UserPublic,
+    UserReplyResponse,
     UserReviewResponse,
     UserStats,
     UserUpdate,
@@ -503,3 +504,44 @@ async def submit_business_verification(
     await session.refresh(verification_request)
 
     return verification_request
+
+
+async def get_user_replies(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    page: int = 1,
+    limit: int = 20,
+) -> tuple[Sequence[UserReplyResponse], int]:
+    """
+    Get list of forum replies created by a specific user.
+    """
+    # Get total count
+    count_stmt = select(func.count(PostReply.id)).where(PostReply.user_id == user_id)
+    total = await session.scalar(count_stmt) or 0
+
+    # Get paginated results
+    offset = (page - 1) * limit
+    stmt = (
+        select(PostReply)
+        .options(selectinload(PostReply.post))
+        .where(PostReply.user_id == user_id)
+        .order_by(PostReply.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    result = await session.execute(stmt)
+    replies = result.scalars().all()
+
+    return (
+        [
+            UserReplyResponse(
+                id=reply.id,
+                post_id=reply.post_id,
+                post_title=reply.post.title,
+                content=reply.content,
+                created_at=reply.created_at,
+            )
+            for reply in replies
+        ],
+        total,
+    )

@@ -21,6 +21,7 @@ export function useForumPost() {
   const currentReplyPage = ref(1);
   const repliesPerPage = 5;
   const isReplyEditorOpen = ref(false);
+  const replyingToId = ref<string | null>(null);
   const isReportDialogOpen = ref(false);
   const reportTarget = ref<{ type: "post" | "comment"; id: string } | null>(
     null
@@ -141,12 +142,13 @@ export function useForumPost() {
     await postStore.fetchReplies(postId.value);
   };
 
-  const openReplyEditor = () => {
+  const openReplyEditor = (replyId?: string) => {
     if (!isAuthenticated.value) {
       // Redirect to login or show login modal
       router.push({ path: "/login", query: { redirect: route.fullPath } });
       return;
     }
+    replyingToId.value = replyId || null;
     isReplyEditorOpen.value = true;
   };
 
@@ -157,6 +159,7 @@ export function useForumPost() {
       if (!confirmed) return;
     }
     isReplyEditorOpen.value = false;
+    replyingToId.value = null;
     resetReplyForm();
   };
 
@@ -169,9 +172,10 @@ export function useForumPost() {
     }
 
     try {
-      await postStore.addReply(postId.value, values.content);
+      await postStore.addReply(postId.value, values.content, replyingToId.value || undefined);
       lastReplyTime.value = Date.now();
       isReplyEditorOpen.value = false;
+      replyingToId.value = null;
       resetReplyForm();
     } catch (err) {
       console.error("Failed to submit reply:", err);
@@ -516,6 +520,7 @@ export function useForumPost() {
     openReplyEditor,
     closeReplyEditor,
     submitReply,
+    replyingToId,
 
     // Report dialog
     isReportDialogOpen,

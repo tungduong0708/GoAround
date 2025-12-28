@@ -136,7 +136,7 @@ const formatLocation = (place: IPlacePublic) => {
 <template>
   <Dialog :open="open" @update:open="handleOpenChange">
     <DialogContent
-      class="max-w-2xl max-h-[85vh] p-0 flex flex-col gap-0 overflow-hidden rounded-2xl"
+      class="max-w-2xl max-h-[85vh] p-0 flex flex-col gap-0 overflow-hidden rounded-2xl !z-[9999]"
     >
       <DialogHeader class="px-6 py-4 border-b border-border/50">
         <DialogTitle class="text-xl font-bold">
@@ -228,3 +228,19 @@ const formatLocation = (place: IPlacePublic) => {
     </DialogContent>
   </Dialog>
 </template>
+
+<style>
+/* Ensure dialog appears above Leaflet map with proper overlay */
+[data-radix-portal] {
+  position: fixed;
+  z-index: 9998 !important;
+}
+
+[data-radix-dialog-overlay] {
+  z-index: 9998 !important;
+}
+
+[data-slot="dialog-content"] {
+  z-index: 9999 !important;
+}
+</style>

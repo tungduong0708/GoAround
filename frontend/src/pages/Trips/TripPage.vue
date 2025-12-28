@@ -377,9 +377,9 @@ watch(
 </script>
 
 <template>
-  <div class="min-h-screen bg-background">
+  <div class="flex flex-col bg-background">
     <!-- Header Section -->
-    <div class="bg-card border-b border-border/50 sticky top-0 z-40">
+    <div class="bg-card border-b border-border/50 flex-shrink-0">
       <div class="max-w-full px-6 py-4">
         <div class="flex items-center justify-between mb-4">
           <Button
@@ -529,9 +529,9 @@ watch(
     </div>
 
     <!-- Main Content: Two-Column Layout -->
-    <div v-if="!loading && !error && trip" class="flex h-[calc(100vh-200px)]">
+    <div v-if="!loading && !error && trip" class="flex" style="min-height: 700px;">
       <!-- Left Panel: Timeline/Itinerary -->
-      <div class="w-[400px] bg-card border-r border-border/50">
+      <div class="w-[400px] bg-card border-r border-border/50 overflow-y-auto flex-shrink-0 pb-20">
         <TripItinerary
           :start-date="trip.start_date"
           :end-date="trip.end_date"
@@ -546,10 +546,10 @@ watch(
       </div>
 
       <!-- Right Panel: Map Placeholder -->
-      <div class="flex-1 relative bg-muted/20">
-        <TripMap v-if="trip && localStops.length > 0" :stops="localStops" :selected-day-index="selectedDayIndex" />
-        <div v-else class="absolute inset-0 flex items-center justify-center">
-          <div class="relative w-full h-full">
+      <div class="flex-1 relative bg-muted/20 overflow-hidden sticky top-0 pt-4 pr-4 pb-24 pl-4" style="z-index: 1; height: 100vh; box-sizing: border-box;">
+        <div class="h-full w-full">
+          <TripMap v-if="trip && localStops.length > 0" :stops="localStops" :selected-day-index="selectedDayIndex" />
+          <div v-else class="relative w-full h-full rounded-3xl overflow-hidden">
             <img
               src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&h=800&fit=crop"
               alt="Map"

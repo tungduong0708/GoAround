@@ -125,15 +125,16 @@ const handleFiles = async (files: File[]) => {
 
       // Upload based on type
       if (props.uploadType === "avatar") {
-        result = await MediaService.uploadAvatar(file);
+        result = await MediaService.uploadAvatar(file, props.maxSizeInMB
+        );
       } else if (props.uploadType === "profile") {
-        result = await MediaService.uploadProfileImage(file);
+        result = await MediaService.uploadProfileImage(file, props.maxSizeInMB);
       } else if (props.uploadType === "post") {
-        result = await MediaService.uploadPostImage(file);
+        result = await MediaService.uploadPostImage(file, props.maxSizeInMB);
       } else if (props.uploadType === "review") {
-        result = await MediaService.uploadReviewImage(file);
+        result = await MediaService.uploadReviewImage(file, props.maxSizeInMB);
       } else if (props.uploadType === "place") {
-        result = await MediaService.uploadPlaceImage(file);
+        result = await MediaService.uploadPlaceImage(file, props.maxSizeInMB);
       } else {
         result = await MediaService.uploadFile(file, {
           maxSizeInMB: props.maxSizeInMB,

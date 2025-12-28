@@ -115,50 +115,65 @@ class MediaService {
   /**
    * Upload forum post image
    */
-  async uploadPostImage(file: File): Promise<IUploadResult> {
+  async uploadPostImage(
+    file: File,
+    maxSizeInMB: number = 10
+  ): Promise<IUploadResult> {
     return this.uploadFile(file, {
       bucket: this.BUCKET_POST_IMAGES,
-      maxSizeInMB: 10,
+      maxSizeInMB: maxSizeInMB,
     });
   }
 
   /**
    * Upload review image
    */
-  async uploadReviewImage(file: File): Promise<IUploadResult> {
+  async uploadReviewImage(
+    file: File,
+    maxSizeInMB: number = 10
+  ): Promise<IUploadResult> {
     return this.uploadFile(file, {
       bucket: this.BUCKET_REVIEW_IMAGES,
-      maxSizeInMB: 10,
+      maxSizeInMB: maxSizeInMB,
     });
   }
 
   /**
    * Upload place image
    */
-  async uploadPlaceImage(file: File): Promise<IUploadResult> {
+  async uploadPlaceImage(
+    file: File,
+    maxSizeInMB: number = 10
+  ): Promise<IUploadResult> {
     return this.uploadFile(file, {
       bucket: this.BUCKET_PLACE_IMAGES,
-      maxSizeInMB: 10,
+      maxSizeInMB: maxSizeInMB,
     });
   }
 
   /**
    * Upload avatar image (stored in post-images bucket)
    */
-  async uploadAvatar(file: File): Promise<IUploadResult> {
+  async uploadAvatar(
+    file: File,
+    maxSizeInMB: number = 2
+  ): Promise<IUploadResult> {
     return this.uploadFile(file, {
       bucket: this.BUCKET_AVATAR_IMAGES,
-      maxSizeInMB: 2,
+      maxSizeInMB: maxSizeInMB,
     });
   }
 
   /**
    * Upload profile image (stored in post-images bucket)
    */
-  async uploadProfileImage(file: File): Promise<IUploadResult> {
+  async uploadProfileImage(
+    file: File,
+    maxSizeInMB: number = 5
+  ): Promise<IUploadResult> {
     return this.uploadFile(file, {
       bucket: this.BUCKET_AVATAR_IMAGES,
-      maxSizeInMB: 5,
+      maxSizeInMB: maxSizeInMB,
     });
   }
 

@@ -118,9 +118,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-    <!-- Loading State -->
-    <div v-if="loading" class="space-y-8">
+  <div>
+    <div class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <!-- Loading State -->
+      <div v-if="loading" class="space-y-8">
       <Skeleton class="h-[400px] w-full rounded-3xl" />
       <div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div class="space-y-4 lg:col-span-2">
@@ -459,23 +460,24 @@ onMounted(() => {
         </div>
       </div>
     </div>
+    </div>
+
+    <!-- Write Review Modal -->
+    <WriteReviewModal
+      v-if="place"
+      v-model:open="showWriteReviewModal"
+      :place-id="place.id"
+      :place-name="place.name"
+      @success="handleReviewSubmitted"
+    />
+
+    <!-- Image Lightbox -->
+    <Lightbox
+      v-model:open="lightboxOpen"
+      v-model:current-index="lightboxIndex"
+      :images="allImages"
+    />
   </div>
-
-  <!-- Write Review Modal -->
-  <WriteReviewModal
-    v-if="place"
-    v-model:open="showWriteReviewModal"
-    :place-id="place.id"
-    :place-name="place.name"
-    @success="handleReviewSubmitted"
-  />
-
-  <!-- Image Lightbox -->
-  <Lightbox
-    v-model:open="lightboxOpen"
-    v-model:current-index="lightboxIndex"
-    :images="allImages"
-  />
 </template>
 
 <style scoped></style>

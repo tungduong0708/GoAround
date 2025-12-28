@@ -211,13 +211,13 @@ const handleUploadError = (error: string) => {
             <ImageUpload
               v-model="avatarUrl"
               upload-type="avatar"
-              :max-size-in-m-b="2"
+              :max-size-in-m-b="18"
               :disabled="isLoading"
               @upload="handleAvatarUpload"
               @error="handleUploadError"
             />
             <p class="text-xs text-muted-foreground">
-              Upload your profile picture (max 2MB)
+              Upload your profile picture (max 18MB)
             </p>
           </div>
 

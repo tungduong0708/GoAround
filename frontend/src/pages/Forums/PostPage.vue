@@ -95,9 +95,10 @@ onBeforeRouteLeave(async () => {
 </script>
 
 <template>
-  <div class="bg-background pb-20">
-    <div class="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
-      <!-- Back Button -->
+  <div>
+    <div class="bg-background pb-20">
+      <div class="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+        <!-- Back Button -->
       <Button
         variant="ghost"
         class="rounded-xl text-muted-foreground hover:text-foreground -ml-2"
@@ -494,6 +495,7 @@ onBeforeRouteLeave(async () => {
         @submit="submitReport"
         @cancel="closeReportDialog"
       />
+    </div>
     </div>
   </div>
 </template>

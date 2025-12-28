@@ -135,16 +135,49 @@ const handleDragOver = (event: DragEvent, dayIndex?: number, stopIndex?: number)
   if (dayIndex !== undefined) {
     dragOverDayIndex.value = dayIndex;
     
-    // Calculate drop position based on mouse position
+    // Calculate drop position based on mouse position with threshold
     if (stopIndex !== undefined) {
       const target = event.currentTarget as HTMLElement;
       const rect = target.getBoundingClientRect();
       const mouseY = event.clientY;
-      const targetMiddle = rect.top + rect.height / 2;
+      const cardHeight = rect.height;
+      const halfHeight = cardHeight / 2;
       
-      // Determine if dropping before or after this stop
-      const position = mouseY > targetMiddle ? stopIndex + 1 : stopIndex;
-      dropPosition.value = { dayIndex, position };
+      const distanceFromTop = mouseY - rect.top;
+      const dayStops = days.value[dayIndex]?.stops || [];
+      const isFirstCard = stopIndex === 0;
+      const isLastCard = stopIndex === dayStops.length - 1;
+      
+      // For first card: only second half is valid for dropping before next card
+      if (isFirstCard) {
+        if (distanceFromTop > halfHeight) {
+          // In second half of first card - can drop after it
+          dropPosition.value = { dayIndex, position: stopIndex + 1 };
+        } else {
+          // In first half of first card - can drop before it (at top)
+          dropPosition.value = { dayIndex, position: stopIndex };
+        }
+      }
+      // For last card: only first half is valid for dropping after previous card
+      else if (isLastCard) {
+        if (distanceFromTop < halfHeight) {
+          // In first half of last card - can drop before it
+          dropPosition.value = { dayIndex, position: stopIndex };
+        } else {
+          // In second half of last card - can drop after it (at bottom)
+          dropPosition.value = { dayIndex, position: stopIndex + 1 };
+        }
+      }
+      // For middle cards: combine second half of previous card and first half of current card
+      else {
+        if (distanceFromTop < halfHeight) {
+          // In first half - can drop before this card (which is after previous card)
+          dropPosition.value = { dayIndex, position: stopIndex };
+        } else {
+          // In second half - can drop after this card (which is before next card)
+          dropPosition.value = { dayIndex, position: stopIndex + 1 };
+        }
+      }
     } else {
       // Dragging over empty day - position at start
       const dayStops = days.value[dayIndex]?.stops || [];
@@ -168,27 +201,26 @@ const handleDropOnStop = (event: DragEvent, toIndex: number, dayIndex: number) =
   event.preventDefault();
   event.stopPropagation();
   
-  console.log('[TripItinerary] Drop on stop:', { toIndex, dayIndex });
+  console.log('[TripItinerary] Drop on stop:', { toIndex, dayIndex, dropPosition: dropPosition.value });
   
   if (!draggedStop.value) {
     console.warn('[TripItinerary] No dragged stop - drop ignored');
     return;
   }
   
+  // Always use dropPosition since it's now always set based on card half logic
+  if (!dropPosition.value) {
+    console.warn('[TripItinerary] No valid drop position - ignoring drop');
+    draggedStop.value = null;
+    dragOverDayIndex.value = null;
+    dragOverStopIndex.value = null;
+    return;
+  }
+  
   const { stopId, stopIndex: fromIndex, dayIndex: fromDayIndex } = draggedStop.value;
   
-  // Determine drop position based on mouse Y position within the target element
-  const target = event.currentTarget as HTMLElement;
-  const rect = target.getBoundingClientRect();
-  const mouseY = event.clientY;
-  const targetMiddle = rect.top + rect.height / 2;
-  const mouseInBottomHalf = mouseY > targetMiddle;
-  
-  // If mouse is in bottom half, insert after (toIndex + 1), otherwise insert at toIndex
-  let adjustedToIndex = toIndex;
-  if (mouseInBottomHalf) {
-    adjustedToIndex = toIndex + 1;
-  }
+  // Use the calculated dropPosition instead of recalculating
+  let adjustedToIndex = dropPosition.value.position;
   
   console.log('[TripItinerary] Drop details:', {
     fromIndex,
@@ -196,12 +228,7 @@ const handleDropOnStop = (event: DragEvent, toIndex: number, dayIndex: number) =
     adjustedToIndex,
     fromDay: fromDayIndex,
     toDay: dayIndex,
-    mousePosition: mouseInBottomHalf ? 'bottom' : 'top',
-    rectTop: rect.top,
-    rectBottom: rect.bottom,
-    rectHeight: rect.height,
-    mouseY: mouseY,
-    targetMiddle: targetMiddle
+    dropPosition: dropPosition.value
   });
   
   // Moving within the same day

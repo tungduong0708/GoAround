@@ -151,8 +151,10 @@ const handleFiles = async (files: File[]) => {
 
   // Update preview URLs
   if (props.multiple) {
-    previewUrls.value = [...previewUrls.value, ...uploadedUrls];
-    emit("update:modelValue", previewUrls.value);
+    const newPreviewUrls = [...previewUrls.value, ...uploadedUrls];
+    console.log('[ImageUpload] Updating multiple images:', newPreviewUrls);
+    previewUrls.value = newPreviewUrls;
+    emit("update:modelValue", newPreviewUrls);
   } else if (uploadedUrls.length > 0 && uploadedUrls[0]) {
     previewUrls.value = [uploadedUrls[0]];
     emit("update:modelValue", uploadedUrls[0]);
@@ -238,6 +240,7 @@ const triggerFileInput = () => {
           class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
         >
           <Button
+            type="button"
             size="icon"
             variant="secondary"
             @click="triggerFileInput"
@@ -246,6 +249,7 @@ const triggerFileInput = () => {
             <ImageIcon class="size-4" />
           </Button>
           <Button
+            type="button"
             size="icon"
             variant="destructive"
             @click.stop="removeImage(0)"
@@ -274,6 +278,7 @@ const triggerFileInput = () => {
           >
             <img :src="url" class="w-full h-full object-cover" alt="Uploaded image" />
             <Button
+              type="button"
               variant="destructive"
               size="icon"
               class="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -287,6 +292,7 @@ const triggerFileInput = () => {
 
         <!-- Add more button -->
         <Button
+          type="button"
           v-if="previewUrls.length < maxFiles"
           variant="outline"
           @click="triggerFileInput"

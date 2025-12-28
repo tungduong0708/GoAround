@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, MapPin, Hotel, UtensilsCrossed, Coffee, Landmark, Loader2 } from "lucide-vue-next";
+import { ArrowLeft, MapPin, Hotel, UtensilsCrossed, Coffee, Landmark, Loader2, Clock } from "lucide-vue-next";
 import ImageUpload from "@/components/common/ImageUpload.vue";
+import LocationPickerModal from "@/components/common/LocationPickerModal.vue";
 import HotelDetailsForm from "@/components/place/HotelDetailsForm.vue";
 import RestaurantDetailsForm from "@/components/place/RestaurantDetailsForm.vue";
 import CafeDetailsForm from "@/components/place/CafeDetailsForm.vue";
@@ -24,9 +25,23 @@ const address = ref("");
 const city = ref("");
 const country = ref("");
 const description = ref("");
+const latitude = ref<number | null>(null);
+const longitude = ref<number | null>(null);
+const showLocationPicker = ref(false);
 const mainImageUrl = ref("");
 const additionalImages = ref<string[]>([]);
 const tags = ref("");
+
+// Operating hours - default all closed
+const operatingHours = ref({
+  monday: { open: "", close: "", closed: true },
+  tuesday: { open: "", close: "", closed: true },
+  wednesday: { open: "", close: "", closed: true },
+  thursday: { open: "", close: "", closed: true },
+  friday: { open: "", close: "", closed: true },
+  saturday: { open: "", close: "", closed: true },
+  sunday: { open: "", close: "", closed: true },
+});
 
 // Category-specific fields
 // Hotel fields
@@ -85,6 +100,34 @@ const handleUploadError = (error: string) => {
   }, 5000);
 };
 
+const toggleDayClosed = (day: keyof typeof operatingHours.value) => {
+  operatingHours.value[day].closed = !operatingHours.value[day].closed;
+  if (operatingHours.value[day].closed) {
+    operatingHours.value[day].open = "";
+    operatingHours.value[day].close = "";
+  }
+};
+
+const copyToAll = (day: keyof typeof operatingHours.value) => {
+  const source = operatingHours.value[day];
+  Object.keys(operatingHours.value).forEach((key) => {
+    if (key !== day) {
+      const targetDay = key as keyof typeof operatingHours.value;
+      operatingHours.value[targetDay] = { ...source };
+    }
+  });
+};
+
+const handleLocationSelected = (location: { lat: number; lng: number }) => {
+  latitude.value = location.lat;
+  longitude.value = location.lng;
+  console.log('Location selected:', location);
+};
+
+const openLocationPicker = () => {
+  showLocationPicker.value = true;
+};
+
 const handleSubmit = async () => {
   if (!isFormValid.value) return;
 
@@ -92,6 +135,27 @@ const handleSubmit = async () => {
   errorMessage.value = "";
 
   try {
+    // Convert operating hours to backend format (only include open days)
+    const openingHoursBackend: Record<string, string> = {};
+    const dayMap: Record<keyof typeof operatingHours.value, string> = {
+      monday: "mon",
+      tuesday: "tue",
+      wednesday: "wed",
+      thursday: "thu",
+      friday: "fri",
+      saturday: "sat",
+      sunday: "sun",
+    };
+
+    Object.entries(operatingHours.value).forEach(([day, hours]) => {
+      const backendDay = dayMap[day as keyof typeof operatingHours.value];
+      if (!hours.closed && hours.open && hours.close) {
+        // Only include open days with valid times
+        openingHoursBackend[backendDay] = `${hours.open} - ${hours.close}`;
+      }
+      // Don't include closed days at all
+    });
+
     const placeData: IPlaceCreate = {
       name: placeName.value.trim(),
       address: address.value.trim() || null,
@@ -102,6 +166,10 @@ const handleSubmit = async () => {
       main_image_url: mainImageUrl.value || null,
       images: additionalImages.value.length > 0 ? additionalImages.value : [],
       tags: tags.value ? tags.value.split(",").map(t => t.trim()).filter(Boolean) : [],
+      opening_hours: Object.keys(openingHoursBackend).length > 0 ? openingHoursBackend : null,
+      location: (latitude.value !== null && longitude.value !== null) 
+        ? { lat: latitude.value, lng: longitude.value } 
+        : null,
     };
 
     // Add category-specific fields
@@ -276,10 +344,107 @@ const handleSubmit = async () => {
             </div>
           </div>
 
-          <div class="p-4 border-2 border-dashed rounded-xl text-center text-sm text-muted-foreground">
-            <MapPin class="size-5 mx-auto mb-2 text-muted-foreground" />
-            <p>Click to select location on map</p>
-            <p class="text-xs mt-1">Select exact coordinates on map for precise location marking</p>
+          <!-- Location Picker -->
+          <div v-if="!latitude || !longitude" class="space-y-3">
+            <Button 
+              type="button"
+              variant="outline" 
+              class="w-full h-20 border-2 border-dashed"
+              @click="openLocationPicker"
+              :disabled="isSubmitting"
+            >
+              <div class="flex flex-col items-center gap-2">
+                <MapPin class="size-5" />
+                <div class="text-sm">
+                  <p class="font-medium">Choose Location on Map</p>
+                  <p class="text-xs text-muted-foreground">Click to select coordinates</p>
+                </div>
+              </div>
+            </Button>
+          </div>
+
+          <!-- Selected Location Display -->
+          <div v-else class="space-y-3">
+            <div class="p-4 border-2 border-primary/20 bg-primary/5 rounded-xl">
+              <div class="flex items-start justify-between">
+                <div class="flex items-start gap-3">
+                  <div class="p-2 bg-primary/10 rounded-lg">
+                    <MapPin class="size-5 text-primary" />
+                  </div>
+                  <div class="space-y-1">
+                    <p class="text-sm font-medium">Location Selected</p>
+                    <p class="text-xs text-muted-foreground font-mono">
+                      {{ latitude?.toFixed(6) }}, {{ longitude?.toFixed(6) }}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  @click="openLocationPicker"
+                  :disabled="isSubmitting"
+                >
+                  Change
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- Operating Hours -->
+      <Card>
+        <CardHeader>
+          <CardTitle class="flex items-center gap-2">
+            <Clock class="w-5 h-5" />
+            Operating Hours
+          </CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-4">
+          <div
+            v-for="(day, key) in operatingHours"
+            :key="key"
+            class="grid grid-cols-12 gap-3 items-center"
+          >
+            <div class="col-span-2 font-medium capitalize">{{ key }}</div>
+            <template v-if="!day.closed">
+              <Input
+                v-model="day.open"
+                type="time"
+                class="col-span-3"
+                :disabled="isSubmitting"
+              />
+              <span class="col-span-1 text-center text-muted-foreground">to</span>
+              <Input
+                v-model="day.close"
+                type="time"
+                class="col-span-3"
+                :disabled="isSubmitting"
+              />
+            </template>
+            <div v-else class="col-span-7 text-muted-foreground">Closed</div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              class="col-span-2"
+              @click="toggleDayClosed(key as keyof typeof operatingHours)"
+              :disabled="isSubmitting"
+            >
+              {{ day.closed ? "Open" : "Closed" }}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              class="col-span-1"
+              @click="copyToAll(key as keyof typeof operatingHours)"
+              :disabled="isSubmitting || day.closed"
+              title="Copy to all days"
+            >
+              Copy
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -424,6 +589,14 @@ const handleSubmit = async () => {
         </Button>
       </div>
     </form>
+
+    <!-- Location Picker Modal -->
+    <LocationPickerModal
+      v-model:open="showLocationPicker"
+      :initial-lat="latitude || 10.8231"
+      :initial-lng="longitude || 106.6297"
+      @select="handleLocationSelected"
+    />
   </div>
 </template>
 

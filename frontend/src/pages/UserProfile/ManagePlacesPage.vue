@@ -80,8 +80,7 @@ const handleViewDetails = (placeId: string) => {
 }
 
 const handleEdit = (placeId: string) => {
-  console.log('Edit place:', placeId)
-  // TODO: Implement edit functionality
+  router.push({ name: 'edit-place', params: { id: placeId } })
 }
 
 const handleDelete = async (placeId: string) => {

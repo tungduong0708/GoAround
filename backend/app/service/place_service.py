@@ -181,8 +181,8 @@ async def create_place(
     # 4. Handle Images (Create PlaceImage rows)
     if place_create.images:
         for i, url in enumerate(place_create.images):
-            # Set main_image_url on Place if it's the first one
-            if i == 0:
+            # Only set main_image_url if not already set, use first image as fallback
+            if i == 0 and not db_place.main_image_url:
                 db_place.main_image_url = url
 
             img = PlaceImage(
@@ -267,7 +267,8 @@ async def update_place(
     for key, value in update_data.items():
         if key == "images" or key == "tags":
             continue
-        if hasattr(db_place, key):
+        # Use inspect to avoid triggering lazy loading
+        if key in db_place.__mapper__.attrs.keys():
             setattr(db_place, key, value)
 
     # 3. Images (Full Replace strategy)
@@ -370,6 +371,6 @@ async def get_unique_cities(session: AsyncSession) -> list[str]:
     )
     result = await session.execute(stmt)
     rows = result.all()
-    
+
     # Format as "City, Country"
     return [f"{row[0]}, {row[1]}" for row in rows]

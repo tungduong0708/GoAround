@@ -2,6 +2,8 @@ import uuid
 from typing import Annotated, Any, List
 
 from fastapi import APIRouter, HTTPException, Query, status
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app import crud
 from app.api.deps import CurrentUserDep, SessionDep
@@ -19,6 +21,8 @@ from app.schemas import (
     PlaceUpdate,
     ReviewSchema,
     TransferOwnershipRequest,
+    VerifyRecipientRequest,
+    VerifyRecipientResponse,
 )
 from app.service import ai_service
 
@@ -41,10 +45,10 @@ async def search_places(
 ) -> Any:
     """
     Search places by keyword, tags, price, or location (radius).
-    
+
     Pagination (page/limit parameters) applies to places only.
     Additionally returns up to 5 related forum posts and 5 public trips as supplementary results.
-    
+
     Metadata total_items reflects the count of places only.
     """
     # Validation for distance sorting
@@ -212,8 +216,11 @@ async def update_place(
     """
     Update a place. Only the owner or admin can perform this action.
     """
-    # Retrieve DB object directly to check ownership and pass to CRUD
-    db_place = await session.get(Place, id)
+    # Retrieve DB object with eagerly loaded images to avoid lazy loading issues
+    result = await session.execute(
+        select(Place).where(Place.id == id).options(selectinload(Place.images))
+    )
+    db_place = result.scalar_one_or_none()
 
     if not db_place:
         raise HTTPException(status_code=404, detail="Place not found")
@@ -261,12 +268,60 @@ async def delete_place(
 
 
 @router.post(
+    "/verify-recipient",
+    status_code=status.HTTP_200_OK,
+    response_model=APIResponse[VerifyRecipientResponse],
+)
+async def verify_recipient(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    verify_request: VerifyRecipientRequest,
+) -> Any:
+    """
+    Verify if an email belongs to a verified business account.
+    Used before transferring ownership.
+    """
+    target_user = await crud.get_profile_by_email(session, verify_request.email)
+
+    if not target_user:
+        return APIResponse(
+            data=VerifyRecipientResponse(
+                is_valid=False, message="No user found with this email address"
+            )
+        )
+
+    if target_user.role != "business":
+        return APIResponse(
+            data=VerifyRecipientResponse(
+                is_valid=False, message="This user is not a business account"
+            )
+        )
+
+    if not target_user.is_verified_business:
+        return APIResponse(
+            data=VerifyRecipientResponse(
+                is_valid=False, message="This business account is not verified"
+            )
+        )
+
+    return APIResponse(
+        data=VerifyRecipientResponse(
+            is_valid=True,
+            username=target_user.username,
+            full_name=target_user.full_name,
+            message="Recipient verified successfully",
+        )
+    )
+
+
+@router.post(
     "/{id}/transfer",
+    status_code=status.HTTP_200_OK,
     response_model=APIResponse[Message],
     responses={
-        400: {"model": HTTPError},
-        403: {"model": HTTPError},
-        404: {"model": HTTPError},
+        404: {"description": "Place or target user not found"},
+        403: {"description": "Not authorized"},
+        400: {"description": "Target user validation failed"},
     },
 )
 async def transfer_ownership(

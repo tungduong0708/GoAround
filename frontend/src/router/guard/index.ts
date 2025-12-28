@@ -11,6 +11,15 @@ const guardRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: "/places/:id/edit",
+    name: "edit-place",
+    component: () => import("@/pages/EditPlacePage.vue"),
+    meta: {
+      title: "Edit Place",
+      authRequired: true,
+    },
+  },
+  {
     path: "/profile",
     name: "profile-me",
     component: () => import("@/pages/UserProfile/UserProfilePage.vue"),

@@ -294,6 +294,17 @@ class TransferOwnershipRequest(BaseModel):
     new_owner_email: EmailStr
 
 
+class VerifyRecipientRequest(BaseModel):
+    email: EmailStr
+
+
+class VerifyRecipientResponse(BaseModel):
+    is_valid: bool
+    username: str | None = None
+    full_name: str | None = None
+    message: str | None = None
+
+
 class PlacePublic(BaseModel):
     id: uuid.UUID
     name: str

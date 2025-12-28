@@ -186,6 +186,17 @@ class PlacesService {
   }
 
 
+  async verifyRecipient(email: string): Promise<{ is_valid: boolean; username?: string; full_name?: string; message?: string }> {
+    try {
+      const response = await authInstance.post("/places/verify-recipient", { email });
+      return (response.data as IApiResponse<{ is_valid: boolean; username?: string; full_name?: string; message?: string }>).data;
+    }
+    catch (error: any) {
+      console.error("Failed to verify recipient:", error);
+      throw error;
+    }
+  }
+
   async transferOwnership(
     id: string,
     input: ITransferOwnershipRequest,

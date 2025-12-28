@@ -244,24 +244,45 @@ export const useTripStore = defineStore("trip", () => {
   };
 
   const deleteTrip = async (id: string) => {
+    console.log('[tripStore] deleteTrip called with id:', id);
     deletingTripId.value = id;
     error.value = null;
 
+    // Optimistically remove from local state immediately for instant UI update
+    const deletedTrip = trips.value.find(trip => trip.id === id);
+    console.log('[tripStore] Found trip to delete:', deletedTrip?.trip_name);
+    console.log('[tripStore] Before delete - trips count:', trips.value.length);
+    
+    trips.value = trips.value.filter((trip) => trip.id !== id);
+    console.log('[tripStore] After optimistic delete - trips count:', trips.value.length);
+    
+    // Clear current trip if it's the one being deleted
+    if (currentTrip.value?.id === id) {
+      currentTrip.value = null;
+    }
+
     try {
+      // Call API asynchronously to delete from backend
+      console.log('[tripStore] Calling API to delete trip');
       await TripService.deleteTrip(id);
-      // Remove from local state
-      trips.value = trips.value.filter((trip) => trip.id !== id);
-      
-      // Clear current trip if it's the one being deleted
-      if (currentTrip.value?.id === id) {
-        currentTrip.value = null;
-      }
+      console.log('[tripStore] API call successful');
     } catch (err) {
+      console.error('[tripStore] API call failed:', err);
+      // Revert the optimistic update on error
+      if (deletedTrip) {
+        trips.value = [...trips.value, deletedTrip].sort((a, b) => {
+          if (!a.start_date) return 1;
+          if (!b.start_date) return -1;
+          return new Date(b.start_date).getTime() - new Date(a.start_date).getTime();
+        });
+        console.log('[tripStore] Reverted optimistic delete');
+      }
       error.value =
         err instanceof Error ? err.message : "Failed to delete trip";
       throw err;
     } finally {
       deletingTripId.value = null;
+      console.log('[tripStore] deleteTrip completed');
     }
   };
 

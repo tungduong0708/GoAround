@@ -414,6 +414,13 @@ async def delete_trip(
         raise PermissionError("Not authorized to delete this trip")
 
     try:
+        # First delete all trip stops using bulk delete to avoid prepared statement conflicts
+        await session.execute(
+            delete(TripStop).where(TripStop.trip_id == trip_id)
+        )
+        await session.flush()
+        
+        # Then delete the trip
         await session.delete(trip)
         await session.commit()
     except Exception as e:

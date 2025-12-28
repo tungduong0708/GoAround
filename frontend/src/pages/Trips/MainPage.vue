@@ -124,14 +124,20 @@ const setFilter = (filter: TripFilter) => {
 };
 
 const openDeleteDialog = (trip: ITripListSchema) => {
+  console.log('[MainPage] Opening delete dialog for trip:', trip.trip_name, trip.id);
   tripPendingDelete.value = trip;
 };
 
 const handleDeleteConfirm = async () => {
   if (!tripPendingDelete.value) return;
 
+  console.log('[MainPage] Delete confirmed for trip:', tripPendingDelete.value.trip_name, tripPendingDelete.value.id);
+  
   try {
     await deleteTrip(tripPendingDelete.value.id);
+    console.log('[MainPage] Trip deleted successfully');
+  } catch (err) {
+    console.error('[MainPage] Failed to delete trip:', err);
   } finally {
     tripPendingDelete.value = null;
   }
@@ -492,13 +498,13 @@ const handleDeleteConfirm = async () => {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
+          <Button
             class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             :disabled="deletingTripId !== null"
             @click="handleDeleteConfirm"
           >
-            Delete trip
-          </AlertDialogAction>
+            {{ deletingTripId ? 'Deleting...' : 'Delete trip' }}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

@@ -262,6 +262,15 @@ class PlaceSearchFilter(BaseModel):
         None, description="Filter by price range ($ to $$$$)"
     )
     rating: float | None = Field(None, ge=0, le=5, description="Minimum rating")
+    hotel_class: int | None = Field(
+        None, ge=1, le=5, description="Filter hotels by star rating (1-5)"
+    )
+    price_per_night_min: float | None = Field(
+        None, ge=0, description="Minimum price per night for hotels"
+    )
+    price_per_night_max: float | None = Field(
+        None, ge=0, description="Maximum price per night for hotels"
+    )
     sort_by: Literal["rating", "distance", "newest"] = "rating"
     page: int = 1
     limit: int = 20

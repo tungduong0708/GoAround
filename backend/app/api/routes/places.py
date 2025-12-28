@@ -41,8 +41,11 @@ async def search_places(
 ) -> Any:
     """
     Search places by keyword, tags, price, or location (radius).
-    Returns places with related forum posts and public trips.
-    Only approved places are shown unless the user is an Admin.
+    
+    Pagination (page/limit parameters) applies to places only.
+    Additionally returns up to 5 related forum posts and 5 public trips as supplementary results.
+    
+    Metadata total_items reflects the count of places only.
     """
     # Validation for distance sorting
     if filter_params.sort_by == "distance" and not filter_params.location:

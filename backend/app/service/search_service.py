@@ -7,7 +7,6 @@ from sqlalchemy.orm import selectinload, with_polymorphic
 
 from app.models import (
     Cafe,
-    ForumPost,
     Hotel,
     Landmark,
     Place,
@@ -17,15 +16,13 @@ from app.models import (
     TripStop,
 )
 from app.schemas import (
-    ForumPostListItem,
-    ForumAuthorSchema,
-    ForumTagSchema,
+    ForumSearchFilter,
     PlaceSearchFilter,
     PlaceSearchResponse,
     TripListSchema,
 )
+from app.service.forum_service import list_forum_posts
 from app.service.place_service import _enrich_place_public
-from app.service.utils import is_user_banned
 
 
 async def search_places(
@@ -63,7 +60,62 @@ async def search_places(
         tag_list = [t.strip() for t in filter_params.tags.split(",")]
         query = query.join(poly.tags).where(Tag.name.in_(tag_list))
 
-    # 4. Geo with validation
+    # 4. Amenities (for Hotel and Cafe)
+    if filter_params.amenities:
+        amenity_list = [a.strip() for a in filter_params.amenities.split(",")]
+        # Check if the place has any of the requested amenities
+        # This works because amenities is an ARRAY field in PostgreSQL
+        query = query.where(
+            or_(
+                and_(
+                    poly.place_type == "hotel",
+                    Hotel.amenities.overlap(amenity_list),
+                ),
+                and_(
+                    poly.place_type == "cafe",
+                    Cafe.amenities.overlap(amenity_list),
+                ),
+            )
+        )
+
+    # 5. Price Range (for Restaurant and Cafe)
+    if filter_params.price_range:
+        query = query.where(
+            or_(
+                and_(
+                    poly.place_type == "restaurant",
+                    Restaurant.price_range == filter_params.price_range,
+                ),
+                and_(
+                    poly.place_type == "cafe",
+                    Cafe.price_range == filter_params.price_range,
+                ),
+            )
+        )
+
+    # 6. Minimum Rating
+    if filter_params.rating:
+        query = query.where(poly.average_rating >= filter_params.rating)
+
+    # 7. Hotel Class (for Hotels only)
+    if filter_params.hotel_class:
+        query = query.where(
+            and_(
+                poly.place_type == "hotel",
+                Hotel.hotel_class == filter_params.hotel_class,
+            )
+        )
+
+    # 8. Hotel Price Per Night Range (for Hotels only)
+    if filter_params.price_per_night_min is not None or filter_params.price_per_night_max is not None:
+        conditions = [poly.place_type == "hotel"]
+        if filter_params.price_per_night_min is not None:
+            conditions.append(Hotel.price_per_night >= filter_params.price_per_night_min)
+        if filter_params.price_per_night_max is not None:
+            conditions.append(Hotel.price_per_night <= filter_params.price_per_night_max)
+        query = query.where(and_(*conditions))
+
+    # 9. Geo with validation
     distance_expr = None
     if filter_params.location:
         try:
@@ -96,7 +148,7 @@ async def search_places(
             # This matches the original behavior but logs the issue
             pass
 
-    # 5. Sorting
+    # 10. Sorting
     if filter_params.sort_by == "distance" and distance_expr is not None:
         query = query.order_by(distance_expr.asc())
     elif filter_params.sort_by == "rating":
@@ -125,55 +177,21 @@ async def search_places(
     # Enrich places
     places = [_enrich_place_public(p) for p in results]
 
-    # Fetch posts matching the search query (if provided)
+    # Fetch supplementary posts using existing forum search logic
+    # Limited to 5 as these are extras, not the primary search result
     posts = []
     if filter_params.q:
-        search_term = f"%{filter_params.q}%"
-        posts_query = (
-            select(ForumPost)
-            .options(
-                selectinload(ForumPost.author),
-                selectinload(ForumPost.tags),
-            )
-            .where(
-                or_(
-                    ForumPost.title.ilike(search_term),
-                    ForumPost.content.ilike(search_term),
-                )
-            )
-            .order_by(ForumPost.created_at.desc())
-            .limit(10)
+        forum_filter = ForumSearchFilter(
+            q=filter_params.q,
+            sort="newest",
+            page=1,
+            limit=5,
         )
-        posts_result = await session.execute(posts_query)
-        forum_posts = posts_result.scalars().all()
+        posts, _ = await list_forum_posts(session, forum_filter)
+        # Ignore total count (second return value) as we don't need it for supplementary results
 
-        for post in forum_posts:
-            author_data = ForumAuthorSchema(
-                id=post.author.id,
-                username=post.author.username or "Unknown",
-                avatar_url=post.author.avatar_url,
-            )
-
-            if is_user_banned(post.author):
-                author_data = ForumAuthorSchema(
-                    id=post.author.id,
-                    username="Banned User",
-                    avatar_url=None,
-                )
-
-            posts.append(
-                ForumPostListItem(
-                    id=post.id,
-                    title=post.title,
-                    content_snippet=post.content[:200] if post.content else "",
-                    author=author_data,
-                    tags=[ForumTagSchema(id=t.id, name=t.name) for t in post.tags],
-                    reply_count=post.reply_count,
-                    created_at=post.created_at,
-                )
-            )
-
-    # Fetch public trips that visit any of the returned places
+    # Fetch supplementary public trips that visit any of the returned places
+    # Limited to 5 as these are extras, not the primary search result
     trips = []
     if results:
         place_ids = [place.id for place in results]
@@ -188,7 +206,7 @@ async def search_places(
             )
             .group_by(Trip.id)
             .order_by(Trip.created_at.desc())
-            .limit(10)
+            .limit(5)
         )
         trips_result = await session.execute(trips_query)
         trip_rows = trips_result.all()

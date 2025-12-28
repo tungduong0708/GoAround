@@ -182,16 +182,12 @@ const handleClearFilters = () => {
           >
             <PaginationContent class="flex items-center gap-5">
               <PaginationItem :value="1" class="px-5">
-                <PaginationFirst 
-                  @click="goToPage(1)"
-                />
+                <PaginationFirst />
               </PaginationItem>
-              <PaginationItem :value="currentPage - 1"
+              <PaginationItem :value="currentPage"
                 class="px-8" 
               >
-                <PaginationPrevious 
-                  @click="currentPage > 1 && goToPage(currentPage - 1)"
-                />
+                <PaginationPrevious />
               </PaginationItem>
               
               <template v-for="page in totalPages" :key="page">
@@ -202,7 +198,6 @@ const handleClearFilters = () => {
                   <Button
                     :variant="page === currentPage ? 'default' : 'outline'"
                     class="text-base font-medium"
-                    @click="goToPage(page)"
                   >
                     {{ page }}
                   </Button>
@@ -215,17 +210,13 @@ const handleClearFilters = () => {
                 </PaginationItem>
               </template>
 
-              <PaginationItem :value="currentPage + 1"
+              <PaginationItem :value="currentPage"
                class="px-8"
                >
-                <PaginationNext 
-                  @click="currentPage < totalPages && goToPage(currentPage + 1)"
-                />
+                <PaginationNext />
               </PaginationItem>
               <PaginationItem :value="totalPages" class="px-5">
-                <PaginationLast 
-                  @click="goToPage(totalPages)"
-                />
+                <PaginationLast />
               </PaginationItem>
             </PaginationContent>
           </Pagination>

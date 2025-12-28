@@ -31,6 +31,23 @@ let marker: L.Marker | null = null;
 const selectedLat = ref(props.initialLat);
 const selectedLng = ref(props.initialLng);
 
+// Handle manual coordinate input
+const handleLatLngInput = () => {
+  const lat = selectedLat.value;
+  const lng = selectedLng.value;
+  
+  // Validate coordinates
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return;
+  }
+  
+  // Update marker and center map
+  if (marker && map) {
+    marker.setLatLng([lat, lng]);
+    map.setView([lat, lng], map.getZoom());
+  }
+};
+
 const initMap = () => {
   if (!mapContainer.value || map) return;
 
@@ -154,22 +171,26 @@ onBeforeUnmount(() => {
             <Label for="latitude">Latitude</Label>
             <Input
               id="latitude"
-              v-model="selectedLat"
+              v-model.number="selectedLat"
               type="number"
               step="0.000001"
-              readonly
+              min="-90"
+              max="90"
               class="font-mono"
+              @input="handleLatLngInput"
             />
           </div>
           <div class="space-y-2">
             <Label for="longitude">Longitude</Label>
             <Input
               id="longitude"
-              v-model="selectedLng"
+              v-model.number="selectedLng"
               type="number"
               step="0.000001"
-              readonly
+              min="-180"
+              max="180"
               class="font-mono"
+              @input="handleLatLngInput"
             />
           </div>
         </div>

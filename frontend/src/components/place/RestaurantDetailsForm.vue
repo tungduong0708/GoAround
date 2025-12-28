@@ -33,6 +33,7 @@ const emit = defineEmits<Emits>();
           @update:model-value="emit('update:cuisineType', $event as string)"
           type="text"
           placeholder="e.g., Italian, Japanese, Thai"
+          maxlength="50"
           :disabled="disabled"
         />
       </div>
@@ -45,6 +46,7 @@ const emit = defineEmits<Emits>();
           type="text"
           placeholder="e.g., $, $$, $$$, $$$$"
           pattern="^\$+$"
+          maxlength="10"
           :disabled="disabled"
         />
         <p class="text-xs text-muted-foreground">

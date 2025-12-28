@@ -79,10 +79,42 @@ const fullAddress = computed(() => {
 });
 
 const isFormValid = computed(() => {
-  return placeName.value.trim() !== "" && 
-         address.value.trim() !== "" && 
-         selectedCategory.value !== null;
+  // Basic field validation
+  if (placeName.value.trim() === "" || address.value.trim() === "" || selectedCategory.value === null) {
+    return false;
+  }
+  
+  // Operating hours validation - check for invalid or incomplete time ranges
+  for (const [day, hours] of Object.entries(operatingHours.value)) {
+    if (!hours.closed) {
+      // Check if times are incomplete (one filled but not the other)
+      if ((hours.open && !hours.close) || (!hours.open && hours.close)) {
+        return false;
+      }
+      // Check if both are filled but start time is later than end time (overnight/invalid)
+      if (hours.open && hours.close && hours.close < hours.open) {
+        return false;
+      }
+    }
+  }
+  
+  return true;
 });
+
+const isOvernightHours = (day: keyof typeof operatingHours.value) => {
+  const hours = operatingHours.value[day];
+  if (hours.closed || !hours.open || !hours.close) return false;
+  return hours.close < hours.open;
+};
+
+const hasInvalidHours = (day: keyof typeof operatingHours.value) => {
+  const hours = operatingHours.value[day];
+  if (hours.closed) return false;
+  // Check if incomplete or overnight
+  if ((hours.open && !hours.close) || (!hours.open && hours.close)) return true;
+  if (hours.open && hours.close && hours.close < hours.open) return true;
+  return false;
+};
 
 const handleMainImageUpload = (url: string) => {
   mainImageUrl.value = url;
@@ -190,8 +222,8 @@ const handleSubmit = async () => {
 
     const createdPlace = await PlacesService.createPlace(placeData);
     
-    // Navigate to the created place details page
-    router.push({ name: "details", params: { id: createdPlace.id } });
+    // Navigate to the Manage Places page
+    router.push({ name: "manage-places" });
   } catch (error: any) {
     errorMessage.value = "Error creating place:" + error.detail;
     
@@ -257,9 +289,11 @@ const handleSubmit = async () => {
               v-model="placeName"
               type="text"
               placeholder="e.g., Grand Plaza Hotel"
+              maxlength="100"
               :disabled="isSubmitting"
               required
             />
+            <p class="text-xs text-muted-foreground">{{ placeName.length }}/100 characters</p>
           </div>
         </CardContent>
       </Card>
@@ -329,6 +363,7 @@ const handleSubmit = async () => {
                 v-model="city"
                 type="text"
                 placeholder="Paris"
+                maxlength="100"
                 :disabled="isSubmitting"
               />
             </div>
@@ -339,6 +374,7 @@ const handleSubmit = async () => {
                 v-model="country"
                 type="text"
                 placeholder="France"
+                maxlength="100"
                 :disabled="isSubmitting"
               />
             </div>
@@ -405,46 +441,53 @@ const handleSubmit = async () => {
           <div
             v-for="(day, key) in operatingHours"
             :key="key"
-            class="grid grid-cols-12 gap-3 items-center"
+            class="space-y-2"
           >
-            <div class="col-span-2 font-medium capitalize">{{ key }}</div>
-            <template v-if="!day.closed">
-              <Input
-                v-model="day.open"
-                type="time"
-                class="col-span-3"
+            <div class="grid grid-cols-12 gap-3 items-center">
+              <div class="col-span-2 font-medium capitalize">{{ key }}</div>
+              <template v-if="!day.closed">
+                <Input
+                  v-model="day.open"
+                  type="time"
+                  class="col-span-3"
+                  :class="{ 'border-red-500': hasInvalidHours(key as keyof typeof operatingHours) }"
+                  :disabled="isSubmitting"
+                />
+                <span class="col-span-1 text-center text-muted-foreground">to</span>
+                <Input
+                  v-model="day.close"
+                  type="time"
+                  class="col-span-3"
+                  :class="{ 'border-red-500': hasInvalidHours(key as keyof typeof operatingHours) }"
+                  :disabled="isSubmitting"
+                />
+              </template>
+              <div v-else class="col-span-7 text-muted-foreground">Closed</div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                class="col-span-2"
+                @click="toggleDayClosed(key as keyof typeof operatingHours)"
                 :disabled="isSubmitting"
-              />
-              <span class="col-span-1 text-center text-muted-foreground">to</span>
-              <Input
-                v-model="day.close"
-                type="time"
-                class="col-span-3"
-                :disabled="isSubmitting"
-              />
-            </template>
-            <div v-else class="col-span-7 text-muted-foreground">Closed</div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              class="col-span-2"
-              @click="toggleDayClosed(key as keyof typeof operatingHours)"
-              :disabled="isSubmitting"
-            >
-              {{ day.closed ? "Open" : "Closed" }}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              class="col-span-1"
-              @click="copyToAll(key as keyof typeof operatingHours)"
-              :disabled="isSubmitting || day.closed"
-              title="Copy to all days"
-            >
-              Copy
-            </Button>
+              >
+                {{ day.closed ? "Open" : "Closed" }}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                class="col-span-1"
+                @click="copyToAll(key as keyof typeof operatingHours)"
+                :disabled="isSubmitting || day.closed"
+                title="Copy to all days"
+              >
+                Copy
+              </Button>
+            </div>
+            <div v-if="!day.closed && hasInvalidHours(key as keyof typeof operatingHours)" class="ml-[16.67%] text-xs bg-red-50 text-red-700 px-3 py-1.5 rounded-md inline-block border border-red-200">
+              ❌ Invalid hours: {{ !day.open || !day.close ? 'Both times required' : 'Close time must be after open time' }}
+            </div>
           </div>
         </CardContent>
       </Card>

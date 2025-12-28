@@ -43,6 +43,7 @@ class AxiosService {
         "Content-Type": "application/json",
       },
       timeout: 30000, // Increased for AI recommendations
+      withCredentials: true,
     });
 
     AxiosService.authInstance.interceptors.request.use(async (request) => {
@@ -81,6 +82,7 @@ class AxiosService {
         "Content-Type": "application/json",
       },
       timeout: 10000,
+      withCredentials: true,
     });
 
     // Add request interceptor to include auth token if available (for optional auth endpoints)

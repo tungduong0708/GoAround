@@ -32,6 +32,7 @@ class TripService {
   async getTrips(
     query?: IPagingQuery,
   ): Promise<IPaginatedResponse<ITripListSchema[]>> {
+    console.log("Fetching trips with query:", query);
     const response = await authInstance.get("/trips", { params: query });
     return response.data as IPaginatedResponse<ITripListSchema[]>;
   }

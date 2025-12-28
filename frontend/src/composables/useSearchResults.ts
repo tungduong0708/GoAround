@@ -15,6 +15,7 @@ export function useSearchResults(options: UseSearchResultsOptions = { autoLoad: 
   const { query, results, loading, error, hasSearched, hasResults, category } = storeToRefs(store)
 
   const performSearch = async () => {
+    console.log('Performing search for', query.value)
     await store.search()
     router.push({ name: "search"})
   }

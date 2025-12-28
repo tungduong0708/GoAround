@@ -34,9 +34,11 @@ class ForumService {
     query?: IForumSearchQuery,
   ): Promise<IPaginatedResponse<IForumPostListItem[]>> {
     try {
+      console.log("Fetching forum posts with query:", query);
       const response = await commonInstance.get("/forum/posts", {
         params: query,
       });
+      console.log("Received forum posts response:", response.data);
       return response.data as IPaginatedResponse<IForumPostListItem[]>;
     } catch (error: any) {
       console.error(error);

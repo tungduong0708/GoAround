@@ -27,8 +27,8 @@ router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore();
   const userProfileStore = useUserProfileStore();
 
-  // Initialize auth state if not already done
-  if (!authStore.session && !authStore.isLoading) {
+  // Always ensure session is initialized before checking authentication
+  if (!authStore.session) {
     await authStore.initSession();
   }
 

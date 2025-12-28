@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +14,13 @@ import {
   Map,
 } from "lucide-vue-next";
 import { useRouter } from "vue-router";
-import type { IUserDetail, IUserPublic, IUserStats } from "@/utils/interfaces";
+import type {
+  IUserDetail,
+  IUserPublic,
+  IUserStats,
+  IUserUpdate,
+} from "@/utils/interfaces";
+import EditProfileModal from "@/components/UserProfile/EditProfileModal.vue";
 
 interface Props {
   user: IUserDetail | IUserPublic | null;
@@ -24,14 +31,36 @@ interface Props {
 const props = defineProps<Props>();
 const router = useRouter();
 
+const emit = defineEmits<{
+  save: [data: IUserUpdate];
+}>();
+
+// Edit Profile Modal state
+const showEditModal = ref(false);
+const editModalRef = ref<InstanceType<typeof EditProfileModal> | null>(null);
+
 const goBack = () => {
   router.back();
 };
 
 const handleEditProfile = () => {
-  // TODO: Implement Edit Profile Modal or Page
-  console.log("Edit Profile clicked");
+  showEditModal.value = true;
 };
+
+const handleSaveProfile = (data: IUserUpdate) => {
+  emit("save", data);
+};
+
+// Method to close modal and stop submitting (called from parent after save completes)
+const closeEditModal = (error?: string) => {
+  if (error) {
+    editModalRef.value?.stopSubmitting(error);
+  } else {
+    showEditModal.value = false;
+  }
+};
+
+defineExpose({ closeEditModal });
 
 // Helper for stats
 const getStat = (key: keyof IUserStats) => {
@@ -213,5 +242,13 @@ const statItems = [
         </Button>
       </div>
     </div>
+
+    <!-- Edit Profile Modal -->
+    <EditProfileModal
+      ref="editModalRef"
+      v-model:open="showEditModal"
+      :user="user"
+      @save="handleSaveProfile"
+    />
   </div>
 </template>

@@ -1,18 +1,35 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import { useUserProfile } from "@/composables";
 import ProfileHeader from "@/components/UserProfile/ProfileHeader.vue";
 import UserProfileTabs from "@/components/UserProfile/UserProfileTabs.vue";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { RefreshCwIcon } from "lucide-vue-next";
+import type { IUserUpdate } from "@/utils/interfaces";
 
 // Initialise composable
-const { user, loading, error, isMe, loadData } = useUserProfile();
+const { user, loading, error, isMe, loadData, updateProfile } =
+  useUserProfile();
 
-// Ensure data is loaded
+// Reference to ProfileHeader for controlling the edit modal
+const profileHeaderRef = ref<InstanceType<typeof ProfileHeader> | null>(null);
 
 const retry = () => {
   loadData();
+};
+
+const handleSaveProfile = async (data: IUserUpdate) => {
+  try {
+    await updateProfile(data);
+    // Close the modal on success
+    profileHeaderRef.value?.closeEditModal();
+  } catch (err: any) {
+    const errorMessage =
+      err?.response?.data?.detail || err.message || "Failed to update profile";
+    // Pass error back to the modal to display
+    profileHeaderRef.value?.closeEditModal(errorMessage);
+  }
 };
 </script>
 
@@ -70,12 +87,14 @@ const retry = () => {
       <div v-else class="space-y-10">
         <!-- Profile Header -->
         <ProfileHeader
+          ref="profileHeaderRef"
           v-motion
           :initial="{ opacity: 0, y: -20 }"
           :enter="{ opacity: 1, y: 0, transition: { duration: 500 } }"
           :user="user"
           :loading="loading"
           :is-me="isMe as boolean"
+          @save="handleSaveProfile"
         />
 
         <!-- Tabs (Only show if user exists) -->

@@ -355,7 +355,17 @@ const handleDeleteConfirm = async () => {
             @click="(e: MouseEvent) => { e.preventDefault(); guardAction(navigate); }"
           >
             <!-- Cover / Accent -->
-            <div class="relative h-32 overflow-hidden bg-gradient-to-br" :class="getGradient(index)">
+            <div class="relative h-32 overflow-hidden" :class="trip.preview_image_url ? '' : 'bg-gradient-to-br ' + getGradient(index)">
+              <!-- Background image if available -->
+              <img
+                v-if="trip.preview_image_url"
+                :src="trip.preview_image_url"
+                :alt="trip.trip_name"
+                class="absolute inset-0 w-full h-full object-cover"
+                @error="(e) => (e.target as HTMLImageElement).style.display = 'none'"
+              />
+              <!-- Overlay -->
+              <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/10" />
               <div class="absolute top-4 left-4">
                 <Badge class="rounded-full bg-white/85 text-foreground px-3 py-1 text-xs font-semibold">

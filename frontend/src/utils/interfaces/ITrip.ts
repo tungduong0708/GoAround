@@ -46,6 +46,7 @@ export interface ITripListSchema {
   end_date: string;
   public?: boolean;
   stop_count?: number;
+  preview_image_url?: string | null;
 }
 // export interface ITripStopUpdate {
 //   order_index?: number;

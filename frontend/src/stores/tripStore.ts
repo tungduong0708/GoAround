@@ -11,6 +11,7 @@ export const useTripStore = defineStore("trip", () => {
   const planTripLoading = ref(false);
   const deletingTripId = ref<string | null>(null);
   const error = ref<string | null>(null);
+  const tripPreviewImages = ref<Map<string, string>>(new Map());
 
   // Computed
   const tripCount = computed(() => trips.value.length);
@@ -58,6 +59,29 @@ export const useTripStore = defineStore("trip", () => {
       // Fetch from API
       const response = await TripService.getTrips();
       trips.value = response.data;
+      
+      // Fetch preview images for trips (non-blocking)
+      trips.value.forEach(async (trip) => {
+        if (!tripPreviewImages.value.has(trip.id)) {
+          try {
+            const fullTrip = await TripService.getTripById(trip.id);
+            if (fullTrip.stops && fullTrip.stops.length > 0) {
+              for (const stop of fullTrip.stops) {
+                if (stop.place?.main_image_url) {
+                  tripPreviewImages.value.set(trip.id, stop.place.main_image_url);
+                  trip.preview_image_url = stop.place.main_image_url;
+                  break;
+                }
+              }
+            }
+          } catch (err) {
+            // Silently fail for preview image fetching
+            console.warn(`Failed to load preview for trip ${trip.id}`);
+          }
+        } else {
+          trip.preview_image_url = tripPreviewImages.value.get(trip.id);
+        }
+      });
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Failed to load trips";
     } finally {
@@ -87,6 +111,17 @@ export const useTripStore = defineStore("trip", () => {
 
     try {
       const newTrip = await TripService.createTrip(tripData);
+      
+      // Cache preview image if trip has stops with places
+      if (newTrip.stops && newTrip.stops.length > 0) {
+        for (const stop of newTrip.stops) {
+          if (stop.place?.main_image_url) {
+            tripPreviewImages.value.set(newTrip.id, stop.place.main_image_url);
+            break;
+          }
+        }
+      }
+      
       await loadTrips(); // Reload the list to get the latest
       return newTrip;
     } catch (err) {

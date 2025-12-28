@@ -63,8 +63,8 @@ class AuthenticationService {
     const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) throw error;
     
-    // Force clear the session from memory
-    await supabase.auth.getSession();
+    // // Force clear the session from memory
+    // await supabase.auth.getSession();
   }
 
   async getMe() {

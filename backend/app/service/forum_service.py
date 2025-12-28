@@ -152,8 +152,15 @@ async def list_forum_posts(
             selectinload(ForumPost.tags),
             selectinload(ForumPost.images),
         )
-        .where(ForumPost.visible.is_(True))
     )
+
+    # Apply visibility filter - same logic as base_query
+    if current_user_id:
+        main_query = main_query.where(
+            or_(ForumPost.visible.is_(True), ForumPost.author_id == current_user_id)
+        )
+    else:
+        main_query = main_query.where(ForumPost.visible.is_(True))
 
     # Apply search filter to main query
     if filter_params.q:

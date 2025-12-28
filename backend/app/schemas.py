@@ -183,7 +183,7 @@ class UserPublic(UserBase):
 
 class UserDetail(UserPublic):
     email: EmailStr | None
-    is_banned: bool
+    ban_until: datetime | None
 
 
 # --- Place Data Schemas ---

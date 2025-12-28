@@ -150,7 +150,7 @@ async def get_user_detail(
         stats=user_public.stats,
         created_at=user_public.created_at,
         email=email,
-        is_banned=is_user_banned(profile) if profile else False,
+        ban_until=profile.ban_until if profile else None,
     )
 
 
@@ -214,6 +214,7 @@ async def create_user(
         stats=stats,
         created_at=profile.updated_at,
         email=email,
+        ban_until=profile.ban_until,
     )
 
 
@@ -286,6 +287,7 @@ async def update_user(
         stats=stats,
         created_at=profile.updated_at,
         email=email,
+        ban_until=profile.ban_until,
     )
 
 

@@ -41,6 +41,7 @@ class MediaService {
       allowedTypes = this.ALLOWED_IMAGE_TYPES,
     } = options;
 
+    console.log("Starting upload for file:", file.name);
     // Check if user is authenticated
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     

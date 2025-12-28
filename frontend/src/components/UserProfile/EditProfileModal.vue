@@ -181,7 +181,7 @@ defineExpose({ stopSubmitting });
               upload-type="avatar"
               :multiple="false"
               accept="image/jpeg,image/png,image/jpg,image/webp"
-              :max-size-in-m-b="2"
+              :max-size-in-m-b="18"
               label=""
               :disabled="submitting"
               @update:model-value="handleAvatarUpdate"

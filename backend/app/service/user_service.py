@@ -265,6 +265,7 @@ async def update_user(
 
     try:
         await session.commit()
+        await session.refresh(profile)
     except IntegrityError:
         await session.rollback()
         raise RuntimeError("Profile already exists")

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { h, ref } from "vue";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -173,8 +173,11 @@ const statItems = [
             <!-- Name & Type -->
             <div>
               <h1 class="text-3xl font-bold tracking-tight text-foreground">
-                {{ user.full_name || user.username }}
+                {{ user.full_name }}
               </h1>
+              <h2 class="text-base text-muted-foreground">
+                @{{ user.username }}
+              </h2>
               <div class="flex items-center gap-3 mt-2">
                 <Badge
                   variant="secondary"

@@ -17,7 +17,7 @@ export function useHeader() {
 
   const displayName = computed(() => {
     return (
-      user.value?.user_metadata?.full_name ||
+      profile.value?.full_name ||
       user.value?.email?.split("@")[0] ||
       "Guest"
     );

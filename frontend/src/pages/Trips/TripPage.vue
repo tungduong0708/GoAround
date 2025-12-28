@@ -578,15 +578,6 @@ watch(
             </div>
           </div>
         </div>
-
-        <!-- Floating Add from Saved Lists Button -->
-        <Button
-          class="absolute right-6 bottom-6 w-14 h-14 rounded-full shadow-2xl bg-coral text-white hover:bg-coral-dark hover:scale-110 transition-all duration-200 z-10"
-          @click="handleAddFromSavedPlaces"
-        >
-          <Bookmark :size="20" />
-          <span class="font-semibold">Saved Lists</span>
-        </Button>
       </div>
     </div>
 

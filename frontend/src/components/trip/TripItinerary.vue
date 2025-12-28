@@ -307,15 +307,6 @@ const handleAddFromSavedList = (dayIndex?: number) => {
     <div class="p-6 border-b border-border/50">
       <div class="flex items-center justify-between mb-2">
         <h2 class="text-xl font-bold text-foreground">Itinerary</h2>
-        <Button
-          size="sm"
-          variant="outline"
-          class="border-coral text-coral hover:bg-coral hover:text-white transition-colors"
-          @click="handleAddFromSavedList()"
-        >
-          <Bookmark :size="16" class="mr-1" />
-          Saved Lists
-        </Button>
       </div>
       <p class="text-sm text-muted-foreground">
         {{ days.length > 0 ? `${days.length} day${days.length > 1 ? 's' : ''} planned` : 'Set trip dates to start planning' }}

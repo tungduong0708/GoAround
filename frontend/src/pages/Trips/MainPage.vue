@@ -290,25 +290,8 @@ const handleDeleteConfirm = async () => {
 
     <!-- Filter bar -->
     <section
-      class="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4"
+      class="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-end gap-4"
     >
-      <div class="flex flex-wrap items-center gap-2">
-        <Button
-          v-for="tab in filters"
-          :key="tab"
-          type="button"
-          variant="outline"
-          :class="[
-            'capitalize rounded-full px-4 py-2 border-border/70',
-            activeFilter === tab
-              ? 'bg-coral text-white border-coral shadow-coral/20 shadow'
-              : 'hover:border-coral/50 hover:text-coral',
-          ]"
-          @click="setFilter(tab)"
-        >
-          {{ tab }}
-        </Button>
-      </div>
       <p class="text-sm text-muted-foreground">
         Sorted by start date — tap a card to open
       </p>

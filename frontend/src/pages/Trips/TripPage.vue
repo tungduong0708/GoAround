@@ -344,9 +344,27 @@ const cancelEditingDetails = () => {
   isEditingDetails.value = false;
 };
 
-const togglePublic = () => {
-  // TODO: Implement toggle public/private
-  console.log("Toggle public/private");
+const togglePublic = async () => {
+  if (!trip.value) return;
+  
+  try {
+    // Optimistically update the UI
+    const newPublicValue = !trip.value.public;
+    trip.value.public = newPublicValue;
+    
+    // Update on the backend
+    await TripService.updateTrip(trip.value.id, {
+      public: newPublicValue
+    });
+    
+    console.log(`Trip is now ${newPublicValue ? 'public' : 'private'}`);
+  } catch (error) {
+    console.error('Failed to toggle public/private:', error);
+    // Revert the optimistic update on error
+    if (trip.value) {
+      trip.value.public = !trip.value.public;
+    }
+  }
 };
 
 onMounted(async () => {

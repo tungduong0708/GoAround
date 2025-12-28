@@ -86,6 +86,7 @@ router.afterEach((to, from) => {
   if (isFromSearchRoute && !isToSearchRoute) {
     const searchStore = useSearchStore();
     searchStore.resetSearch();
+    console.log("Reset search");
   }
 });
 

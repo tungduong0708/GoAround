@@ -44,7 +44,7 @@ const handleLikeClick = (event: Event) => {
   event.preventDefault();
   event.stopPropagation();
   if (props.isAuthenticated) {
-    emit('toggleLike', props.post.id);
+    emit("toggleLike", props.post.id);
   }
 };
 </script>
@@ -62,10 +62,12 @@ const handleLikeClick = (event: Event) => {
               <Avatar
                 class="size-12 border-2 border-background shadow-sm hover:opacity-80 transition-opacity"
               >
-                <AvatarImage
-                  :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author.username}`"
-                />
-                <AvatarFallback>UN</AvatarFallback>
+                <AvatarImage :src="post.author.avatar_url as string" />
+                <AvatarFallback
+                  class="text-base bg-gradient-to-br from-orange-100 to-orange-200 text-orange-600 font-bold"
+                >
+                  {{ post.author.username?.charAt(0).toUpperCase() }}
+                </AvatarFallback>
               </Avatar>
             </RouterLink>
           </div>
@@ -73,24 +75,29 @@ const handleLikeClick = (event: Event) => {
           <div class="flex-1 space-y-4">
             <!-- Header -->
             <div class="flex items-center gap-2 text-sm">
-              <RouterLink :to="`/users/${post.author.id}`" @click.stop>
-                <Avatar
-                  class="sm:hidden size-8 hover:opacity-80 transition-opacity"
-                >
-                  <AvatarImage
-                    :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author.username}`"
-                  />
-                  <AvatarFallback>UN</AvatarFallback>
-                </Avatar>
-              </RouterLink>
-              <RouterLink :to="`/users/${post.author.id}`" @click.stop class="hover:underline">
+              <RouterLink
+                :to="`/users/${post.author.id}`"
+                @click.stop
+                class="hover:underline"
+              >
                 <span class="font-bold text-foreground">{{
-                  post.author.is_verified_business ? post.author.username : (post.author.full_name || post.author.username)
+                  post.author.full_name
+                    ? post.author.full_name
+                    : post.author.username
                 }}</span>
               </RouterLink>
-              <BadgeCheckIcon v-if="post.author.is_verified_business" class="size-4 text-blue-500 fill-blue-500/10" />
-              <RouterLink :to="`/users/${post.author.id}`" @click.stop class="hover:underline">
-                <span class="text-muted-foreground">@{{ post.author.username }}</span>
+              <BadgeCheckIcon
+                v-if="post.author.is_verified_business"
+                class="size-4 text-blue-500 fill-blue-500/10"
+              />
+              <RouterLink
+                :to="`/users/${post.author.id}`"
+                @click.stop
+                class="hover:underline"
+              >
+                <span class="text-muted-foreground"
+                  >@{{ post.author.username }}</span
+                >
               </RouterLink>
               <span class="text-muted-foreground">•</span>
               <span class="text-muted-foreground">{{
@@ -170,7 +177,7 @@ const handleLikeClick = (event: Event) => {
                   >{{ formatNumber(post.reply_count || 0) }}</span
                 >
               </div>
-              <div 
+              <div
                 class="flex items-center gap-2 group cursor-pointer"
                 @click="handleLikeClick"
               >
@@ -180,14 +187,18 @@ const handleLikeClick = (event: Event) => {
                   <HeartIcon
                     :class="[
                       'size-5 transition-colors',
-                      isLiked ? 'fill-red-500 text-red-500' : 'text-muted-foreground group-hover:text-red-500'
+                      isLiked
+                        ? 'fill-red-500 text-red-500'
+                        : 'text-muted-foreground group-hover:text-red-500',
                     ]"
                   />
                 </div>
                 <span
                   :class="[
                     'text-sm font-medium transition-colors',
-                    isLiked ? 'text-red-500' : 'text-muted-foreground group-hover:text-red-500'
+                    isLiked
+                      ? 'text-red-500'
+                      : 'text-muted-foreground group-hover:text-red-500',
                   ]"
                   >{{ formatNumber(post.like_count || 0) }}</span
                 >

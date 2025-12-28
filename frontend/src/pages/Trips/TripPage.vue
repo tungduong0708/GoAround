@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from "vue";
+import { onMounted, ref, computed, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useTripDetails, useGenerateTrip } from "@/composables";
 import TripService from "@/services/TripService";
@@ -49,7 +49,7 @@ const {
 const showSavedPlacesModal = ref(false);
 const showAddPlaceModal = ref(false);
 const selectedDayForPlace = ref<number>(0);
-const isEditingDetails = ref(false);
+const isEditingDetails = ref(true);
 
 const { 
   showGenerateTripModal, 
@@ -64,6 +64,15 @@ const editableTripName = ref("");
 const editableStartDate = ref("");
 const editableEndDate = ref("");
 
+// Local stops state for reordering (only synced on save)
+const localStops = ref<any[]>([]);
+
+// Computed to add logging when stops change
+const stopsForItinerary = computed(() => {
+  console.log('[TripPage] stopsForItinerary computed:', localStops.value.length);
+  return localStops.value;
+});
+
 const handleAddFromSavedPlaces = () => {
   showSavedPlacesModal.value = true;
 };
@@ -71,129 +80,144 @@ const handleAddFromSavedPlaces = () => {
 const handlePlaceAdded = async () => {
   // Reload trip to show newly added place
   await loadTrip(true);
+  // Sync local stops with updated trip data
+  if (trip.value?.stops) {
+    localStops.value = [...trip.value.stops];
+  }
 };
 
 const handleRemoveStop = async (stopId: string) => {
   if (confirm("Are you sure you want to remove this place from your trip?")) {
     try {
       await removeStop(stopId);
+      // Sync local stops with updated trip data
+      if (trip.value?.stops) {
+        localStops.value = [...trip.value.stops];
+      }
     } catch (err) {
       console.error("Failed to remove stop:", err);
     }
   }
 };
 
-const handleReorderStop = async (fromIndex: number, toIndex: number, dayIndex: number) => {
-  if (!trip.value?.stops || !trip.value.start_date || !trip.value.end_date) return;
+const handleReorderStop = (fromIndex: number, toIndex: number, dayIndex: number) => {
+  console.log('[TripPage] handleReorderStop called:', { fromIndex, toIndex, dayIndex });
+  console.log('[TripPage] Current localStops length:', localStops.value.length);
   
-  try {
-    // Calculate the date for the specific day
-    const start = new Date(trip.value.start_date);
-    const targetDate = new Date(start);
-    targetDate.setDate(start.getDate() + dayIndex);
-    const dateString = targetDate.toISOString().split("T")[0];
-    
-    // Get stops for the specific day
-    const dayStops = trip.value.stops.filter(stop => {
+  if (!localStops.value.length || !trip.value?.start_date || !trip.value?.end_date) {
+    console.warn('[TripPage] Missing data - cannot reorder');
+    return;
+  }
+  
+  // Calculate the date for the specific day
+  const start = new Date(trip.value.start_date);
+  const targetDate = new Date(start);
+  targetDate.setDate(start.getDate() + dayIndex);
+  const dateString = targetDate.toISOString().split("T")[0];
+  
+  // Get stops for the specific day with their indices in the full array
+  const dayStopsWithIndices = localStops.value
+    .map((stop, idx) => ({ stop, originalIndex: idx }))
+    .filter(({ stop }) => {
       if (!stop.arrival_time) return false;
       const stopDate = new Date(stop.arrival_time).toISOString().split("T")[0];
       return stopDate === dateString;
     });
-    
-    const movedStop = dayStops[fromIndex];
-    if (!movedStop) return;
-    
-    // Create new stops array with updated order
-    const updatedStops = [...trip.value.stops];
-    const movedStopInFullArray = updatedStops.find(s => s.id === movedStop.id);
-    if (!movedStopInFullArray) return;
-    
-    // Remove the stop from its original position
-    const originalIndex = updatedStops.indexOf(movedStopInFullArray);
-    updatedStops.splice(originalIndex, 1);
-    
-    // Calculate the new position in the full array
-    const targetStopInDay = dayStops[toIndex];
-    const targetIndexInFullArray = updatedStops.findIndex(s => s.id === targetStopInDay?.id);
-    const newIndex = targetIndexInFullArray >= 0 ? targetIndexInFullArray : updatedStops.length;
-    
-    // Insert at new position
-    updatedStops.splice(newIndex, 0, movedStopInFullArray);
-    
-    // Update stop_order for all stops
-    const stopsPayload = updatedStops.map((stop, idx) => ({
-      place_id: stop.place?.id || '',
-      stop_order: idx,
-      arrival_time: stop.arrival_time || '',
-      notes: stop.notes || ''
-    }));
-    
-    // Update trip with new stops order
-    await TripService.updateTrip(trip.value.id, { stops: stopsPayload });
-    await loadTrip(true);
-  } catch (error) {
-    console.error('Failed to reorder stop:', error);
+  
+  if (fromIndex >= dayStopsWithIndices.length || toIndex > dayStopsWithIndices.length) return;
+  if (fromIndex === toIndex) return;
+  
+  const movedItem = dayStopsWithIndices[fromIndex];
+  if (!movedItem) return;
+  
+  // Create new stops array
+  const updatedStops = [...localStops.value];
+  
+  // Remove the moved stop from its original position
+  updatedStops.splice(movedItem.originalIndex, 1);
+  
+  // Calculate the insertion index in the full stops array
+  let insertIndex: number;
+  if (toIndex === 0) {
+    // Insert at the beginning - find the first stop of this day
+    insertIndex = dayStopsWithIndices[0].originalIndex;
+    if (movedItem.originalIndex < insertIndex) insertIndex--;
+  } else if (toIndex >= dayStopsWithIndices.length) {
+    // Insert at the end - find the last stop of this day
+    const lastDayStop = dayStopsWithIndices[dayStopsWithIndices.length - 1];
+    insertIndex = lastDayStop.originalIndex;
+    if (movedItem.originalIndex < lastDayStop.originalIndex) insertIndex--;
+    insertIndex++; // Insert after the last item
+  } else {
+    // Insert before the stop at toIndex
+    const targetItem = dayStopsWithIndices[toIndex];
+    insertIndex = updatedStops.findIndex(s => s.id === targetItem.stop.id);
   }
+  
+  // Insert at new position
+  updatedStops.splice(insertIndex, 0, movedItem.stop);
+  
+  console.log('[TripPage] Reorder complete:', {
+    oldLength: localStops.value.length,
+    newLength: updatedStops.length,
+    movedStopName: movedItem.stop.place?.name,
+    updatedStops: updatedStops.map(s => s.place?.name)
+  });
+  
+  // Update local state - create completely new reference to trigger reactivity
+  localStops.value = [...updatedStops];
+  
+  // Force Vue to process the update
+  nextTick(() => {
+    console.log('[TripPage] nextTick - localStops should be rendered:', localStops.value.length);
+  });
 };
 
-const handleMoveStopBetweenDays = async (
+const handleMoveStopBetweenDays = (
   stopId: string, 
   fromDayIndex: number, 
   toDayIndex: number, 
   toPosition: number
 ) => {
-  if (!trip.value?.stops || !trip.value.start_date) return;
+  if (!localStops.value.length || !trip.value?.start_date) return;
   
-  try {
-    const updatedStops = [...trip.value.stops];
-    const stopToMove = updatedStops.find(s => s.id === stopId);
-    if (!stopToMove) return;
-    
-    // Calculate new arrival_time based on target day
-    const startDate = new Date(trip.value.start_date);
-    const newArrivalDate = new Date(startDate);
-    newArrivalDate.setDate(startDate.getDate() + toDayIndex);
-    const newArrivalTime = newArrivalDate.toISOString();
-    
-    // Remove stop from original position
-    const originalIndex = updatedStops.indexOf(stopToMove);
-    updatedStops.splice(originalIndex, 1);
-    
-    // Find target position in the full array
-    const targetDayStops = updatedStops.filter(stop => {
-      if (!stop.arrival_time) return false;
-      const stopDate = new Date(stop.arrival_time);
-      const daysDiff = Math.floor((stopDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      return daysDiff === toDayIndex;
-    });
-    
-    let insertIndex = updatedStops.length;
-    if (toPosition < targetDayStops.length && targetDayStops[toPosition]) {
-      insertIndex = updatedStops.indexOf(targetDayStops[toPosition]);
-    } else if (targetDayStops.length > 0) {
-      insertIndex = updatedStops.indexOf(targetDayStops[targetDayStops.length - 1]) + 1;
-    }
-    
-    // Update stop with new arrival time
-    stopToMove.arrival_time = newArrivalTime;
-    
-    // Insert at new position
-    updatedStops.splice(insertIndex, 0, stopToMove);
-    
-    // Update stop_order for all stops
-    const stopsPayload = updatedStops.map((stop, idx) => ({
-      place_id: stop.place?.id || '',
-      stop_order: idx,
-      arrival_time: stop.arrival_time || '',
-      notes: stop.notes || ''
-    }));
-    
-    // Update trip with new stops order and arrival times
-    await TripService.updateTrip(trip.value.id, { stops: stopsPayload });
-    await loadTrip(true);
-  } catch (error) {
-    console.error('Failed to move stop between days:', error);
+  const updatedStops = [...localStops.value];
+  const stopToMove = updatedStops.find(s => s.id === stopId);
+  if (!stopToMove) return;
+  
+  // Calculate new arrival_time based on target day
+  const startDate = new Date(trip.value.start_date);
+  const newArrivalDate = new Date(startDate);
+  newArrivalDate.setDate(startDate.getDate() + toDayIndex);
+  const newArrivalTime = newArrivalDate.toISOString();
+  
+  // Remove stop from original position
+  const originalIndex = updatedStops.indexOf(stopToMove);
+  updatedStops.splice(originalIndex, 1);
+  
+  // Find target position in the full array
+  const targetDayStops = updatedStops.filter(stop => {
+    if (!stop.arrival_time) return false;
+    const stopDate = new Date(stop.arrival_time);
+    const daysDiff = Math.floor((stopDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    return daysDiff === toDayIndex;
+  });
+  
+  let insertIndex = updatedStops.length;
+  if (toPosition < targetDayStops.length && targetDayStops[toPosition]) {
+    insertIndex = updatedStops.indexOf(targetDayStops[toPosition]);
+  } else if (targetDayStops.length > 0) {
+    insertIndex = updatedStops.indexOf(targetDayStops[targetDayStops.length - 1]) + 1;
   }
+  
+  // Update stop with new arrival time
+  stopToMove.arrival_time = newArrivalTime;
+  
+  // Insert at new position
+  updatedStops.splice(insertIndex, 0, stopToMove);
+  
+  // Update local state only
+  localStops.value = updatedStops;
 };
 
 const handleAddPlaceToDay = (dayIndex: number) => {
@@ -217,9 +241,29 @@ const startEditingDetails = () => {
 };
 
 const saveEditedDetails = async () => {
-  // TODO: Implement save trip details
-  console.log("Save trip details");
-  isEditingDetails.value = false;
+  if (!trip.value) return;
+  
+  try {
+    // Prepare stops payload with updated order
+    const stopsPayload = localStops.value.map((stop, idx) => ({
+      place_id: stop.place?.id || '',
+      stop_order: idx,
+      arrival_time: stop.arrival_time || '',
+      notes: stop.notes || ''
+    }));
+    
+    // Update trip with new details and stops order
+    await TripService.updateTrip(trip.value.id, {
+      trip_name: editableTripName.value,
+      start_date: editableStartDate.value,
+      end_date: editableEndDate.value,
+      stops: stopsPayload
+    });
+    
+    await loadTrip(true);
+  } catch (error) {
+    console.error('Failed to save trip:', error);
+  }
 };
 
 const cancelEditingDetails = () => {
@@ -238,7 +282,28 @@ const handleAIGenerate = () => {
 onMounted(async () => {
   console.log("Mounted");
   await loadTrip(true);
+  
+  // Initialize editable fields and local stops
+  if (trip.value) {
+    editableTripName.value = trip.value.trip_name;
+    editableStartDate.value = trip.value.start_date || "";
+    editableEndDate.value = trip.value.end_date || "";
+    localStops.value = trip.value.stops ? [...trip.value.stops] : [];
+  }
 });
+
+// Watch for changes in trip.value.stops and sync to localStops
+watch(
+  () => trip.value?.stops,
+  (newStops) => {
+    console.log('[TripPage] Watch triggered - trip.stops changed');
+    if (newStops) {
+      console.log('[TripPage] Syncing localStops with trip.stops:', newStops.length, 'items');
+      localStops.value = [...newStops];
+    }
+  },
+  { deep: true }
+);
 </script>
 
 <template>
@@ -288,30 +353,13 @@ onMounted(async () => {
             </Button>
 
             <Button
-              v-if="!isEditingDetails"
               size="sm"
-              class="bg-coral text-white hover:bg-coral-dark"
-              @click="startEditingDetails"
+              class="bg-coral text-white hover:bg-coral-dark flex items-center gap-2"
+              @click="saveEditedDetails"
             >
-              Edit Details
+              <Save :size="16" />
+              Save Trip
             </Button>
-            <template v-else>
-              <Button
-                size="sm"
-                class="bg-coral text-white hover:bg-coral-dark flex items-center gap-2"
-                @click="saveEditedDetails"
-              >
-                <Save :size="16" />
-                Save Trip
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                @click="cancelEditingDetails"
-              >
-                Cancel
-              </Button>
-            </template>
           </div>
         </div>
 
@@ -429,7 +477,7 @@ onMounted(async () => {
         <TripItinerary
           :start-date="trip.start_date"
           :end-date="trip.end_date"
-          :stops="trip.stops"
+          :stops="stopsForItinerary"
           @add-place="handleAddPlaceToDay"
           @remove-stop="handleRemoveStop"
           @reorder-stop="handleReorderStop"

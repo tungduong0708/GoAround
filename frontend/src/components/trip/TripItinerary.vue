@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { Plus, Calendar, MapPin, Clock, GripVertical, Trash2 } from "lucide-vue-next";
+import { Plus, Calendar, MapPin, GripVertical, Trash2 } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import type { ITripStopWithPlace } from "@/utils/interfaces";
 
@@ -38,9 +38,12 @@ const draggedStop = ref<{
 } | null>(null);
 const dragOverDayIndex = ref<number | null>(null);
 const dragOverStopIndex = ref<number | null>(null);
+const dropPosition = ref<{ dayIndex: number; position: number } | null>(null);
 
 // Compute days based on date range and populate with stops
 const days = computed((): DayItinerary[] => {
+  console.log('[TripItinerary] days computed - recalculating with', props.stops?.length, 'stops');
+  
   if (!props.startDate || !props.endDate) return [];
 
   const start = new Date(props.startDate);
@@ -66,6 +69,12 @@ const days = computed((): DayItinerary[] => {
       stops: dayStops,
     });
   }
+  
+  console.log('[TripItinerary] days computed result:', result.map(d => ({
+    day: d.day,
+    stopCount: d.stops.length,
+    stopNames: d.stops.map(s => s.place?.name)
+  })));
 
   return result;
 });
@@ -81,6 +90,12 @@ const formatDate = (dateString: string) => {
 
 const handleDragStart = (event: DragEvent, stop: ITripStopWithPlace, stopIndex: number, dayIndex: number) => {
   draggedStop.value = { stopId: stop.id, stopIndex, dayIndex, stop };
+  console.log('[TripItinerary] Drag started:', {
+    stopId: stop.id,
+    stopName: stop.place?.name,
+    fromIndex: stopIndex,
+    fromDay: dayIndex
+  });
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", stop.id);
@@ -90,19 +105,40 @@ const handleDragStart = (event: DragEvent, stop: ITripStopWithPlace, stopIndex: 
 };
 
 const handleDragEnd = (event: DragEvent) => {
+  console.log('[TripItinerary] Drag ended');
   (event.target as HTMLElement).classList.remove('opacity-50');
   draggedStop.value = null;
   dragOverDayIndex.value = null;
   dragOverStopIndex.value = null;
+  dropPosition.value = null;
 };
 
 const handleDragOver = (event: DragEvent, dayIndex?: number, stopIndex?: number) => {
   event.preventDefault();
+  event.stopPropagation();
   if (event.dataTransfer) {
     event.dataTransfer.dropEffect = "move";
   }
   if (dayIndex !== undefined) {
     dragOverDayIndex.value = dayIndex;
+    
+    // Calculate drop position based on mouse position
+    if (stopIndex !== undefined) {
+      const target = event.currentTarget as HTMLElement;
+      const rect = target.getBoundingClientRect();
+      const mouseY = event.clientY;
+      const targetMiddle = rect.top + rect.height / 2;
+      
+      // Determine if dropping before or after this stop
+      const position = mouseY > targetMiddle ? stopIndex + 1 : stopIndex;
+      dropPosition.value = { dayIndex, position };
+    } else {
+      // Dragging over empty day - position at start
+      const dayStops = days.value[dayIndex]?.stops || [];
+      if (dayStops.length === 0) {
+        dropPosition.value = { dayIndex, position: 0 };
+      }
+    }
   }
   if (stopIndex !== undefined) {
     dragOverStopIndex.value = stopIndex;
@@ -112,29 +148,85 @@ const handleDragOver = (event: DragEvent, dayIndex?: number, stopIndex?: number)
 const handleDragLeave = () => {
   dragOverDayIndex.value = null;
   dragOverStopIndex.value = null;
+  dropPosition.value = null;
 };
 
 const handleDropOnStop = (event: DragEvent, toIndex: number, dayIndex: number) => {
   event.preventDefault();
   event.stopPropagation();
   
-  if (!draggedStop.value) return;
+  console.log('[TripItinerary] Drop on stop:', { toIndex, dayIndex });
+  
+  if (!draggedStop.value) {
+    console.warn('[TripItinerary] No dragged stop - drop ignored');
+    return;
+  }
   
   const { stopId, stopIndex: fromIndex, dayIndex: fromDayIndex } = draggedStop.value;
   
+  // Determine drop position based on mouse Y position within the target element
+  const target = event.currentTarget as HTMLElement;
+  const rect = target.getBoundingClientRect();
+  const mouseY = event.clientY;
+  const targetMiddle = rect.top + rect.height / 2;
+  const mouseInBottomHalf = mouseY > targetMiddle;
+  
+  // If mouse is in bottom half, insert after (toIndex + 1), otherwise insert at toIndex
+  let adjustedToIndex = toIndex;
+  if (mouseInBottomHalf) {
+    adjustedToIndex = toIndex + 1;
+  }
+  
+  console.log('[TripItinerary] Drop details:', {
+    fromIndex,
+    toIndex,
+    adjustedToIndex,
+    fromDay: fromDayIndex,
+    toDay: dayIndex,
+    mousePosition: mouseInBottomHalf ? 'bottom' : 'top',
+    rectTop: rect.top,
+    rectBottom: rect.bottom,
+    rectHeight: rect.height,
+    mouseY: mouseY,
+    targetMiddle: targetMiddle
+  });
+  
   // Moving within the same day
   if (fromDayIndex === dayIndex) {
-    if (fromIndex !== toIndex) {
-      emit("reorder-stop", fromIndex, toIndex, dayIndex);
+    console.log('[TripItinerary] Same-day reorder:', {
+      beforeAdjustment: { fromIndex, adjustedToIndex }
+    });
+    
+    // Only adjust if we're moving forward AND the adjusted position is after the original
+    // When moving backward, no adjustment needed
+    // When moving forward, we need to account for the item being removed first
+    let finalToIndex = adjustedToIndex;
+    if (fromIndex < adjustedToIndex) {
+      finalToIndex = adjustedToIndex - 1;
+    }
+    
+    console.log('[TripItinerary] After adjustment:', {
+      finalFromIndex: fromIndex,
+      finalToIndex: finalToIndex,
+      willEmit: fromIndex !== finalToIndex
+    });
+    
+    if (fromIndex !== finalToIndex) {
+      console.log('[TripItinerary] Emitting reorder-stop event');
+      emit("reorder-stop", fromIndex, finalToIndex, dayIndex);
+    } else {
+      console.log('[TripItinerary] No change - same position');
     }
   } else {
     // Moving between different days
-    emit("move-stop-between-days", stopId, fromDayIndex, dayIndex, toIndex);
+    console.log('[TripItinerary] Cross-day move:', { stopId, fromDayIndex, dayIndex, adjustedToIndex });
+    emit("move-stop-between-days", stopId, fromDayIndex, dayIndex, adjustedToIndex);
   }
   
   draggedStop.value = null;
   dragOverDayIndex.value = null;
   dragOverStopIndex.value = null;
+  dropPosition.value = null;
 };
 
 const handleDropOnDay = (event: DragEvent, dayIndex: number) => {
@@ -154,6 +246,7 @@ const handleDropOnDay = (event: DragEvent, dayIndex: number) => {
   draggedStop.value = null;
   dragOverDayIndex.value = null;
   dragOverStopIndex.value = null;
+  dropPosition.value = null;
 };
 
 const handleRemoveStop = (stopId: string) => {
@@ -218,11 +311,11 @@ const handleAddPlace = (dayIndex: number) => {
           </div>
 
           <div
-            class="space-y-2 min-h-[60px] rounded-lg transition-colors"
+            class="rounded-lg transition-colors"
             :class="[
               dragOverDayIndex === dayIndex && day.stops.length === 0 
-                ? 'bg-coral/10 border-2 border-dashed border-coral' 
-                : ''
+                ? 'bg-coral/10 border-2 border-dashed border-coral min-h-[60px]' 
+                : 'min-h-[60px]'
             ]"
             @dragover="handleDragOver($event, dayIndex)"
             @dragleave="handleDragLeave"
@@ -235,9 +328,14 @@ const handleAddPlace = (dayIndex: number) => {
               No places added yet
             </div>
 
+            <!-- Drop indicator at the beginning -->
             <div
-              v-for="(stop, stopIndex) in day.stops"
-              :key="stop.id"
+              v-if="day.stops.length > 0 && dropPosition?.dayIndex === dayIndex && dropPosition?.position === 0"
+              class="h-1 bg-coral rounded-full mb-2 shadow-lg shadow-coral/50 animate-pulse"
+            ></div>
+
+            <template v-for="(stop, stopIndex) in day.stops" :key="stop.id">
+              <div
               draggable="true"
               @dragstart="handleDragStart($event, stop, stopIndex, dayIndex)"
               @dragend="handleDragEnd"
@@ -251,8 +349,11 @@ const handleAddPlace = (dayIndex: number) => {
               ]"
             >
               <div class="flex gap-3">
-                <div class="flex items-center">
-                  <GripVertical :size="16" class="text-muted-foreground" />
+                <div class="flex flex-col items-center gap-1">
+                  <div class="flex items-center justify-center w-6 h-6 rounded-full bg-coral/10 text-coral text-xs font-semibold">
+                    {{ stopIndex + 1 }}
+                  </div>
+                  <GripVertical :size="14" class="text-muted-foreground" />
                 </div>
                 
                 <img
@@ -260,6 +361,8 @@ const handleAddPlace = (dayIndex: number) => {
                   :src="stop.place.main_image_url"
                   :alt="stop.place?.name"
                   class="w-12 h-12 object-cover rounded-lg shrink-0 bg-muted"
+                  crossorigin="anonymous"
+                  loading="lazy"
                 />
 
                 <div class="flex-1 min-w-0">
@@ -282,24 +385,19 @@ const handleAddPlace = (dayIndex: number) => {
                     <span>{{ stop.place?.city }}, {{ stop.place?.country }}</span>
                   </div>
 
-                  <div v-if="stop.arrival_time" class="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                    <Clock :size="12" />
-                    <span>{{ new Date(stop.arrival_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) }}</span>
-                  </div>
-
                   <p v-if="stop.notes" class="text-xs text-muted-foreground mt-2 line-clamp-2">
                     {{ stop.notes }}
                   </p>
                 </div>
               </div>
-            </div>
+              </div>
 
-            <div
-              v-if="day.stops.length === 0"
-              class="text-center py-8 text-sm text-muted-foreground border-2 border-dashed border-border/50 rounded-lg"
-            >
-              No places added yet
-            </div>
+              <!-- Drop indicator after this card -->
+              <div
+                v-if="dropPosition?.dayIndex === dayIndex && dropPosition?.position === stopIndex + 1"
+                class="h-1 bg-coral rounded-full my-2 shadow-lg shadow-coral/50 animate-pulse"
+              ></div>
+            </template>
           </div>
         </div>
       </div>

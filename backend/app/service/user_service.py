@@ -138,6 +138,7 @@ async def get_user_detail(
         return None
 
     email = await _get_email(session, user_id)
+    profile = await _get_profile(session, user_id)
 
     return UserDetail(
         username=user_public.username,
@@ -149,6 +150,7 @@ async def get_user_detail(
         stats=user_public.stats,
         created_at=user_public.created_at,
         email=email,
+        is_banned=is_user_banned(profile) if profile else False,
     )
 
 

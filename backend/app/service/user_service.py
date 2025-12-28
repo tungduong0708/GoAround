@@ -258,7 +258,7 @@ async def update_user(
     if not profile:
         return None
 
-    data = user_update.model_dump(exclude_unset=True)
+    data = user_update.model_dump(exclude_unset=True, exclude_none=True)
 
     for field, value in data.items():
         setattr(profile, field, value)

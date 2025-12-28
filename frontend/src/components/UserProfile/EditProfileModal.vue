@@ -86,18 +86,18 @@ const handleSubmit = async () => {
     const updateData: IUserUpdate = {
       username:
         username.value.trim() !== props.user?.username
-          ? username.value.trim()
+          ? username.value.trim() || ""
           : null,
       full_name:
         fullName.value.trim() !== (props.user?.full_name || "")
-          ? fullName.value.trim()
+          ? fullName.value.trim() || ""
           : null,
       avatar_url:
         avatarUrl.value !== (props.user?.avatar_url || null)
-          ? avatarUrl.value
+          ? avatarUrl.value || ""
           : null,
     };
-
+    console.log("Emitting save with data:", updateData);
     emit("save", updateData);
   } catch (error: any) {
     console.error("Failed to update profile:", error);

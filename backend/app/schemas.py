@@ -664,3 +664,59 @@ class TripGenerateRequest(BaseModel):
     start_date: date
     end_date: date
     # Removed interests and budget to match UI
+
+
+# --- AI Recommendation Schemas ---
+
+
+class UserContextSchema(BaseModel):
+    """User preference context for recommendations"""
+
+    saved_categories: list[str] = Field(default_factory=list)
+    saved_count_per_category: dict[str, int] = Field(default_factory=dict)
+    visited_cities: list[str] = Field(default_factory=list)
+    price_preference: str | None = None
+    avg_rating_given: float | None = None
+    preferred_cuisines: list[str] = Field(default_factory=list)
+    hotel_preferences: dict[str, Any] = Field(default_factory=dict)
+    recent_activity_focus: str | None = None
+
+
+class SearchCriteriaSchema(BaseModel):
+    """AI-generated search criteria"""
+
+    place_types: list[str] = Field(default_factory=list)
+    cities: list[str] = Field(default_factory=list)
+    keywords: list[str] = Field(default_factory=list)
+    min_rating: float = 0.0
+    price_ranges: list[str] = Field(default_factory=list)
+    must_have_tags: list[str] = Field(default_factory=list)
+    exclude_tags: list[str] = Field(default_factory=list)
+    reasoning: str = ""
+    match_priority: dict[str, float] = Field(
+        default_factory=lambda: {
+            "category_match": 0.3,
+            "rating": 0.2,
+            "price": 0.15,
+            "location": 0.2,
+            "keywords": 0.15,
+        }
+    )
+
+
+class RecommendationItem(BaseModel):
+    """Single recommendation with relevance info"""
+
+    place: PlacePublic
+    relevance_score: float = Field(..., ge=0.0, le=1.0)
+    match_reasons: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RecommendationResponse(BaseModel):
+    """AI recommendation response"""
+
+    recommendations: list[RecommendationItem]
+    search_summary: str
+    user_context_used: UserContextSchema | None = None

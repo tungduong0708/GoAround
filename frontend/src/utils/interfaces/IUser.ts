@@ -14,6 +14,9 @@ export interface IUserDetail {
 
   created_at: string;
   email?: string | null;
+
+  ban_until?: string | null;
+  ban_reason?: string | null;
 }
 
 export interface IUserStats {

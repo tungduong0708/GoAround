@@ -82,7 +82,8 @@ export function useHeader() {
       // Log or surface sign-out errors if needed
       console.error("Failed to sign out", err);
     } finally {
-      router.push({ name: "home" });
+      // Use replace to reset navigation stack and prevent going back
+      router.replace({ name: "home" });
     }
   }
 

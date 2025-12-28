@@ -50,6 +50,16 @@ const commonRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: "/banned",
+    name: "banned",
+    component: () => import("@/pages/BannedPage.vue"),
+    meta: {
+      title: "Account Suspended",
+      authRequired: true,
+      hideHeader: true,
+    },
+  },
+  {
     path: "/search",
     name: "search",
     component: () => import("@/pages/SearchPage.vue"),

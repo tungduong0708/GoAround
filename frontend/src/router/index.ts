@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import commonRoutes from "./common";
 import guardRoutes from "./guard";
-import { useSearchStore, useAuthStore } from "@/stores";
+import { useSearchStore, useAuthStore, useUserProfileStore } from "@/stores";
 
 const routes = [
   ...commonRoutes,
@@ -25,6 +25,7 @@ const router = createRouter({
 // Authentication guard - protect routes that require auth
 router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore();
+  const userProfileStore = useUserProfileStore();
 
   // Initialize auth state if not already done
   if (!authStore.session && !authStore.isLoading) {
@@ -33,6 +34,25 @@ router.beforeEach(async (to, _from, next) => {
 
   const isAuthenticated = authStore.isAuthenticated;
   const requiresAuth = to.meta.authRequired === true;
+
+  // Check ban status first for authenticated users
+  if (isAuthenticated && to.name !== "banned") {
+    // Fetch profile if not already loaded
+    if (!userProfileStore.profile && userProfileStore.profileExists !== false) {
+      try {
+        await userProfileStore.fetchProfile();
+      } catch (error) {
+        // If profile fetch fails, let the user continue for now
+        console.error('Failed to fetch profile in router guard:', error);
+      }
+    }
+
+    // Force redirect banned users to banned page for ANY route
+    if (userProfileStore.profile?.ban_until) {
+      next({ name: "banned", replace: true });
+      return;
+    }
+  }
 
   // Redirect unauthenticated users to login for protected routes
   if (requiresAuth && !isAuthenticated) {

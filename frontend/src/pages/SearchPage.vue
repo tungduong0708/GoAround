@@ -120,7 +120,7 @@ const handleClearFilters = () => {
           Places
         </h2>
         <p class="text-sm text-muted-foreground">
-          {{ results?.data.places.length ?? 0 }} places found
+          {{ results?.meta?.total_items ?? 0 }} places found
         </p>
       </div>
 

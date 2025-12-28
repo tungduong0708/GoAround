@@ -7,7 +7,6 @@ export { useSearchCategories } from "./useSearchCategories";
 export { useRecommendations } from "./useRecommendations";
 export { useSearchResults } from "./useSearchResults";
 export { useSearchFilters } from "./useSearchFilters";
-export { useGeolocation } from "./useGeolocation";
 export { useSavedTrip } from "./useSavedTrip";
 export { useSavedLists } from "./useSavedLists";
 

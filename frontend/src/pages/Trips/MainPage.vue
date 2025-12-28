@@ -488,22 +488,7 @@ const handleDeleteConfirm = async () => {
                 </div>
               </div>
 
-              <div class="flex flex-wrap items-center gap-2">
-                <Badge
-                  variant="secondary"
-                  class="bg-coral/10 text-coral border-coral/30 px-3 py-1"
-                >
-                  {{ formatTripPlaceCount(trip) }}
-                </Badge>
-                <Badge
-                  variant="secondary"
-                  class="bg-muted/70 text-muted-foreground px-3 py-1"
-                >
-                  ID: {{ trip.id.slice(0, 6) }}
-                </Badge>
-              </div>
-
-              <div class="flex items-center gap-3 pt-2">
+              <div class="flex items-center gap-3 pt-4">
                 <Button
                   size="sm"
                   class="flex-1 bg-coral text-white hover:bg-coral-dark rounded-xl"

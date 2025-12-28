@@ -66,7 +66,12 @@ const dropdownRef = ref<HTMLElement | null>(null);
 const dropdownPosition = ref({ top: 0, left: 0, width: 0 });
 
 const isFormValid = computed(() => {
-  return tripName.value.trim() !== "" && destination.value.trim() !== "";
+  return (
+    tripName.value.trim() !== "" &&
+    destination.value.trim() !== "" &&
+    startDate.value !== "" &&
+    endDate.value !== ""
+  );
 });
 
 // Filter cities based on destination input

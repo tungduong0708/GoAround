@@ -395,8 +395,8 @@ class TripStopCreate(BaseModel):
 
 class TripCreate(BaseModel):
     trip_name: str = Field(..., min_length=1, max_length=100)
-    start_date: date | None = None
-    end_date: date | None = None
+    start_date: date
+    end_date: date
     public: bool = False
     tags: list[str] = Field(default_factory=list)
     stops: list[TripStopCreate] = Field(default_factory=list)
@@ -461,8 +461,13 @@ class TripSchema(BaseModel):
 class TripListSchema(BaseModel):
     id: uuid.UUID
     trip_name: str
+<<<<<<< Updated upstream
     start_date: date | None
     end_date: date | None
+=======
+    start_date: date | None = None
+    end_date: date | None = None
+>>>>>>> Stashed changes
     public: bool = False
     stop_count: int = 0
 

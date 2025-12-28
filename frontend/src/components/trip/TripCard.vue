@@ -6,9 +6,9 @@ import CardHeader from '@/components/ui/card/CardHeader.vue'
 import CardTitle from '@/components/ui/card/CardTitle.vue'
 import CardContent from '@/components/ui/card/CardContent.vue'
 import { Badge } from '@/components/ui/badge'
-import { MapPin, Calendar, FileText } from 'lucide-vue-next'
+import { Calendar } from 'lucide-vue-next'
 import type { ITripListSchema } from '@/utils/interfaces'
-import { formatDateRange, getPlaceCountText } from '@/utils/helpers'
+import { formatDateRange } from '@/utils/helpers'
 
 interface Props {
   trip: ITripListSchema
@@ -31,17 +31,6 @@ const emit = defineEmits<{
 const tripDateRange = computed(() => 
   formatDateRange(props.trip.start_date, props.trip.end_date)
 )
-
-const tripPlaceCount = computed(() => 
-  getPlaceCountText(props.trip.stop_count || 0)
-)
-
-const tripLocation = computed(() => {
-  if (props.trip.stop_count && props.trip.stop_count > 0) {
-    return `${props.trip.stop_count} destination${props.trip.stop_count > 1 ? 's' : ''}`
-  }
-  return 'No destinations yet'
-})
 
 const handleClick = () => {
   if (props.customOnClick) {
@@ -92,17 +81,6 @@ const handleClick = () => {
       </CardHeader>
 
       <CardContent class="space-y-3 pt-0">
-        <div
-          class="flex items-center gap-3 text-muted-foreground text-sm group-hover:text-muted-foreground/80 transition-colors"
-        >
-          <div
-            class="flex items-center justify-center w-8 h-8 rounded-lg bg-coral/10 shrink-0"
-          >
-            <MapPin :size="16" class="text-coral" />
-          </div>
-          <span class="truncate">{{ tripLocation }}</span>
-        </div>
-
         <div class="flex items-center gap-3 text-muted-foreground text-sm">
           <div
             class="flex items-center justify-center w-8 h-8 rounded-lg bg-coral/10 shrink-0"
@@ -110,17 +88,6 @@ const handleClick = () => {
             <Calendar :size="16" class="text-coral" />
           </div>
           <span>{{ tripDateRange }}</span>
-        </div>
-
-        <div class="flex items-center gap-3 text-sm">
-          <div
-            class="flex items-center justify-center w-8 h-8 rounded-lg bg-coral/10 shrink-0"
-          >
-            <FileText :size="16" class="text-coral" />
-          </div>
-          <span class="text-foreground font-semibold">
-            {{ tripPlaceCount }}
-          </span>
         </div>
       </CardContent>
     </Card>
@@ -156,17 +123,6 @@ const handleClick = () => {
     </CardHeader>
 
     <CardContent class="space-y-3 pt-0">
-      <div
-        class="flex items-center gap-3 text-muted-foreground text-sm group-hover:text-muted-foreground/80 transition-colors"
-      >
-        <div
-          class="flex items-center justify-center w-8 h-8 rounded-lg bg-coral/10 shrink-0"
-        >
-          <MapPin :size="16" class="text-coral" />
-        </div>
-        <span class="truncate">{{ tripLocation }}</span>
-      </div>
-
       <div class="flex items-center gap-3 text-muted-foreground text-sm">
         <div
           class="flex items-center justify-center w-8 h-8 rounded-lg bg-coral/10 shrink-0"
@@ -174,17 +130,6 @@ const handleClick = () => {
           <Calendar :size="16" class="text-coral" />
         </div>
         <span>{{ tripDateRange }}</span>
-      </div>
-
-      <div class="flex items-center gap-3 text-sm">
-        <div
-          class="flex items-center justify-center w-8 h-8 rounded-lg bg-coral/10 shrink-0"
-        >
-          <FileText :size="16" class="text-coral" />
-        </div>
-        <span class="text-foreground font-semibold">
-          {{ tripPlaceCount }}
-        </span>
       </div>
     </CardContent>
   </Card>

@@ -2,6 +2,7 @@
 import { onMounted, ref } from "vue";
 import { useAdmin } from "@/composables/useAdmin";
 import BusinessVerificationCard from "@/components/admin/BusinessVerificationCard.vue";
+import Lightbox from "@/components/common/Lightbox.vue";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,7 @@ const isDialogOpen = ref(false);
 const processing = ref(false);
 const reviewNote = ref("");
 const showRejectInput = ref(false); // To toggle reject specific input if needed, or just use common one
+const lightboxOpen = ref(false);
 
 onMounted(() => {
   loadBusinessVerifications();
@@ -38,6 +40,10 @@ const openDetail = (verification: IBusinessVerificationDetail) => {
   reviewNote.value = "";
   showRejectInput.value = false;
   isDialogOpen.value = true;
+};
+
+const openImageLightbox = () => {
+  lightboxOpen.value = true;
 };
 
 const handleApprove = async () => {
@@ -210,7 +216,8 @@ const handleReject = async () => {
           <div class="space-y-2">
             <Label>Business License / Documentation</Label>
             <div
-              class="rounded-lg border bg-muted/20 p-2 overflow-hidden bg-black/5"
+              class="rounded-lg border bg-muted/20 p-2 overflow-hidden bg-black/5 cursor-pointer hover:opacity-90 transition-opacity"
+              @click="openImageLightbox"
             >
               <img
                 :src="selectedVerification.business_image_url"
@@ -242,7 +249,7 @@ const handleReject = async () => {
           </div>
         </div>
 
-        <DialogFooter class="gap-2 sm:gap-0">
+        <DialogFooter class="gap-3 sm:gap-3">
           <Button
             variant="destructive"
             @click="handleRejectClick"
@@ -260,5 +267,13 @@ const handleReject = async () => {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <!-- Image Lightbox -->
+    <Lightbox
+      v-if="selectedVerification"
+      v-model:open="lightboxOpen"
+      :images="[selectedVerification.business_image_url]"
+      :current-index="0"
+    />
   </div>
 </template>

@@ -53,6 +53,7 @@ async def _load_trip_detail(session: AsyncSession, trip: Trip) -> TripSchema:
         )
     return TripSchema(
         id=trip_obj.id,
+        user_id=trip_obj.user_id,
         trip_name=trip_obj.trip_name,
         start_date=trip_obj.start_date,
         end_date=trip_obj.end_date,
@@ -199,12 +200,21 @@ async def create_trip(
 
 
 async def get_trip(
-    session: AsyncSession, user_id: uuid.UUID, trip_id: uuid.UUID
+    session: AsyncSession, user_id: uuid.UUID | None, trip_id: uuid.UUID
 ) -> TripSchema:
-    """Get a specific trip by ID."""
+    """Get a specific trip by ID. Public trips can be viewed by anyone."""
     trip = await session.get(Trip, trip_id)
-    if not trip or trip.user_id != user_id:
+    if not trip:
         raise ValueError("Trip not found")
+
+    # If trip is public, anyone can view it
+    if trip.public:
+        return await _load_trip_detail(session, trip)
+
+    # If trip is private, only the owner can view it
+    if user_id is None or trip.user_id != user_id:
+        raise ValueError("Trip not found")
+
     return await _load_trip_detail(session, trip)
 
 

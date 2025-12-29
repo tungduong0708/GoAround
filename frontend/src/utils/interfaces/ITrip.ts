@@ -33,6 +33,7 @@ export interface ITripStopWithPlace {
 }
 export interface ITripSchema {
   id: string;
+  user_id: string;
   trip_name: string;
   start_date?: string | null;
   end_date?: string | null;

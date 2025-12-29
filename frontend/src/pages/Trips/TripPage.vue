@@ -2,6 +2,7 @@
 import { onMounted, ref, computed, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useTripDetails } from "@/composables";
+import { useAuthStore } from "@/stores";
 import TripService from "@/services/TripService";
 import Button from "@/components/ui/button/Button.vue";
 import Card from "@/components/ui/card/Card.vue";
@@ -28,6 +29,7 @@ import {
 const route = useRoute();
 const router = useRouter();
 const tripId = route.params.id as string;
+const authStore = useAuthStore();
 
 const {
   trip,
@@ -44,6 +46,12 @@ const {
   navigateBack,
   clearErrors,
 } = useTripDetails({ tripId, autoLoad: true });
+
+// Check if current user is the trip author
+const isAuthor = computed(() => {
+  if (!trip.value || !authStore.user) return false;
+  return trip.value.user_id === authStore.user.id;
+});
 
 const showSavedPlacesModal = ref(false);
 const showAddPlaceModal = ref(false);
@@ -416,6 +424,7 @@ watch(
             <Button
               size="sm"
               variant="outline"
+              :disabled="!isAuthor"
               :class="[
                 'flex items-center gap-2 transition-all',
                 trip?.public
@@ -430,6 +439,7 @@ watch(
 
             <Button
               size="sm"
+              :disabled="!isAuthor"
               class="bg-coral text-white hover:bg-coral-dark flex items-center gap-2"
               @click="saveEditedDetails"
             >
@@ -488,6 +498,7 @@ watch(
             <Input
               v-if="isEditingDetails"
               v-model="editableTripName"
+              :disabled="!isAuthor"
               placeholder="e.g., Summer in Da Nang"
               class="h-11 rounded-xl"
             />
@@ -501,6 +512,7 @@ watch(
             <Input
               v-if="isEditingDetails"
               v-model="editableStartDate"
+              :disabled="!isAuthor"
               type="date"
               class="h-11 rounded-xl"
             />
@@ -514,6 +526,7 @@ watch(
             <Input
               v-if="isEditingDetails"
               v-model="editableEndDate"
+              :disabled="!isAuthor"
               type="date"
               class="h-11 rounded-xl"
             />
@@ -554,6 +567,7 @@ watch(
           :start-date="trip.start_date"
           :end-date="trip.end_date"
           :stops="stopsForItinerary"
+          :is-author="isAuthor"
           @add-place="handleAddPlaceToDay"
           @add-from-saved-list="handleAddFromSavedPlaces"
           @remove-stop="handleRemoveStop"

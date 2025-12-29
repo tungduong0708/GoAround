@@ -20,6 +20,7 @@ interface TripItineraryProps {
   startDate?: string | null;
   endDate?: string | null;
   stops?: ITripStopWithPlace[];
+  isAuthor?: boolean;
 }
 
 interface TripItineraryEmits {
@@ -33,6 +34,7 @@ interface TripItineraryEmits {
 
 const props = withDefaults(defineProps<TripItineraryProps>(), {
   stops: () => [],
+  isAuthor: true,
 });
 
 const emit = defineEmits<TripItineraryEmits>();
@@ -346,7 +348,7 @@ const handleAddFromSavedList = (dayIndex?: number) => {
                 {{ formatDate(day.date) }}
               </p>
             </button>
-            <DropdownMenu>
+            <DropdownMenu v-if="isAuthor">
               <DropdownMenuTrigger as-child>
                 <Button
                   size="sm"
@@ -396,13 +398,14 @@ const handleAddFromSavedList = (dayIndex?: number) => {
 
             <template v-for="(stop, stopIndex) in day.stops" :key="stop.id">
               <div
-              draggable="true"
+              :draggable="isAuthor"
               @dragstart="handleDragStart($event, stop, stopIndex, dayIndex)"
               @dragend="handleDragEnd"
               @dragover.stop="handleDragOver($event, dayIndex, stopIndex)"
               @drop="handleDropOnStop($event, stopIndex, dayIndex)"
-              class="bg-card border-2 rounded-lg p-3 group hover:border-coral/50 hover:shadow-md transition-all cursor-move relative"
+              class="bg-card border-2 rounded-lg p-3 group hover:border-coral/50 hover:shadow-md transition-all relative"
               :class="[
+                isAuthor ? 'cursor-move' : '',
                 dragOverDayIndex === dayIndex && dragOverStopIndex === stopIndex 
                   ? 'border-coral ring-2 ring-coral/20' 
                   : 'border-border/60'
@@ -413,7 +416,7 @@ const handleAddFromSavedList = (dayIndex?: number) => {
                   <div class="flex items-center justify-center w-6 h-6 rounded-full bg-coral/10 text-coral text-xs font-semibold">
                     {{ stopIndex + 1 }}
                   </div>
-                  <GripVertical :size="14" class="text-muted-foreground" />
+                  <GripVertical v-if="isAuthor" :size="14" class="text-muted-foreground" />
                 </div>
                 
                 <img
@@ -431,6 +434,7 @@ const handleAddFromSavedList = (dayIndex?: number) => {
                       {{ stop.place?.name }}
                     </h4>
                     <Button
+                      v-if="isAuthor"
                       size="icon"
                       variant="ghost"
                       class="w-8 h-8 shrink-0 opacity-0 group-hover:opacity-100 text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-all"

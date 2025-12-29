@@ -441,6 +441,7 @@ class TripStopWithPlace(BaseModel):
 
 class TripSchema(BaseModel):
     id: uuid.UUID
+    user_id: uuid.UUID
     trip_name: str
     start_date: date | None = None
     end_date: date | None = None

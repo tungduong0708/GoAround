@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, status
 
 from app import crud
-from app.api.deps import CurrentUserDep, SessionDep
+from app.api.deps import CurrentUserDep, OptionalCurrentUserDep, SessionDep
 from app.service.ai_service import generate_trip_plan
 from app.schemas import (
     APIResponse,
@@ -50,10 +50,11 @@ async def list_trips(
     },
 )
 async def get_trip(
-    session: SessionDep, current_user: CurrentUserDep, trip_id: uuid.UUID
+    session: SessionDep, current_user: OptionalCurrentUserDep, trip_id: uuid.UUID
 ):
     try:
-        trip = await crud.get_trip(session, current_user.id, trip_id)
+        user_id = current_user.id if current_user else None
+        trip = await crud.get_trip(session, user_id, trip_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return APIResponse(data=trip)
@@ -131,7 +132,6 @@ async def delete_trip(
     return APIResponse(data=Message(message="Trip deleted successfully"))
 
 
-
 @router.post(
     "/generate",
     status_code=status.HTTP_200_OK,
@@ -152,10 +152,10 @@ async def generate_trip(
     try:
         # 1. Generate plan (returns TripCreate)
         trip_plan = await generate_trip_plan(session, body)
-        
+
         # 2. Save to database using existing manual trip creation logic
         saved_trip = await crud.create_trip(session, current_user.id, trip_plan)
-        
+
         return APIResponse(data=saved_trip)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

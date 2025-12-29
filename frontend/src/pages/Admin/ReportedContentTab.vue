@@ -2,6 +2,7 @@
 import { ref, onMounted } from "vue";
 import { useAdmin } from "@/composables/useAdmin";
 import ModerationCaseCard from "@/components/admin/ModerationCaseCard.vue";
+import Lightbox from "@/components/common/Lightbox.vue";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,17 @@ const resolveAction = ref<"dismiss" | "remove_content" | "ban_user">("dismiss");
 const resolveNote = ref("");
 const banDuration = ref<number>(7); // Default to 7 days
 const resolving = ref(false);
+
+// Lightbox State
+const lightboxOpen = ref(false);
+const lightboxImages = ref<string[]>([]);
+const lightboxIndex = ref(0);
+
+const openImageLightbox = (imageUrl: string) => {
+  lightboxImages.value = [imageUrl];
+  lightboxIndex.value = 0;
+  lightboxOpen.value = true;
+};
 
 const loadCases = () => {
   const query: IReportQuery = {};
@@ -266,7 +278,8 @@ const handleResolve = async () => {
                   v-for="(img, idx) in (selectedCaseDetail.content_snapshot as any).images"
                   :key="idx"
                   :src="img.image_url || img"
-                  class="h-32 w-auto rounded-md object-cover border"
+                  class="h-32 w-auto rounded-md object-cover border cursor-pointer hover:opacity-80 transition-opacity"
+                  @click="openImageLightbox(img.image_url || img)"
                 />
               </div>
             </div>
@@ -404,4 +417,11 @@ const handleResolve = async () => {
       </DialogContent>
     </Dialog>
   </div>
+
+  <!-- Lightbox for Image Viewing -->
+  <Lightbox
+    v-model:open="lightboxOpen"
+    :images="lightboxImages"
+    :current-index="lightboxIndex"
+  />
 </template>

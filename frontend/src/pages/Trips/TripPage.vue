@@ -71,6 +71,12 @@ const destinationCity = computed(() => {
   return null;
 });
 
+// Date validation
+const isEndDateBeforeStartDate = computed(() => {
+  if (!editableStartDate.value || !editableEndDate.value) return false;
+  return new Date(editableEndDate.value) < new Date(editableStartDate.value);
+});
+
 // Computed to add logging when stops change
 const stopsForItinerary = computed(() => {
   console.log('[TripPage] stopsForItinerary computed:', localStops.value.length);
@@ -328,6 +334,12 @@ const startEditingDetails = () => {
 const saveEditedDetails = async () => {
   if (!trip.value) return;
   
+  // Validate dates
+  if (isEndDateBeforeStartDate.value) {
+    console.error('Cannot save: End date is before start date');
+    return;
+  }
+  
   try {
     // Prepare stops payload with updated order (stop_order starts from 1)
     const stopsPayload = localStops.value.map((stop, idx) => ({
@@ -441,7 +453,8 @@ watch(
 
             <Button
               size="sm"
-              class="bg-coral text-white hover:bg-coral-dark flex items-center gap-2"
+              class="bg-coral text-white hover:bg-coral-dark flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="isEndDateBeforeStartDate"
               @click="saveEditedDetails"
             >
               <Save :size="16" />
@@ -526,12 +539,22 @@ watch(
               v-if="isEditingDetails"
               v-model="editableEndDate"
               type="date"
-              class="h-11 rounded-xl"
+              :min="editableStartDate"
+              :class="[
+                'h-11 rounded-xl',
+                isEndDateBeforeStartDate ? 'border-red-500' : ''
+              ]"
             />
             <p v-else class="text-lg text-foreground">
               {{ trip.end_date ? new Date(trip.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set' }}
             </p>
           </div>
+        </div>
+
+        <!-- Date validation error -->
+        <div v-if="isEditingDetails && isEndDateBeforeStartDate" class="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-700 dark:text-red-400 mt-4">
+          <p class="font-medium">End date cannot be before start date</p>
+          <p class="text-xs mt-1">Please select an end date that is on or after {{ editableStartDate }}.</p>
         </div>
 
         <!-- Remove Error Alert -->

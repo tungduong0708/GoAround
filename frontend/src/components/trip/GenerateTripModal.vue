@@ -50,7 +50,12 @@ const isOpen = computed({
 });
 
 const isFormValid = computed(() => {
-  return destination.value.trim() && startDate.value && endDate.value;
+  return destination.value.trim() && startDate.value && endDate.value && !isEndDateBeforeStartDate.value;
+});
+
+const isEndDateBeforeStartDate = computed(() => {
+  if (!startDate.value || !endDate.value) return false;
+  return new Date(endDate.value) < new Date(startDate.value);
 });
 
 // Filter cities based on input
@@ -228,9 +233,18 @@ watch(() => props.open, (newVal) => {
               required
               :disabled="loading"
               :min="startDate"
-              class="w-full"
+              :class="[
+                'w-full',
+                isEndDateBeforeStartDate ? 'border-red-500' : ''
+              ]"
             />
           </div>
+        </div>
+
+        <!-- Date validation error -->
+        <div v-if="isEndDateBeforeStartDate" class="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-700 dark:text-red-400">
+          <p class="font-medium">End date cannot be before start date</p>
+          <p class="text-xs mt-1">Please select an end date that is on or after {{ startDate }}.</p>
         </div>
 
         <!-- Error Display -->

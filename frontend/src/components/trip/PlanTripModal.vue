@@ -80,8 +80,14 @@ const isFormValid = computed(() => {
     tripName.value.trim() !== "" &&
     isDestinationValid.value &&
     startDate.value !== "" &&
-    endDate.value !== ""
+    endDate.value !== "" &&
+    !isEndDateBeforeStartDate.value
   );
+});
+
+const isEndDateBeforeStartDate = computed(() => {
+  if (!startDate.value || !endDate.value) return false;
+  return new Date(endDate.value) < new Date(startDate.value);
 });
 
 const canAddPlaces = computed(() => {
@@ -494,9 +500,19 @@ onBeforeUnmount(() => {
               id="end-date"
               v-model="endDate"
               type="date"
-              class="h-11 text-sm rounded-xl border-border/80 focus:border-coral focus:ring-coral/20"
+              :min="startDate"
+              :class="[
+                'h-11 text-sm rounded-xl border-border/80 focus:border-coral focus:ring-coral/20',
+                isEndDateBeforeStartDate ? 'border-red-500' : ''
+              ]"
             />
           </div>
+        </div>
+        
+        <!-- Date validation error message -->
+        <div v-if="isEndDateBeforeStartDate" class="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-700 dark:text-red-400">
+          <p class="font-medium">End date cannot be before start date</p>
+          <p class="text-xs mt-1">Please select an end date that is on or after {{ startDate }}.</p>
         </div>
 
         <!-- Public/Private Toggle -->

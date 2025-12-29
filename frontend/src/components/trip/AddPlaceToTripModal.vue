@@ -17,6 +17,7 @@ import type { IPlacePublic } from "@/utils/interfaces";
 interface AddPlaceToTripModalProps {
   open?: boolean;
   dayNumber?: number;
+  destinationCity?: string | null;
 }
 
 interface AddPlaceToTripModalEmits {
@@ -27,6 +28,7 @@ interface AddPlaceToTripModalEmits {
 const props = withDefaults(defineProps<AddPlaceToTripModalProps>(), {
   open: false,
   dayNumber: 1,
+  destinationCity: null,
 });
 
 const emit = defineEmits<AddPlaceToTripModalEmits>();
@@ -79,7 +81,17 @@ watch(searchQuery, (value) => {
         q: value,
         limit: 20,
       });
-      searchSuggestions.value = response.data?.places || [];
+      
+      // Filter by destination city if provided
+      const allPlaces = response.data?.places || [];
+      if (props.destinationCity) {
+        searchSuggestions.value = allPlaces.filter(place => 
+          place.city?.toLowerCase() === props.destinationCity?.toLowerCase()
+        );
+      } else {
+        searchSuggestions.value = allPlaces;
+      }
+      
       showSuggestions.value = searchSuggestions.value.length > 0;
       if (showSuggestions.value) {
         await nextTick();
@@ -143,7 +155,12 @@ const formatLocation = (place: IPlacePublic) => {
           Search Places for Day {{ dayNumber }}
         </DialogTitle>
         <p class="text-sm text-muted-foreground mt-0.5">
-          Search and add places to your itinerary
+          <template v-if="destinationCity">
+            Showing places in {{ destinationCity }}
+          </template>
+          <template v-else>
+            Search and add places to your itinerary
+          </template>
         </p>
       </DialogHeader>
 

@@ -55,6 +55,16 @@ const newPlaceInput = ref("");
 // Destination autocomplete
 const filteredCities = ref<string[]>([]);
 const showCitiesDropdown = ref(false);
+const destinationInputRef = ref<HTMLInputElement | null>(null);
+const citiesDropdownRef = ref<HTMLElement | null>(null);
+const isDestinationValid = ref(false);
+
+// Extract city name from "city, country" format
+const getDestinationCity = computed(() => {
+  if (!destination.value) return "";
+  const parts = destination.value.split(',');
+  return parts[0]?.trim() || "";
+});
 
 // Search suggestions
 const searchSuggestions = ref<IPlacePublic[]>([]);
@@ -68,10 +78,14 @@ const dropdownPosition = ref({ top: 0, left: 0, width: 0 });
 const isFormValid = computed(() => {
   return (
     tripName.value.trim() !== "" &&
-    destination.value.trim() !== "" &&
+    isDestinationValid.value &&
     startDate.value !== "" &&
     endDate.value !== ""
   );
+});
+
+const canAddPlaces = computed(() => {
+  return isDestinationValid.value;
 });
 
 // Filter cities based on destination input
@@ -89,6 +103,8 @@ const filterCities = () => {
 const handleDestinationInput = () => {
   filterCities();
   showCitiesDropdown.value = true;
+  // Mark as invalid when user types
+  isDestinationValid.value = false;
 };
 
 const handleDestinationFocus = () => {
@@ -99,6 +115,20 @@ const handleDestinationFocus = () => {
 const selectCity = (city: string) => {
   destination.value = city;
   showCitiesDropdown.value = false;
+  isDestinationValid.value = true;
+  // Clear places when destination changes
+  places.value = [];
+};
+
+const handleDestinationBlur = () => {
+  // Use setTimeout to allow click event on dropdown to fire first
+  setTimeout(() => {
+    // If destination doesn't match any city in the list, mark as invalid
+    if (destination.value && !cities.value.includes(destination.value)) {
+      isDestinationValid.value = false;
+    }
+    showCitiesDropdown.value = false;
+  }, 200);
 };
 
 // Calculate dropdown position relative to input
@@ -141,15 +171,25 @@ watch(newPlaceInput, (value) => {
   searchTimeoutId.value = window.setTimeout(async () => {
     isSearching.value = true;
     try {
+      const cityName = getDestinationCity.value;
       const response = await PlacesService.getPlaces({
         q: value,
         limit: 20,
       });
-      searchSuggestions.value = response.data?.places || [];
-      showSuggestions.value = searchSuggestions.value.length > 0;
-      if (showSuggestions.value) {
+      // Filter results to only show places from the selected destination city
+      const allPlaces = response.data?.places || [];
+      searchSuggestions.value = allPlaces.filter(place => 
+        place.city?.toLowerCase() === cityName.toLowerCase()
+      );
+      
+      if (searchSuggestions.value.length > 0) {
         await nextTick();
-        updateDropdownPosition();
+        await updateDropdownPosition();
+        showSuggestions.value = true;
+        console.log('[PlanTripModal] Showing suggestions:', searchSuggestions.value.length, 'at position:', dropdownPosition.value);
+      } else {
+        showSuggestions.value = false;
+        console.log('[PlanTripModal] No suggestions found for city:', cityName);
       }
     } catch (error) {
       console.error("Search failed:", error);
@@ -159,6 +199,15 @@ watch(newPlaceInput, (value) => {
       isSearching.value = false;
     }
   }, 300);
+});
+
+// Watch destination changes to clear places if destination changes
+watch(destination, (newValue, oldValue) => {
+  // If destination changed and we have places, clear them
+  if (oldValue && newValue !== oldValue && places.value.length > 0) {
+    places.value = [];
+    isDestinationValid.value = false;
+  }
 });
 
 // Update position on window resize/scroll
@@ -171,6 +220,10 @@ const handlePositionUpdate = () => {
 onMounted(() => {
   window.addEventListener('resize', handlePositionUpdate);
   window.addEventListener('scroll', handlePositionUpdate, true);
+  // Load cities for destination autocomplete
+  if (cities.value.length === 0) {
+    citiesStore.fetchCities();
+  }
 });
 
 onBeforeUnmount(() => {
@@ -206,6 +259,7 @@ const handleCancel = () => {
   // Reset form
   tripName.value = "";
   destination.value = "";
+  isDestinationValid.value = false;
   startDate.value = "";
   endDate.value = "";
   isPublic.value = false;
@@ -227,6 +281,19 @@ const addPlaceFromSuggestion = (place: IPlacePublic, event?: Event) => {
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
+  }
+  
+  // Check if destination is selected
+  if (!canAddPlaces.value) {
+    console.warn('Cannot add place: No destination selected');
+    return;
+  }
+  
+  // Check if place matches the destination city
+  const cityName = getDestinationCity.value;
+  if (place.city?.toLowerCase() !== cityName.toLowerCase()) {
+    console.warn('Cannot add place: Place is not from the selected destination');
+    return;
   }
   
   // Check if place is already added
@@ -366,26 +433,35 @@ onBeforeUnmount(() => {
             Destination
           </Label>
           <Input
+            ref="destinationInputRef"
             id="destination"
             v-model="destination"
             type="text"
-            placeholder="e.g., Nha Trang, Vietnam"
-            class="h-11 text-sm rounded-xl border-border/80 focus:border-coral focus:ring-coral/20"
+            placeholder="Select a destination (e.g., Nha Trang, Vietnam)"
+            :class="[
+              'h-11 text-sm rounded-xl border-border/80 focus:border-coral focus:ring-coral/20',
+              !isDestinationValid && destination ? 'border-red-500' : ''
+            ]"
             autocomplete="off"
             @input="handleDestinationInput"
             @focus="handleDestinationFocus"
+            @blur="handleDestinationBlur"
           />
+          <p v-if="!isDestinationValid && destination" class="text-xs text-red-500 mt-1">
+            Please select a valid destination from the dropdown list
+          </p>
           
           <!-- Cities Dropdown -->
           <div
             v-if="showCitiesDropdown && filteredCities.length > 0"
+            ref="citiesDropdownRef"
             class="absolute z-50 w-full mt-1 top-full bg-background border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto"
           >
             <div
               v-for="city in filteredCities"
               :key="city"
-              class="px-4 py-2 hover:bg-accent cursor-pointer transition-colors"
-              @click="selectCity(city)"
+              class="px-4 py-2 hover:bg-accent cursor-pointer transition-colors text-sm"
+              @mousedown.prevent="selectCity(city)"
             >
               {{ city }}
             </div>
@@ -519,16 +595,31 @@ onBeforeUnmount(() => {
 
           <!-- Add Place Input with Suggestions (at bottom) -->
           <div class="relative">
+            <!-- Warning when no destination selected -->
+            <div
+              v-if="!canAddPlaces"
+              class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-sm text-amber-700 dark:text-amber-400 mb-3"
+            >
+              <p class="font-medium">Please select a destination first</p>
+              <p class="text-xs mt-1">You can only add places from the destination you've selected above.</p>
+            </div>
+            
             <div class="relative">
               <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" :size="16" />
               <Input
                 ref="inputRef"
                 v-model="newPlaceInput"
                 type="text"
-                placeholder="e.g. Colosseum, Rome, Italy"
-                class="h-11 text-sm rounded-xl border-border/80 focus:border-coral focus:ring-coral/20 pl-10 pr-10"
+                :placeholder="canAddPlaces ? `Search places in ${getDestinationCity}` : 'Select a destination first'"
+                :disabled="!canAddPlaces"
+                class="h-11 text-sm rounded-xl border-border/80 focus:border-coral focus:ring-coral/20 pl-10 pr-10 disabled:opacity-50 disabled:cursor-not-allowed"
                 @keyup.enter="addPlaceFromInput"
-                @focus="showSuggestions = searchSuggestions.length > 0; updateDropdownPosition();"
+                @focus="async () => {
+                  if (canAddPlaces && searchSuggestions.length > 0) {
+                    showSuggestions.value = true;
+                    await updateDropdownPosition();
+                  }
+                }"
               />
               <Loader2 
                 v-if="isSearching" 
@@ -573,9 +664,9 @@ onBeforeUnmount(() => {
         top: `${dropdownPosition.top}px`,
         left: `${dropdownPosition.left}px`,
         width: `${dropdownPosition.width}px`,
+        zIndex: 100000,
       }"
-      class="bg-card border border-border/80 rounded-xl shadow-2xl overflow-hidden"
-      style="z-index: 99999; pointer-events: auto;"
+      class="bg-card border border-border/80 rounded-xl shadow-2xl overflow-hidden pointer-events-auto"
       @mousedown.stop
     >
       <div class="max-h-[300px] overflow-y-auto p-2">

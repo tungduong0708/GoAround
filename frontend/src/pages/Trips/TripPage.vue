@@ -60,6 +60,17 @@ const editableEndDate = ref("");
 // Local stops state for reordering (only synced on save)
 const localStops = ref<any[]>([]);
 
+// Computed to get destination city from the first stop
+const destinationCity = computed(() => {
+  if (localStops.value.length > 0 && localStops.value[0]?.place?.city) {
+    return localStops.value[0].place.city;
+  }
+  if (trip.value?.stops && trip.value.stops.length > 0 && trip.value.stops[0]?.place?.city) {
+    return trip.value.stops[0].place.city;
+  }
+  return null;
+});
+
 // Computed to add logging when stops change
 const stopsForItinerary = computed(() => {
   console.log('[TripPage] stopsForItinerary computed:', localStops.value.length);
@@ -609,6 +620,7 @@ watch(
     <AddPlaceToTripModal
       v-model:open="showAddPlaceModal"
       :day-number="selectedDayForPlace + 1"
+      :destination-city="destinationCity"
       @add-place="handleAddPlace"
     />
   </div>

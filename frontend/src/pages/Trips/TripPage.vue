@@ -462,9 +462,8 @@ watch(
 
             <Button
               size="sm"
-              :disabled="!isAuthor"
+              :disabled="!isAuthor || isEndDateBeforeStartDate"
               class="bg-coral text-white hover:bg-coral-dark flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              :disabled="isEndDateBeforeStartDate"
               @click="saveEditedDetails"
             >
               <Save :size="16" />

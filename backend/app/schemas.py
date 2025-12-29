@@ -441,7 +441,6 @@ class TripStopWithPlace(BaseModel):
 
 class TripSchema(BaseModel):
     id: uuid.UUID
-    user_id: uuid.UUID
     trip_name: str
     start_date: date | None = None
     end_date: date | None = None
@@ -462,13 +461,8 @@ class TripSchema(BaseModel):
 class TripListSchema(BaseModel):
     id: uuid.UUID
     trip_name: str
-<<<<<<< Updated upstream
-    start_date: date | None
-    end_date: date | None
-=======
     start_date: date | None = None
     end_date: date | None = None
->>>>>>> Stashed changes
     public: bool = False
     stop_count: int = 0
 

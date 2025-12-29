@@ -14,6 +14,8 @@ import type { IPlacePublic } from "@/utils/interfaces";
 import { PlacesService } from "@/services";
 import { useCitiesStore } from '@/stores';
 import { storeToRefs } from 'pinia';
+import SavedPlacesModal from './SavedPlacesModal.vue';
+import { toast } from 'vue-sonner';
 
 interface PlanTripModalProps {
   open?: boolean;
@@ -74,6 +76,9 @@ const searchTimeoutId = ref<number | null>(null);
 const inputRef = ref<HTMLInputElement | null>(null);
 const dropdownRef = ref<HTMLElement | null>(null);
 const dropdownPosition = ref({ top: 0, left: 0, width: 0 });
+
+// Saved places modal
+const showSavedPlacesModal = ref(false);
 
 const isFormValid = computed(() => {
   return (
@@ -292,6 +297,9 @@ const addPlaceFromSuggestion = (place: IPlacePublic, event?: Event) => {
   // Check if destination is selected
   if (!canAddPlaces.value) {
     console.warn('Cannot add place: No destination selected');
+    toast.info('Please select a destination first', {
+      description: 'Choose a destination before adding places to your trip.'
+    });
     return;
   }
   
@@ -299,6 +307,9 @@ const addPlaceFromSuggestion = (place: IPlacePublic, event?: Event) => {
   const cityName = getDestinationCity.value;
   if (place.city?.toLowerCase() !== cityName.toLowerCase()) {
     console.warn('Cannot add place: Place is not from the selected destination');
+    toast.warning('Place not in destination', {
+      description: `This place is in ${place.city}, but your trip destination is ${getDestinationCity.value}. Please select places from ${getDestinationCity.value}.`
+    });
     return;
   }
   
@@ -334,6 +345,41 @@ const addPlaceFromInput = () => {
 
 const togglePublic = () => {
   isPublic.value = !isPublic.value;
+};
+
+const handleAddFromSavedList = () => {
+  showSavedPlacesModal.value = true;
+};
+
+const handlePlacesFromSavedList = (selectedPlaces: IPlacePublic[]) => {
+  // Check if destination is selected
+  if (!isDestinationValid.value || !getDestinationCity.value) {
+    toast.info('Please select a destination first', {
+      description: 'Choose a destination before adding places to your trip.'
+    });
+    return; // Keep modal open
+  }
+  
+  // Add places (already filtered by modal)
+  let addedCount = 0;
+  selectedPlaces.forEach(place => {
+    if (!places.value.some(p => p.id === place.id)) {
+      places.value.push(place);
+      addedCount++;
+    }
+  });
+  
+  // Show feedback
+  if (addedCount > 0) {
+    toast.success('Places added successfully', {
+      description: `Added ${addedCount} place(s) to your trip.`
+    });
+    showSavedPlacesModal.value = false;
+  } else if (selectedPlaces.length > 0) {
+    toast.info('Places already in trip', {
+      description: 'All selected places are already in your trip.'
+    });
+  }
 };
 
 // Handle clicks outside to close dropdown
@@ -553,6 +599,7 @@ onBeforeUnmount(() => {
               size="sm"
               class="text-coral hover:text-coral-dark text-sm font-medium px-2 py-1 h-auto hover:bg-coral-light rounded-lg transition-colors"
               type="button"
+              @click="handleAddFromSavedList"
             >
               Add from Saved List
             </Button>
@@ -726,6 +773,13 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </Teleport>
+
+  <!-- Saved Places Modal -->
+  <SavedPlacesModal
+    v-model:open="showSavedPlacesModal"
+    :destination-city="getDestinationCity"
+    @places-selected="handlePlacesFromSavedList"
+  />
 </template>
 
 <style scoped>

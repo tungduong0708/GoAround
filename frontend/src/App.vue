@@ -20,7 +20,7 @@ const showFooter = computed(() => route.meta.hideFooter !== true);
         </transition>
       </router-view>
       <AppFooter v-if="showFooter" />
-      <Toaster />
+      <Toaster position="top-right" rich-colors />
     </div>
   </div>
 </template>

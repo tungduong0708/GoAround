@@ -19,6 +19,7 @@ const props = defineProps<{
   tripId?: string; // If provided, directly add places to this trip
   selectedDayIndex?: number; // If provided, add to specific day
   tripStartDate?: string | null; // Required for day calculation
+  destinationCity?: string; // If provided, filter places by this city
 }>();
 
 const emit = defineEmits<{
@@ -34,10 +35,21 @@ const selectedListId = ref<string | null>(null);
 const selectedPlaceIds = ref<Set<string>>(new Set());
 const successMessage = ref<string | null>(null);
 const errorMessage = ref<string | null>(null);
+const listFilteredCounts = ref<Map<string, number>>(new Map());
 
 const lists = computed(() => listPlaceStore.listLists);
 const currentList = computed(() => listPlaceStore.listCurrentSelection);
-const places = computed(() => currentList.value?.items || []);
+const allPlaces = computed(() => currentList.value?.items || []);
+
+// Filter places by destination city if provided
+const places = computed(() => {
+  if (!props.destinationCity) {
+    return allPlaces.value;
+  }
+  return allPlaces.value.filter(item => 
+    item.place.city?.toLowerCase() === props.destinationCity?.toLowerCase()
+  );
+});
 
 const handleOpenChange = async (open: boolean) => {
   emit("update:open", open);
@@ -47,7 +59,15 @@ const handleOpenChange = async (open: boolean) => {
     selectedPlaceIds.value.clear();
     successMessage.value = null;
     errorMessage.value = null;
+    listFilteredCounts.value.clear();
+    
+    // Load lists first
     await loadLists();
+    
+    // Then preload filtered counts if destination filter is active
+    if (props.destinationCity) {
+      await preloadFilteredCounts();
+    }
   }
 };
 
@@ -62,6 +82,34 @@ const loadLists = async () => {
   }
 };
 
+const preloadFilteredCounts = async () => {
+  if (!props.destinationCity || lists.value.length === 0) {
+    console.log('[SavedPlacesModal] Skipping preload - destinationCity:', props.destinationCity, 'lists:', lists.value.length);
+    return;
+  }
+  
+  console.log('[SavedPlacesModal] Preloading filtered counts for', lists.value.length, 'lists with destination:', props.destinationCity);
+  
+  // Load each list and count filtered places
+  const countPromises = lists.value.map(async (list) => {
+    try {
+      await listPlaceStore.fetchListCurrentSelection(list.id);
+      const items = listPlaceStore.listCurrentSelection?.items || [];
+      const filteredCount = items.filter(item => 
+        item.place.city?.toLowerCase() === props.destinationCity?.toLowerCase()
+      ).length;
+      console.log('[SavedPlacesModal] List', list.name, '- Total:', items.length, 'Filtered:', filteredCount);
+      listFilteredCounts.value.set(list.id, filteredCount);
+    } catch (error) {
+      console.error(`Failed to load list ${list.id}:`, error);
+      listFilteredCounts.value.set(list.id, 0);
+    }
+  });
+  
+  await Promise.all(countPromises);
+  console.log('[SavedPlacesModal] Preload complete. Filtered counts:', Array.from(listFilteredCounts.value.entries()));
+};
+
 const handleSelectList = async (listId: string) => {
   selectedListId.value = listId;
   selectedPlaceIds.value.clear();
@@ -70,6 +118,11 @@ const handleSelectList = async (listId: string) => {
   
   try {
     await listPlaceStore.fetchListCurrentSelection(listId);
+    
+    // Update cached count for this list if destination filter is active
+    if (props.destinationCity) {
+      listFilteredCounts.value.set(listId, places.value.length);
+    }
   } catch (error: any) {
     errorMessage.value = error?.message || "Failed to load list details";
   } finally {
@@ -105,16 +158,14 @@ const handleBulkAddPlaces = () => {
   // Clear selection
   selectedPlaceIds.value.clear();
   
-  // Close modal
-  emit("update:open", false);
+  // Note: Parent component will close modal if places are successfully added
 };
 
 const handleAddPlaceToTrip = (place: IPlacePublic) => {
   // Emit single place to parent component
   emit("places-selected", [place], props.selectedDayIndex);
   
-  // Close modal
-  emit("update:open", false);
+  // Note: Parent component will close modal if place is successfully added
 };
 
 const formatLocation = (place: IPlacePublic) => {
@@ -125,6 +176,31 @@ const formatLocation = (place: IPlacePublic) => {
 const hasNoLists = computed(() => !loading.value && lists.value.length === 0);
 const hasNoPlaces = computed(() => selectedListId.value && !loading.value && places.value.length === 0);
 const selectedCount = computed(() => selectedPlaceIds.value.size);
+
+// Compute filtered place count for each list when destination filter is active
+const getListPlaceCount = (listId: string) => {
+  if (!props.destinationCity) {
+    // No filter, return original count
+    const list = lists.value.find(l => l.id === listId);
+    return list?.item_count || 0;
+  }
+  
+  // Return cached filtered count if available
+  if (listFilteredCounts.value.has(listId)) {
+    return listFilteredCounts.value.get(listId) || 0;
+  }
+  
+  // If this is the currently selected list, count filtered places
+  if (listId === selectedListId.value) {
+    const count = places.value.length;
+    listFilteredCounts.value.set(listId, count);
+    return count;
+  }
+  
+  // Fallback to original count while loading
+  const list = lists.value.find(l => l.id === listId);
+  return list?.item_count || 0;
+};
 
 // Watch for modal open and load lists
 watch(() => props.open, (isOpen) => {
@@ -208,9 +284,6 @@ watch(() => props.open, (isOpen) => {
                     <Bookmark class="h-4 w-4 text-coral shrink-0" />
                     <div class="flex-1 min-w-0">
                       <p class="font-medium truncate">{{ list.name }}</p>
-                      <p class="text-xs text-muted-foreground">
-                        {{ list.item_count || 0 }} places
-                      </p>
                     </div>
                   </div>
                 </CardContent>
